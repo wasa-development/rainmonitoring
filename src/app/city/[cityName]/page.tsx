@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -23,24 +22,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, Trash2 } from 'lucide-react';
-import type { PondingPoint } from '@/lib/types';
-import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell, updatePondingPointsBatch } from './actions';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
+import type { AdminUser, PondingPoint, Spell } from '@/lib/types';
+import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import PondingPointCard from '@/components/ponding-point-card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -52,17 +44,19 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [pondingPoints, setPondingPoints] = useState<PondingPoint[]>([]);
   const [maxSpellToday, setMaxSpellToday] = useState(0);
   
-  const [isAddFormOpen, setAddFormOpen] = useState(false);
+  const [isFormOpen, setFormOpen] = useState(false);
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  
+  const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
   const [isSpellActive, setIsSpellActive] = useState(false);
   const [isStopSpellBlocked, setStopSpellBlocked] = useState(false);
   
-  const [inputValues, setInputValues] = useState<Record<string, { currentSpell: string; ponding: string; clearedInTime: string; }>>({});
-
+  const [currentPondingValue, setCurrentPondingValue] = useState('0');
+  
   const [isPending, startTransition] = useTransition();
 
-  const addPointFormRef = useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -92,6 +86,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
      }
   }, [authLoading, user, claims, cityName, router, toast]);
 
+
   useEffect(() => {
     async function fetchData() {
         const [points, activeSpell] = await Promise.all([
@@ -101,16 +96,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
         const sortedPoints = points.sort((a, b) => a.name.localeCompare(b.name));
         setPondingPoints(sortedPoints);
-
-        const initialValues: typeof inputValues = {};
-        for (const point of sortedPoints) {
-            initialValues[point.id] = {
-                currentSpell: String(point.currentSpell ?? 0),
-                ponding: String(point.ponding ?? 0),
-                clearedInTime: point.clearedInTime ?? '',
-            };
-        }
-        setInputValues(initialValues);
         
         setIsSpellActive(!!activeSpell);
         
@@ -132,38 +117,36 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     }
   }, [cityName, isPending, user]);
 
-  const handleInputChange = (pointId: string, field: keyof typeof inputValues[string], value: string) => {
-    setInputValues(prev => ({
-        ...prev,
-        [pointId]: {
-            ...prev[pointId],
-            [field]: value,
-        }
-    }));
-  };
   
-  const handleTableSubmit = (formData: FormData) => {
-    startTransition(async () => {
-        const result = await updatePondingPointsBatch(formData, cityName);
-        if (result.success) {
-            toast({ title: 'Success', description: result.message });
-        } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
-        }
-    });
-  };
-  
-  const handleAddPointSubmit = (formData: FormData) => {
+  const handleFormSubmit = (formData: FormData) => {
     startTransition(async () => {
         const result = await addOrUpdatePondingPoint(formData, cityName);
         if (result.success) {
             toast({ title: 'Success', description: result.message });
-            setAddFormOpen(false);
-            addPointFormRef.current?.reset();
+            setFormOpen(false);
+            setEditingPoint(null);
+            formRef.current?.reset();
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
         }
     });
+  };
+
+  const handleEditClick = (point: PondingPoint) => {
+    setEditingPoint(point);
+    setCurrentPondingValue(String(point.ponding ?? 0));
+    setFormOpen(true);
+  };
+
+  const handleAddNewClick = () => {
+    setEditingPoint(null);
+    setCurrentPondingValue('0');
+    setFormOpen(true);
+  };
+  
+  const handleDeleteClick = (point: PondingPoint) => {
+    setPointToDelete(point);
+    setDeleteAlertOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -179,11 +162,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         setDeleteAlertOpen(false);
         setPointToDelete(null);
     });
-  };
-
-  const handleDeleteClick = (point: PondingPoint) => {
-    setPointToDelete(point);
-    setDeleteAlertOpen(true);
   };
 
   const handleToggleSpell = () => {
@@ -210,6 +188,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         }
       }
     });
+  };
+  
+  const handlePondingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setCurrentPondingValue(e.target.value);
   };
 
   const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
@@ -241,142 +223,36 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                             {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
                             {isSpellActive ? 'Stop Spell' : 'Start Spell'}
                         </Button>
-                        <Dialog open={isAddFormOpen} onOpenChange={setAddFormOpen}>
-                            <DialogTrigger asChild>
-                                 <Button>
-                                    <PlusCircle className="mr-2" />
-                                    Add Point
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader>
-                                <DialogTitle>Add New Ponding Point</DialogTitle>
-                                <DialogDescription>
-                                    Add a new location to track for ponding. You can add rainfall data after the point is created.
-                                </DialogDescription>
-                                </DialogHeader>
-                                <form ref={addPointFormRef} action={handleAddPointSubmit}>
-                                    <div className="grid gap-4 py-4">
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="name" className="text-right">Name</Label>
-                                            <Input id="name" name="name" className="col-span-3" required />
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button type="submit" disabled={isPending}>
-                                            {isPending && <RefreshCw className="animate-spin" />}
-                                            {isPending ? 'Saving...' : 'Save Point'}
-                                        </Button>
-                                    </DialogFooter>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
+                        <Button onClick={handleAddNewClick}>
+                            <PlusCircle className="mr-2" />
+                            Add Point
+                        </Button>
                     </>
                 )}
                  <ThemeToggle />
             </div>
         </header>
 
-        <form action={handleTableSubmit}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Live Data Entry</CardTitle>
-              <CardDescription>
-                {isSpellActive
-                  ? "Enter live rainfall and ponding data. Click 'Save All Changes' when done."
-                  : "A spell must be active to enter data. Click 'Start Spell' to begin."
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[200px]">Point Name</TableHead>
-                      <TableHead>Rain (mm)</TableHead>
-                      <TableHead>Ponding (in)</TableHead>
-                      <TableHead>Cleared Time (hh:mm)</TableHead>
-                       {claims?.role !== 'viewer' && <TableHead>Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pondingPoints.length > 0 ? (
-                      pondingPoints.map((point) => (
-                        <TableRow key={point.id}>
-                          <TableCell className="font-medium">{point.name}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              name={`currentSpell_${point.id}`}
-                              value={inputValues[point.id]?.currentSpell || '0'}
-                              onChange={(e) => handleInputChange(point.id, 'currentSpell', e.target.value)}
-                              disabled={!isSpellActive || claims?.role === 'viewer'}
-                              className="w-28"
-                              step="0.1"
-                              min="0"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              name={`ponding_${point.id}`}
-                              value={inputValues[point.id]?.ponding || '0'}
-                              onChange={(e) => handleInputChange(point.id, 'ponding', e.target.value)}
-                              disabled={!isSpellActive || claims?.role === 'viewer'}
-                              className="w-28"
-                              step="0.1"
-                              min="0"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="text"
-                              name={`clearedInTime_${point.id}`}
-                              placeholder="02:30"
-                              value={inputValues[point.id]?.clearedInTime || ''}
-                              onChange={(e) => handleInputChange(point.id, 'clearedInTime', e.target.value)}
-                              disabled={!isSpellActive || (parseFloat(inputValues[point.id]?.ponding) || 0) > 0 || claims?.role === 'viewer'}
-                              className="w-32"
-                            />
-                          </TableCell>
-                          {claims?.role !== 'viewer' && (
-                            <TableCell>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => handleDeleteClick(point)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                          No ponding points added for {cityName} yet.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-            {claims?.role !== 'viewer' && (
-              <CardFooter className="border-t px-6 py-4">
-                  <Button type="submit" disabled={isPending || !isSpellActive}>
-                      {isPending ? <RefreshCw className="animate-spin mr-2"/> : null}
-                      Save All Changes
-                  </Button>
-              </CardFooter>
-            )}
-          </Card>
-        </form>
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {pondingPoints.length > 0 ? (
+            pondingPoints.map((point) => (
+                <PondingPointCard 
+                    key={point.id} 
+                    point={point} 
+                    onEdit={() => handleEditClick(point)} 
+                    onDelete={() => handleDeleteClick(point)}
+                    userRole={claims?.role}
+                />
+            ))
+          ) : (
+             <Card className="md:col-span-2 lg:col-span-3">
+                <CardContent className="flex flex-col items-center justify-center h-48">
+                    <h3 className="text-lg font-semibold">No Ponding Points Found</h3>
+                    <p className="text-muted-foreground">Get started by adding a new ponding point.</p>
+                </CardContent>
+            </Card>
+          )}
+        </div>
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
@@ -398,7 +274,84 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </CardContent>
             </Card>
         </div>
+
       </main>
+
+        <Dialog open={isFormOpen} onOpenChange={setFormOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>{editingPoint ? 'Edit' : 'Add'} Ponding Point</DialogTitle>
+                    <DialogDescription>
+                        {editingPoint
+                        ? `Update the details for ${editingPoint.name}.`
+                        : 'Add a new location to track for ponding.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <form ref={formRef} action={handleFormSubmit}>
+                    {editingPoint && <input type="hidden" name="id" value={editingPoint.id} />}
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">Name</Label>
+                            <Input
+                                id="name"
+                                name="name"
+                                defaultValue={editingPoint?.name || ''}
+                                className="col-span-3"
+                                readOnly={claims?.role === 'city-user'}
+                                required
+                            />
+                        </div>
+                        {isSpellActive && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
+                                <Input
+                                    id="currentSpell"
+                                    name="currentSpell"
+                                    type="number"
+                                    defaultValue={editingPoint?.currentSpell ?? 0}
+                                    className="col-span-3"
+                                    step="0.1"
+                                    min="0"
+                                />
+                            </div>
+                        )}
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
+                            <Input
+                                id="ponding"
+                                name="ponding"
+                                type="number"
+                                value={currentPondingValue}
+                                onChange={handlePondingChange}
+                                className="col-span-3"
+                                step="0.1"
+                                min="0"
+                            />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="clearedInTime" className="text-right">Cleared In</Label>
+                            <Input
+                                id="clearedInTime"
+                                name="clearedInTime"
+                                type="text"
+                                defaultValue={editingPoint?.clearedInTime || ''}
+                                placeholder="e.g., 02:30"
+                                className="col-span-3"
+                                disabled={parseFloat(currentPondingValue) > 0}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <RefreshCw className="animate-spin" />}
+                            {isPending ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
 
         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
             <AlertDialogContent>
