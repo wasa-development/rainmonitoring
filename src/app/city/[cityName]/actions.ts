@@ -67,7 +67,6 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                 const newPonding = data.ponding ?? 0;
                 const clearedInTime = data.clearedInTime ?? '';
 
-                // The new validation logic
                 if (oldPonding > 0 && newPonding === 0 && !clearedInTime) {
                     return { 
                         success: false, 
@@ -75,7 +74,6 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                     };
                 }
 
-                // Carry over the existing logic for spell calculation
                 let dailyMaxSpell = pointDataForDb.currentSpell;
                 let maxSpellRainfall = pointDataForDb.currentSpell;
 
@@ -110,6 +108,82 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
         return { success: true, message: `Ponding point ${id ? 'updated' : 'created'} successfully.` };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
+    }
+}
+
+export async function updatePondingPointsBatch(formData: FormData, cityName: string) {
+    if (!cityName) {
+        return { success: false, error: 'City name is required.' };
+    }
+
+    try {
+        const existingPoints = await getPondingPoints(cityName);
+        if (existingPoints.length === 0) {
+            return { success: true, message: 'No points to update.' };
+        }
+
+        const batch = db.batch();
+        const now = new Date();
+
+        for (const point of existingPoints) {
+            const pointRef = db.collection('ponding_points').doc(point.id);
+
+            const currentSpellStr = formData.get(`currentSpell_${point.id}`) as string | null;
+            const pondingStr = formData.get(`ponding_${point.id}`) as string | null;
+            const clearedInTime = formData.get(`clearedInTime_${point.id}`) as string | null ?? '';
+
+            if (currentSpellStr === null || pondingStr === null) {
+                continue;
+            }
+
+            const currentSpell = parseFloat(currentSpellStr) || 0;
+            const ponding = parseFloat(pondingStr) || 0;
+            
+            if (currentSpell < 0 || ponding < 0) {
+                 return { success: false, error: `Negative values are not allowed for point ${point.name}.` };
+            }
+            
+            const oldPonding = point.ponding ?? 0;
+            if (oldPonding > 0 && ponding === 0 && !clearedInTime) {
+                return { 
+                    success: false, 
+                    error: `'Cleared In' time is required for ${point.name} since ponding was resolved.` 
+                };
+            }
+
+            const lastUpdated = point.updatedAt;
+            const isSameDay = lastUpdated ? (
+                lastUpdated.getFullYear() === now.getFullYear() &&
+                lastUpdated.getMonth() === now.getMonth() &&
+                lastUpdated.getDate() === now.getDate()
+            ) : true;
+
+            const oldDailyMax = isSameDay ? (point.dailyMaxSpell ?? 0) : 0;
+            const dailyMaxSpell = Math.max(oldDailyMax, currentSpell);
+            
+            const oldMaxSpellRainfall = point.maxSpellRainfall ?? 0;
+            const maxSpellRainfall = Math.max(oldMaxSpellRainfall, currentSpell);
+
+            const pointDataForDb = { 
+                currentSpell,
+                ponding,
+                clearedInTime,
+                isRaining: currentSpell > 0,
+                dailyMaxSpell,
+                maxSpellRainfall,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+
+            batch.update(pointRef, pointDataForDb);
+        }
+
+        await batch.commit();
+
+        revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        return { success: true, message: 'All ponding points updated successfully.' };
+    } catch (error: any) {
+        console.error("Error batch updating ponding points:", error);
+        return { success: false, error: error.message || 'An unknown error occurred during batch update.' };
     }
 }
 
@@ -179,7 +253,6 @@ export async function stopSpell(cityName: string) {
 
         const batch = db.batch();
 
-        // Update the spell document
         const spellRef = db.collection('spells').doc(activeSpell.id);
         batch.update(spellRef, {
             status: 'completed',
@@ -187,7 +260,6 @@ export async function stopSpell(cityName: string) {
             spellData: spellData
         });
 
-        // Reset currentSpell for all ponding points
         pondingPoints.forEach(point => {
             const pointRef = db.collection('ponding_points').doc(point.id);
             batch.update(pointRef, { currentSpell: 0, isRaining: false, maxSpellRainfall: 0 });
