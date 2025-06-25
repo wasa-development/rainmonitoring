@@ -1,7 +1,8 @@
 'use server';
 
-import type { WeatherData } from "@/lib/types";
+import type { Spell, WeatherData } from "@/lib/types";
 import { getCities } from "./admin/actions";
+import { db } from "@/lib/firebase-admin";
 
 function mapAccuWeatherCondition(weatherText: string): WeatherData['condition'] {
     const text = weatherText.toLowerCase();
@@ -21,6 +22,32 @@ function mapAccuWeatherCondition(weatherText: string): WeatherData['condition'] 
         return 'Cloudy';
     }
     return 'Cloudy'; // Default for any other condition
+}
+
+async function getActiveSpell(cityName: string): Promise<Spell | null> {
+    try {
+        const snapshot = await db.collection('spells')
+            .where('cityName', '==', cityName)
+            .where('status', '==', 'active')
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            return null;
+        }
+
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            startTime: data.startTime.toDate(),
+            endTime: data.endTime ? data.endTime.toDate() : undefined,
+        } as Spell;
+    } catch (error) {
+        console.error("Error fetching active spell:", error);
+        return null;
+    }
 }
 
 
@@ -59,13 +86,14 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         return null;
       }
 
-      // Step 2 & 3: Get Current Conditions and 1-Day Forecast concurrently
+      // Step 2 & 3: Get Current Conditions, Forecast and Spell status concurrently
       const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
       const forecastUrl = `http://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
 
-      const [weatherResponse, forecastResponse] = await Promise.all([
+      const [weatherResponse, forecastResponse, activeSpell] = await Promise.all([
           fetch(weatherUrl, { next: { revalidate: 3600 } }), // Revalidate every hour
-          fetch(forecastUrl, { next: { revalidate: 21600 } }) // Revalidate every 6 hours
+          fetch(forecastUrl, { next: { revalidate: 21600 } }), // Revalidate every 6 hours
+          getActiveSpell(city.name)
       ]);
       
       if (!weatherResponse.ok) {
@@ -104,6 +132,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         temperature: Math.round(weatherInfo.Temperature.Metric.Value),
         lastUpdated: new Date(weatherInfo.EpochTime * 1000),
         forecast: forecastData,
+        isSpellActive: !!activeSpell,
       };
       return weatherData;
     } catch (error) {
@@ -152,13 +181,14 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
         return null;
     }
 
-    // Step 2 & 3: Get Current Conditions and Forecast
+    // Step 2 & 3: Get Current Conditions, Forecast and Spell status
     const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
     const forecastUrl = `http://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
 
-    const [weatherResponse, forecastResponse] = await Promise.all([
+    const [weatherResponse, forecastResponse, activeSpell] = await Promise.all([
         fetch(weatherUrl),
-        fetch(forecastUrl)
+        fetch(forecastUrl),
+        getActiveSpell(locationName)
     ]);
     
     if (!weatherResponse.ok) {
@@ -192,7 +222,8 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
       condition: mapAccuWeatherCondition(weatherInfo.WeatherText),
       temperature: Math.round(weatherInfo.Temperature.Metric.Value),
       lastUpdated: new Date(weatherInfo.EpochTime * 1000),
-      forecast: forecastData
+      forecast: forecastData,
+      isSpellActive: !!activeSpell
     };
     return weatherData;
   } catch (error) {

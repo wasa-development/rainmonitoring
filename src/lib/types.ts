@@ -8,6 +8,7 @@ export interface WeatherData {
     hasPrecipitation: boolean;
     precipitationType: string;
   };
+  isSpellActive?: boolean;
 }
 
 export interface PondingPoint {
