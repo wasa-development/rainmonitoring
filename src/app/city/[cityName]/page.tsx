@@ -37,11 +37,12 @@ import { cn } from '@/lib/utils';
 
 // Mock data for demonstration purposes
 const mockPondingPoints: PondingPoint[] = [
-  { id: '1', name: 'Liberty Chowk', currentSpell: 15, clearedInTime: '01:30', ponding: 2.5, isRaining: true },
-  { id: '2', name: 'Kalma Underpass', currentSpell: 25, clearedInTime: '02:00', ponding: 4.0, isRaining: true },
-  { id: '3', name: 'Center Point', currentSpell: 10, clearedInTime: '00:45', ponding: 1.0, isRaining: false },
-  { id: '4', name: 'Ferozepur Road', currentSpell: 22, clearedInTime: '02:15', ponding: 3.5, isRaining: true },
-  { id: '5', name: 'Ichhra Market', currentSpell: 8, clearedInTime: '01:00', ponding: 0.5, isRaining: false },
+  { id: '1', name: 'Liberty Chowk', currentSpell: 15, clearedInTime: '', ponding: 2.5, isRaining: true },
+  { id: '2', name: 'Kalma Underpass', currentSpell: 25, clearedInTime: '', ponding: 4.0, isRaining: true },
+  { id: '3', name: 'Center Point', currentSpell: 10, clearedInTime: '', ponding: 1.0, isRaining: false },
+  { id: '4', name: 'Ferozepur Road', currentSpell: 22, clearedInTime: '', ponding: 3.5, isRaining: true },
+  { id: '5', name: 'Ichhra Market', currentSpell: 8, clearedInTime: '', ponding: 0.5, isRaining: false },
+  { id: '6', name: 'Model Town Park', currentSpell: 5, clearedInTime: '00:30', ponding: 0.0, isRaining: false },
 ];
 
 const PONDING_THRESHOLD = 3.0; // inches
@@ -62,15 +63,19 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   const handleAddPondingPoint = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const pondingValue = Number(formData.get('ponding'));
+
     const newPoint: PondingPoint = {
       id: new Date().toISOString(),
       name: formData.get('name') as string,
       currentSpell: Number(formData.get('currentSpell')),
-      clearedInTime: formData.get('clearedInTime') as string,
-      ponding: Number(formData.get('ponding')),
+      clearedInTime: pondingValue > 0 ? '' : (formData.get('clearedInTime') as string),
+      ponding: pondingValue,
       isRaining: (formData.get('isRaining') as string) === 'on',
     };
+    
     const updatedPoints = [...pondingPoints, newPoint].sort((a, b) => b.currentSpell - a.currentSpell);
     setPondingPoints(updatedPoints);
 
@@ -79,6 +84,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     }
 
     setFormOpen(false);
+    form.reset();
   };
 
 
@@ -123,7 +129,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
-                                <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" required />
+                                <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
@@ -174,7 +180,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 >
                     <TableCell className="font-medium">{point.name}</TableCell>
                     <TableCell className="text-right">{point.currentSpell.toFixed(1)}</TableCell>
-                    <TableCell className="text-right">{point.clearedInTime}</TableCell>
+                    <TableCell className="text-right">{point.ponding > 0 ? '—' : point.clearedInTime}</TableCell>
                     <TableCell className="text-right font-bold">
                         <div className="flex items-center justify-end gap-2">
                         {point.ponding > PONDING_THRESHOLD && (
