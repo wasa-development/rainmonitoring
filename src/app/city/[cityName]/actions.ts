@@ -63,7 +63,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             
             let dailyMaxSpell = pointDataForDb.currentSpell;
 
-            if (docSnap.exists()) {
+            if (docSnap.exists) {
                 const existingData = docSnap.data();
                 if (existingData && existingData.updatedAt) {
                     const lastUpdated = existingData.updatedAt.toDate();
