@@ -3,7 +3,7 @@
 import type { WeatherData } from "@/lib/weather";
 import { getCities } from "./admin/actions";
 
-function mapApiCondition(apiMain: string, apiDesc: string): WeatherData['condition'] {
+function mapApiCondition(apiMain: string, apiDesc:string): WeatherData['condition'] {
     switch (apiMain) {
         case 'Thunderstorm':
         case 'Drizzle':
@@ -53,7 +53,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       
       const weatherData: WeatherData = {
         id: data.id.toString(),
-        city: data.name,
+        city: city.name, // Use the name from Firestore
         condition: mapApiCondition(data.weather[0].main, data.weather[0].description),
         temperature: Math.round(data.main.temp),
         lastUpdated: new Date(data.dt * 1000),
