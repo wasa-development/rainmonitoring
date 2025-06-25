@@ -21,8 +21,8 @@ const CardRainAnimation = () => {
   return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg z-10">{raindrops}</div>;
 };
 
-const PondingAnimation = () => (
-    <div className="ponding-animation-container">
+const PondingAnimation = ({ height }: { height: number }) => (
+    <div className="ponding-animation-container" style={{ height: `${height}%` }}>
         <div className="wave-layer wave1"></div>
         <div className="wave-layer wave2"></div>
     </div>
@@ -39,10 +39,13 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const isRaining = point.isRaining && point.currentSpell > 0;
     const isPonding = point.ponding > 0;
 
+    // Scale: Start at 5% height, add 4% for each inch of ponding, up to a max of 40%.
+    const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
+
     return (
         <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group">
             {isRaining && <CardRainAnimation />}
-            {isPonding && <PondingAnimation />}
+            {isPonding && <PondingAnimation height={waveHeightPercentage} />}
             
             <div className="relative z-20 bg-card/50 dark:bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg">
                 <CardHeader className="flex flex-row items-start justify-between p-4">
