@@ -2,56 +2,35 @@
  * IMPORTANT:
  * ----------
  * This file is used for server-side Firebase operations.
- * It initializes the Firebase Admin SDK, which requires special service account credentials.
- * 
- * To get this working, you need to:
- * 1. Go to your Firebase project settings > Service accounts.
- * 2. Generate a new private key (JSON file).
- * 3. Copy the values from the JSON file into your environment variables (.env.local).
- *    You will need:
- *    - NEXT_PUBLIC_FIREBASE_PROJECT_ID
- *    - FIREBASE_CLIENT_EMAIL
- *    - FIREBASE_PRIVATE_KEY
- * 
- *    Note: When you copy the private key, it will have newline characters (\n).
- *    You might need to replace them with literal newlines in your .env.local file
- *    or handle it as shown below.
+ * It initializes the Firebase Admin SDK.
+ *
+ * How it works:
+ * - In a Google Cloud environment (like Firebase App Hosting), the SDK automatically
+ *   discovers the necessary credentials.
+ * - For local development, you must set up a service account:
+ *   1. Go to your Firebase project settings > Service accounts.
+ *   2. Generate a new private key (JSON file).
+ *   3. Save this file somewhere safe (e.g., outside the `src` folder) and ensure
+ *      it is listed in your .gitignore file to prevent it from being committed.
+ *   4. Set an environment variable named `GOOGLE_APPLICATION_CREDENTIALS` to the
+ *      path of this JSON file. For example, in a `.env.local` file:
+ *      GOOGLE_APPLICATION_CREDENTIALS="./path/to/your/serviceAccountKey.json"
  */
 import admin from 'firebase-admin';
 
-/**
- * Initializes the Firebase Admin SDK if it hasn't been initialized yet.
- * This function is designed to be idempotent.
- * @returns The initialized Firebase Admin module.
- * @throws {Error} If Firebase credentials are not set or initialization fails.
- */
 function getInitializedAdmin() {
   if (admin.apps.length === 0) {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-    if (projectId && clientEmail && privateKey) {
-      try {
-        admin.initializeApp({
-          credential: admin.credential.cert({
-            projectId,
-            clientEmail,
-            privateKey,
-          }),
-        });
-        console.log("Firebase Admin SDK initialized successfully.");
-      } catch (error: any) {
-        console.error('Firebase admin initialization error:', error.stack);
-        // Throw an error to prevent the app from starting in a broken state.
-        throw new Error('Failed to initialize Firebase Admin SDK.');
-      }
-    } else {
-      // Throw a clear error if credentials are missing.
-      // This stops the server from crashing silently and provides a clear debug message.
+    try {
+      // When deployed to a Google Cloud environment or with GOOGLE_APPLICATION_CREDENTIALS
+      // set, the SDK automatically discovers the necessary credentials.
+      admin.initializeApp();
+      console.log("Firebase Admin SDK initialized successfully.");
+    } catch (error: any) {
+      console.error('Firebase admin initialization error:', error.stack);
       throw new Error(
-          'Firebase Admin credentials are not fully set in environment variables. ' +
-          'Required: NEXT_PUBLIC_FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY'
+        'Failed to initialize Firebase Admin SDK. ' +
+        'For local development, ensure the GOOGLE_APPLICATION_CREDENTIALS environment variable is set correctly. ' +
+        'In production, ensure your hosting environment has access to the default service account.'
       );
     }
   }
