@@ -14,6 +14,8 @@ export interface PondingPoint {
     clearedInTime: string;
     ponding: number;
     isRaining: boolean;
+    dailyMaxSpell?: number;
+    updatedAt?: Date;
 }
 
 export interface AdminUser {

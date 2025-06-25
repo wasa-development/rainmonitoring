@@ -76,7 +76,17 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         const sortedPoints = points.sort((a, b) => b.currentSpell - a.currentSpell);
         setPondingPoints(sortedPoints);
         
-        const dailyMax = Math.max(0, ...points.map(p => p.currentSpell));
+        const now = new Date();
+        const dailyMax = Math.max(0, ...points
+            .filter(p => {
+                if (!p.updatedAt) return false;
+                const lastUpdated = p.updatedAt;
+                return lastUpdated.getFullYear() === now.getFullYear() &&
+                       lastUpdated.getMonth() === now.getMonth() &&
+                       lastUpdated.getDate() === now.getDate();
+            })
+            .map(p => p.dailyMaxSpell ?? 0));
+        
         setMaxSpellToday(dailyMax);
     }
     fetchData();

@@ -1,6 +1,6 @@
 'use server';
 
-import { db } from '@/lib/firebase-admin';
+import { db, admin } from '@/lib/firebase-admin';
 import type { PondingPoint } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -20,13 +20,16 @@ export async function getPondingPoints(cityName: string): Promise<PondingPoint[]
         if (snapshot.empty) {
             return [];
         }
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        })) as PondingPoint[];
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                updatedAt: data.updatedAt ? data.updatedAt.toDate() : undefined,
+            } as PondingPoint;
+        });
     } catch (error) {
         console.error("Error fetching ponding points:", error);
-        // In a real app, you might want to throw the error or handle it differently
         return [];
     }
 }
@@ -42,22 +45,45 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
 
     const { id, ...data } = validation.data;
     
-    const pointData = { 
+    const pointDataForDb: any = { 
         cityName,
         name: data.name,
         currentSpell: data.currentSpell ?? 0,
         clearedInTime: data.clearedInTime ?? '',
         ponding: data.ponding ?? 0,
         isRaining: data.isRaining ?? false,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
     try {
         if (id) {
             // Update
-            await db.collection('ponding_points').doc(id).set(pointData, { merge: true });
+            const pointRef = db.collection('ponding_points').doc(id);
+            const docSnap = await pointRef.get();
+            
+            let dailyMaxSpell = pointDataForDb.currentSpell;
+
+            if (docSnap.exists()) {
+                const existingData = docSnap.data();
+                if (existingData && existingData.updatedAt) {
+                    const lastUpdated = existingData.updatedAt.toDate();
+                    const now = new Date();
+
+                    const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
+                                      lastUpdated.getMonth() === now.getMonth() &&
+                                      lastUpdated.getDate() === now.getDate();
+                    
+                    const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
+                    dailyMaxSpell = Math.max(oldDailyMax, pointDataForDb.currentSpell);
+                }
+            }
+            
+            pointDataForDb.dailyMaxSpell = dailyMaxSpell;
+            await pointRef.set(pointDataForDb, { merge: true });
         } else {
             // Create
-            await db.collection('ponding_points').add(pointData);
+            pointDataForDb.dailyMaxSpell = pointDataForDb.currentSpell;
+            await db.collection('ponding_points').add(pointDataForDb);
         }
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         return { success: true, message: `Ponding point ${id ? 'updated' : 'created'} successfully.` };
