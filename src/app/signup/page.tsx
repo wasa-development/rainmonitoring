@@ -14,6 +14,7 @@ import { CloudSun, UserPlus, RefreshCw } from 'lucide-react';
 import type { City } from '@/lib/types';
 import { getCities, requestSignup } from './actions';
 import { useAuth } from '@/hooks/use-auth';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -71,10 +72,13 @@ export default function SignupPage() {
 
     return (
         <main className="flex items-center justify-center min-h-screen bg-background p-4">
-            <Card className="w-full max-w-md shadow-2xl">
+            <Card className="w-full max-w-md shadow-2xl relative">
+                <div className="absolute top-4 right-4">
+                    <ThemeToggle />
+                </div>
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-2 mb-2">
-                        <CloudSun className="w-8 h-8 text-accent" />
+                        <CloudSun className="w-8 h-8 text-primary" />
                         <h1 className="text-2xl font-bold text-primary">Pakistan Weather Pulse</h1>
                     </div>
                     <CardTitle>Request an Account</CardTitle>
@@ -138,7 +142,7 @@ export default function SignupPage() {
                     </form>
                      <div className="mt-4 text-center text-sm">
                         Already have an account?{" "}
-                        <Link href="/login" className="underline text-accent hover:text-primary/80">
+                        <Link href="/login" className="underline text-primary/80 hover:text-primary">
                             Sign In
                         </Link>
                     </div>

@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function AdminPage() {
     const { toast } = useToast();
@@ -132,13 +133,14 @@ export default function AdminPage() {
     <main className="container mx-auto p-4 sm:p-6 md:p-8">
        <header className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-                <Link href="/" className="text-accent hover:text-primary">
+                <Link href="/" className="text-primary hover:text-primary/80">
                     <Home className="w-7 h-7" />
                 </Link>
                 <h1 className="text-3xl sm:text-4xl font-bold text-primary">
                     Super Admin Dashboard
                 </h1>
             </div>
+            <ThemeToggle />
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

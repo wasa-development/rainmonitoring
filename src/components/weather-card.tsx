@@ -14,7 +14,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
 
   return (
     <Link href={`/city/${encodeURIComponent(data.city)}`} className="block group">
-        <Card className="flex flex-col justify-between h-full transition-colors border-transparent border group-hover:border-accent/50 bg-card">
+        <Card className="flex flex-col justify-between h-full transition-colors border group-hover:border-primary/50 bg-card">
         <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
             <CardTitle className="text-lg font-semibold">{data.city}</CardTitle>
             <CardDescription className="text-sm text-muted-foreground">{data.condition}</CardDescription>
@@ -25,7 +25,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
                 <span className="text-5xl font-bold text-primary">{data.temperature}</span>
                 <span className="text-xl font-medium text-muted-foreground mt-1">°C</span>
                 </div>
-                <Icon className="w-16 h-16 text-accent drop-shadow-lg transition-transform group-hover:scale-110" />
+                <Icon className="w-16 h-16 text-primary drop-shadow-lg transition-transform group-hover:scale-110" />
             </div>
             {data.forecast?.hasPrecipitation ? (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">

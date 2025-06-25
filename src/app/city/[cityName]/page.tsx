@@ -39,6 +39,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import PondingPointCard from '@/components/ponding-point-card';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
@@ -209,7 +210,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       <main className="container mx-auto p-4 sm:p-6 md:p-8 z-10 relative">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
             <div className="flex items-center gap-4">
-                <Link href="/" className="text-accent hover:text-primary">
+                <Link href="/" className="text-primary hover:text-primary/80">
                     <Home className="w-7 h-7" />
                 </Link>
                 <h1 className="text-3xl sm:text-4xl font-bold text-primary">
@@ -284,6 +285,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         </Dialog>
                     </>
                 )}
+                 <ThemeToggle />
             </div>
         </header>
 

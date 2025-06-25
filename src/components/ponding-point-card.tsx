@@ -44,7 +44,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
             {isRaining && <CardRainAnimation />}
             {isPonding && <PondingAnimation />}
             
-            <div className="relative z-20 bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg">
+            <div className="relative z-20 bg-card/50 dark:bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg">
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
                         <CardTitle className="text-lg">{point.name}</CardTitle>
@@ -65,28 +65,28 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 <CardContent className="flex-grow p-4 space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                            <Droplets className="h-5 w-5 text-accent" />
+                            <Droplets className="h-5 w-5 text-primary" />
                             <div>
                                 <p className="text-muted-foreground">Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-accent" />
+                            <TrendingUp className="h-5 w-5 text-primary" />
                             <div>
                                 <p className="text-muted-foreground">Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-accent" />
+                            <AlertTriangle className="h-5 w-5 text-primary" />
                             <div>
                                 <p className="text-muted-foreground">Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-accent" />
+                            <Clock className="h-5 w-5 text-primary" />
                             <div>
                                 <p className="text-muted-foreground">Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>

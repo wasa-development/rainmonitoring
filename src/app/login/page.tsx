@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CloudSun, LogIn, RefreshCw } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -98,10 +99,13 @@ export default function LoginPage() {
 
     return (
         <main className="flex items-center justify-center min-h-screen bg-background p-4">
-            <Card className="w-full max-w-md shadow-2xl">
+            <Card className="w-full max-w-md shadow-2xl relative">
+                <div className="absolute top-4 right-4">
+                    <ThemeToggle />
+                </div>
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-2 mb-2">
-                        <CloudSun className="w-8 h-8 text-accent" />
+                        <CloudSun className="w-8 h-8 text-primary" />
                         <h1 className="text-2xl font-bold text-primary">Pakistan Weather Pulse</h1>
                     </div>
                     <CardTitle>Sign In</CardTitle>
@@ -148,7 +152,7 @@ export default function LoginPage() {
                     </form>
                      <div className="mt-4 text-center text-sm">
                         Don&apos;t have an account?{" "}
-                        <Link href="/signup" className="underline text-accent hover:text-primary/80">
+                        <Link href="/signup" className="underline text-primary/80 hover:text-primary">
                             Sign up
                         </Link>
                     </div>

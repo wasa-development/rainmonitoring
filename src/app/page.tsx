@@ -12,6 +12,7 @@ import { RefreshCw, CloudSun, AlertTriangle, Search, LogIn, LogOut, LayoutDashbo
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const CitySkeleton = () => (
     <div className="flex flex-col justify-between rounded-lg border bg-card text-card-foreground p-4 space-y-4">
@@ -137,7 +138,7 @@ export default function Home() {
     <main className="min-h-screen p-4 sm:p-8 md:p-12">
       <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
         <div className="flex items-center gap-3">
-          <CloudSun className="w-8 h-8 text-accent" />
+          <CloudSun className="w-8 h-8 text-primary" />
           <h1 className="text-3xl sm:text-4xl font-bold text-primary">
             Pakistan Weather Pulse
           </h1>
@@ -152,12 +153,12 @@ export default function Home() {
                     className="sm:w-48"
                     disabled={searching || loading}
                 />
-                <Button type="submit" variant="outline" disabled={searching || loading || !searchQuery} className="px-3">
+                <Button type="submit" variant="outline" size="icon" disabled={searching || loading || !searchQuery}>
                     {searching ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                     <span className="sr-only">Search</span>
                 </Button>
             </form>
-            <Button onClick={handleRefresh} disabled={refreshing || loading || searching} variant="outline" className="border-accent text-accent hover:bg-accent/10 hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed">
+            <Button onClick={handleRefresh} disabled={refreshing || loading || searching} variant="outline">
               <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </Button>
@@ -187,6 +188,7 @@ export default function Home() {
                     </Button>
                 </Link>
             )}
+            <ThemeToggle />
         </div>
       </header>
 
