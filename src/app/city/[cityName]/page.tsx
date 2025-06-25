@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Home, PlusCircle, Droplets, Trash2, Edit, AlertTriangle } from 'lucide-react';
 import RainAnimation from '@/components/rain-animation';
 import type { PondingPoint } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 // Mock data for demonstration purposes
 const mockPondingPoints: PondingPoint[] = [
@@ -155,17 +156,26 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             </TableHeader>
             <TableBody>
                 {pondingPoints.map((point) => (
-                <TableRow key={point.id} className="relative">
-                    {point.ponding > PONDING_THRESHOLD && (
-                        <div
-                            className="ponding-animation"
-                            style={{ '--ponding-height': `${Math.min((point.ponding / (PONDING_THRESHOLD + 2)) * 100, 100)}%` } as React.CSSProperties}
-                        />
-                    )}
-                    <TableCell className="font-medium relative z-10">{point.name}</TableCell>
-                    <TableCell className="text-right relative z-10">{point.currentSpell.toFixed(1)}</TableCell>
-                    <TableCell className="text-right relative z-10">{point.clearedInTime}</TableCell>
-                    <TableCell className="text-right font-bold relative z-10">
+                <TableRow
+                    key={point.id}
+                    className={cn({
+                    'ponding-animation': point.ponding > PONDING_THRESHOLD,
+                    })}
+                    style={
+                    point.ponding > PONDING_THRESHOLD
+                        ? ({
+                            '--ponding-height': `${Math.min(
+                                (point.ponding / (PONDING_THRESHOLD + 2)) * 100,
+                                100
+                            )}%`,
+                            } as React.CSSProperties)
+                        : undefined
+                    }
+                >
+                    <TableCell className="font-medium">{point.name}</TableCell>
+                    <TableCell className="text-right">{point.currentSpell.toFixed(1)}</TableCell>
+                    <TableCell className="text-right">{point.clearedInTime}</TableCell>
+                    <TableCell className="text-right font-bold">
                         <div className="flex items-center justify-end gap-2">
                         {point.ponding > PONDING_THRESHOLD && (
                             <AlertTriangle className="w-4 h-4 text-destructive" />
@@ -173,7 +183,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         {point.ponding.toFixed(1)}
                         </div>
                     </TableCell>
-                    <TableCell className="text-center relative z-10">
+                    <TableCell className="text-center">
                         {point.isRaining ? (
                             <Badge variant="secondary" className="bg-blue-900/50 text-blue-300 border-blue-500/50">
                                 <Droplets className="mr-1 h-3 w-3" />
@@ -183,7 +193,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                             <Badge variant="outline">Clear</Badge>
                         )}
                     </TableCell>
-                     <TableCell className="text-right relative z-10">
+                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <Edit className="h-4 w-4" />
