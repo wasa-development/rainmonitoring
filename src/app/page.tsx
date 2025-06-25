@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useToast } from "@/hooks/use-toast";
 import type { WeatherData } from "@/lib/weather";
 import { fetchWeatherData, fetchWeatherForCity } from "@/app/actions";
 import WeatherCard from "@/components/weather-card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CloudSun, AlertTriangle, Search } from 'lucide-react';
+import { RefreshCw, CloudSun, AlertTriangle, Search, LogIn } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 
@@ -128,6 +129,12 @@ export default function Home() {
               <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </Button>
+            <Link href="/login" passHref>
+                <Button>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign In
+                </Button>
+            </Link>
         </div>
       </header>
 

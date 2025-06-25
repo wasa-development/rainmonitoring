@@ -41,12 +41,15 @@ export async function createNewUser(formData: FormData) {
             role,
         };
 
+        const claims: { role: 'super-admin' | 'city-user', assignedCity?: string } = { role };
+
         if (role === 'city-user' && assignedCity) {
             userDoc.assignedCity = assignedCity;
+            claims.assignedCity = assignedCity;
         }
 
         await db.collection('users').doc(userRecord.uid).set(userDoc);
-        await auth.setCustomUserClaims(userRecord.uid, { role });
+        await auth.setCustomUserClaims(userRecord.uid, claims);
 
         return { success: true, message: `User ${email} created successfully.` };
     } catch (error: any) {
