@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,9 +17,23 @@ import { CloudSun, LogIn, RefreshCw } from 'lucide-react';
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { user, claims, loading: authLoading } = useAuth();
+    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    
+    useEffect(() => {
+        if (!authLoading && user) {
+            if (claims?.role === 'super-admin') {
+                router.push('/admin');
+            } else if (claims?.role === 'city-user' && claims.assignedCity) {
+                router.push(`/city/${encodeURIComponent(claims.assignedCity)}`);
+            } else {
+                router.push('/');
+            }
+        }
+    }, [authLoading, user, claims, router]);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -72,6 +87,14 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
+    
+    if (authLoading || user) {
+        return (
+            <main className="flex min-h-screen items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            </main>
+        );
+    }
 
     return (
         <main className="flex items-center justify-center min-h-screen bg-background p-4">

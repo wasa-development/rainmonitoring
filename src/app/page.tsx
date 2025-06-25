@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import type { WeatherData } from "@/lib/weather";
 import { fetchWeatherData, fetchWeatherForCity } from "@/app/actions";
@@ -37,6 +38,13 @@ export default function Home() {
   const [searching, setSearching] = useState(false);
   const { toast } = useToast();
   const { user, claims, loading: authLoading, signOut } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
 
   const getDashboardLink = () => {
     if (!claims) return '/';
@@ -67,9 +75,11 @@ export default function Home() {
   }, [toast]);
 
   useEffect(() => {
-    setLoading(true);
-    loadData().finally(() => setLoading(false));
-  }, [loadData]);
+    if (user) { // Only load data if user is authenticated
+        setLoading(true);
+        loadData().finally(() => setLoading(false));
+    }
+  }, [loadData, user]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -113,6 +123,14 @@ export default function Home() {
         setSearching(false);
     }
   };
+
+  if (authLoading || !user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen p-4 sm:p-8 md:p-12">

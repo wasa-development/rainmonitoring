@@ -48,7 +48,7 @@ import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint } from '.
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 
 const PONDING_THRESHOLD = 3.0; // inches
@@ -57,7 +57,8 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const { cityName: encodedCityName } = use(params);
   const cityName = decodeURIComponent(encodedCityName);
   const { toast } = useToast();
-  const { claims, loading: authLoading } = useAuth();
+  const { user, claims, loading: authLoading } = useAuth();
+  const router = useRouter();
   
   const [pondingPoints, setPondingPoints] = useState<PondingPoint[]>([]);
   const [maxSpellToday, setMaxSpellToday] = useState(0);
@@ -72,6 +73,30 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [isPending, startTransition] = useTransition();
 
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      if (claims?.role === 'super-admin') {
+        router.push('/admin');
+      } else if (
+        claims?.role === 'city-user' &&
+        claims.assignedCity &&
+        claims.assignedCity !== cityName
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Access Denied',
+          description: `You can only view the dashboard for ${claims.assignedCity}.`,
+        });
+        router.push(`/city/${encodeURIComponent(claims.assignedCity)}`);
+      }
+    }
+  }, [authLoading, user, claims, cityName, router, toast]);
 
   useEffect(() => {
     async function fetchData() {
@@ -92,8 +117,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         
         setMaxSpellToday(dailyMax);
     }
-    fetchData();
-  }, [cityName, isPending]);
+    if (user) { // Only fetch data if user is logged in
+        fetchData();
+    }
+  }, [cityName, isPending, user]);
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -162,7 +189,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const isRainingAnywhere = pondingPoints.some(p => p.isRaining);
   const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
 
-  if (authLoading) {
+  if (authLoading || !user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <RefreshCw className="h-8 w-8 animate-spin text-primary" />

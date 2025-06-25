@@ -14,9 +14,14 @@ import Link from 'next/link';
 import { Home, UserPlus, Building, RefreshCw, MailCheck, UserCheck, UserX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
     const { toast } = useToast();
+    const { user, claims, loading: authLoading } = useAuth();
+    const router = useRouter();
+
     const [cities, setCities] = useState<City[]>([]);
     const [pendingRequests, setPendingRequests] = useState<UserRequest[]>([]);
     const [selectedRole, setSelectedRole] = useState<'super-admin' | 'city-user' | 'viewer' | ''>('');
@@ -30,6 +35,21 @@ export default function AdminPage() {
     const createCityFormRef = useRef<HTMLFormElement>(null);
     const approveFormRef = useRef<HTMLFormElement>(null);
 
+    useEffect(() => {
+        if (!authLoading) {
+          if (!user) {
+            router.push('/login');
+          } else if (claims?.role !== 'super-admin') {
+            toast({
+              variant: 'destructive',
+              title: 'Access Denied',
+              description: "You don't have permission to view this page.",
+            });
+            router.push('/');
+          }
+        }
+    }, [authLoading, user, claims, router, toast]);
+
     const fetchData = async () => {
         const [cityData, requestData] = await Promise.all([getCities(), getPendingUserRequests()]);
         setCities(cityData);
@@ -37,8 +57,10 @@ export default function AdminPage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (claims?.role === 'super-admin') {
+            fetchData();
+        }
+    }, [claims]);
 
     const handleCreateUser = async (formData: FormData) => {
         startSubmitting(async () => {
@@ -96,6 +118,14 @@ export default function AdminPage() {
             }
         });
     };
+    
+    if (authLoading || !user || claims?.role !== 'super-admin') {
+        return (
+          <main className="flex min-h-screen items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+          </main>
+        );
+    }
 
 
   return (

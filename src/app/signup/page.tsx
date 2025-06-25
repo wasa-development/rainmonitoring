@@ -13,14 +13,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CloudSun, UserPlus, RefreshCw } from 'lucide-react';
 import type { City } from '@/lib/types';
 import { getCities, requestSignup } from './actions';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { user, loading: authLoading } = useAuth();
+
     const [isLoading, setIsLoading] = useState(false);
     const [cities, setCities] = useState<City[]>([]);
     const [selectedRole, setSelectedRole] = useState<'city-user' | 'viewer' | ''>('');
     const formRef = useRef<HTMLFormElement>(null);
+
+    useEffect(() => {
+        if (!authLoading && user) {
+            router.push('/');
+        }
+    }, [authLoading, user, router]);
 
     useEffect(() => {
         async function fetchCityData() {
@@ -51,6 +60,14 @@ export default function SignupPage() {
         }
         setIsLoading(false);
     };
+    
+    if (authLoading || user) {
+        return (
+            <main className="flex min-h-screen items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            </main>
+        );
+    }
 
     return (
         <main className="flex items-center justify-center min-h-screen bg-background p-4">
