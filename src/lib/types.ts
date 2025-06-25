@@ -14,3 +14,15 @@ export interface PondingPoint {
     ponding: number;
     isRaining: boolean;
 }
+
+export interface AdminUser {
+    uid: string;
+    email: string;
+    role: 'super-admin' | 'city-user';
+    assignedCity?: string;
+}
+
+export interface City {
+    id: string;
+    name: string;
+}
