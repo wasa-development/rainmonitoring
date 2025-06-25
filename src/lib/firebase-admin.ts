@@ -19,38 +19,50 @@
  */
 import admin from 'firebase-admin';
 
-// Check if admin is already initialized
-if (!admin.apps.length) {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+/**
+ * Initializes the Firebase Admin SDK if it hasn't been initialized yet.
+ * This function is designed to be idempotent.
+ * @returns The initialized Firebase Admin module.
+ * @throws {Error} If Firebase credentials are not set or initialization fails.
+ */
+function getInitializedAdmin() {
+  if (admin.apps.length === 0) {
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-  // Only attempt to initialize if all credentials are provided
-  if (projectId && clientEmail && privateKey) {
-    try {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: projectId,
-          clientEmail: clientEmail,
-          privateKey: privateKey,
-        }),
-      });
-      console.log("Firebase Admin SDK initialized successfully.");
-    } catch (error: any) {
-      console.error('Firebase admin initialization error:', error.stack);
-    }
-  } else {
-    // This provides a clear warning if credentials are not in the environment.
-    if (process.env.NODE_ENV !== 'production') {
-        console.warn(
-            'Firebase Admin credentials are not fully set in .env.local. Skipping initialization. ' +
-            'Required: NEXT_PUBLIC_FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY'
-        );
+    if (projectId && clientEmail && privateKey) {
+      try {
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey,
+          }),
+        });
+        console.log("Firebase Admin SDK initialized successfully.");
+      } catch (error: any) {
+        console.error('Firebase admin initialization error:', error.stack);
+        // Throw an error to prevent the app from starting in a broken state.
+        throw new Error('Failed to initialize Firebase Admin SDK.');
+      }
+    } else {
+      // Throw a clear error if credentials are missing.
+      // This stops the server from crashing silently and provides a clear debug message.
+      throw new Error(
+          'Firebase Admin credentials are not fully set in environment variables. ' +
+          'Required: NEXT_PUBLIC_FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY'
+      );
     }
   }
+  return admin;
 }
 
-const auth = admin.auth();
-const db = admin.firestore();
+// Get the initialized admin instance. This will throw if it fails.
+const initializedAdmin = getInitializedAdmin();
+const auth = initializedAdmin.auth();
+const db = initializedAdmin.firestore();
 
+// Export the original admin module for things like `admin.firestore.FieldValue`
+// and the initialized services.
 export { admin, auth, db };
