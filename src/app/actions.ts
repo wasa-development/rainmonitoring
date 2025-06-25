@@ -55,7 +55,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   const apiKey = process.env.ACCUWEATHER_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The AccuWeather API key is missing. Please add ACCUWEATHER_API_KEY to your environment variables.");
+    throw new Error("The AccuWeather API key is missing. For production, you must set the ACCUWEATHER_API_KEY environment variable in your hosting provider's settings.");
   }
   
   const cities = await getCities();
@@ -153,7 +153,7 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
   const apiKey = process.env.ACCUWEATHER_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The AccuWeather API key is missing. Please add ACCUWEATHER_API_KEY to your environment variables.");
+    throw new Error("The AccuWeather API key is missing. For production, you must set the ACCUWEATHER_API_KEY environment variable in your hosting provider's settings.");
   }
 
   try {
