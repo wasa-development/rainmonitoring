@@ -105,6 +105,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             await db.collection('ponding_points').add(pointDataForDb);
         }
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         return { success: true, message: `Ponding point ${id ? 'updated' : 'created'} successfully.` };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
@@ -153,6 +154,7 @@ export async function startSpell(cityName: string) {
         });
 
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         return { success: true, message: 'Spell started successfully.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
@@ -192,6 +194,7 @@ export async function stopSpell(cityName: string) {
         await batch.commit();
 
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         return { success: true, message: 'Spell ended and data saved.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
@@ -206,8 +209,124 @@ export async function deletePondingPoint(id: string, cityName: string) {
     try {
         await db.collection('ponding_points').doc(id).delete();
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         return { success: true, message: 'Ponding point deleted successfully.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
+    }
+}
+
+
+// Helper function to parse form data with array-like keys into an array of objects
+function parsePointsFromFormData(formData: FormData) {
+    const pointsMap = new Map<string, any>();
+    
+    for (const [key, value] of formData.entries()) {
+        const match = key.match(/^points\[(\d+)\]\.(.+)$/);
+        if (match) {
+            const [, index, field] = match;
+            if (!pointsMap.has(index)) {
+                pointsMap.set(index, { index: parseInt(index, 10) });
+            }
+            pointsMap.get(index)[field] = value;
+        }
+    }
+    
+    return Array.from(pointsMap.values()).sort((a, b) => a.index - b.index);
+}
+
+
+const BatchPondingPointSchema = z.object({
+  id: z.string().min(1, { message: 'ID is missing.' }),
+  name: z.string(), // for error messages
+  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }),
+  clearedInTime: z.string().optional(),
+  ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }),
+});
+
+export async function batchUpdatePondingPoints(formData: FormData, cityName: string) {
+    const parsedPoints = parsePointsFromFormData(formData);
+    
+    const validationResults = parsedPoints.map(p => BatchPondingPointSchema.safeParse(p));
+
+    // Find the first validation error, if any
+    for (let i = 0; i < validationResults.length; i++) {
+        const result = validationResults[i];
+        if (!result.success) {
+            const pointName = parsedPoints[i]?.name || `Point #${i + 1}`;
+            const firstError = Object.values(result.error.flatten().fieldErrors)[0]?.[0];
+            return { success: false, error: `Error for ${pointName}: ${firstError || 'Invalid input.'}` };
+        }
+    }
+
+    const pointsToUpdate = validationResults.map(res => (res as z.SafeParseSuccess<any>).data);
+
+    try {
+        const batch = db.batch();
+        const allPointIds = pointsToUpdate.map(p => p.id);
+        
+        // Fetch all existing points in one go
+        const existingPointsSnapshots = allPointIds.length > 0
+            ? await db.collection('ponding_points').where(admin.firestore.FieldPath.documentId(), 'in', allPointIds).get()
+            : { docs: [] };
+        const existingPointsData = new Map(existingPointsSnapshots.docs.map(doc => [doc.id, doc.data() as PondingPoint]));
+
+        for (const pointData of pointsToUpdate) {
+            const pointRef = db.collection('ponding_points').doc(pointData.id);
+            const existingData = existingPointsData.get(pointData.id);
+
+            if (!existingData) {
+                console.warn(`Ponding point with ID ${pointData.id} not found during batch update. Skipping.`);
+                continue;
+            }
+
+            const oldPonding = existingData.ponding ?? 0;
+            const newPonding = pointData.ponding;
+
+            if (oldPonding > 0 && newPonding === 0 && !pointData.clearedInTime) {
+                return { 
+                    success: false, 
+                    error: `'Cleared In' time is required for ${pointData.name} since ponding was resolved.` 
+                };
+            }
+            
+            const currentSpellValue = pointData.currentSpell ?? 0;
+            
+            let dailyMaxSpell = currentSpellValue;
+            let maxSpellRainfall = currentSpellValue;
+
+            if (existingData.updatedAt) {
+                const lastUpdated = existingData.updatedAt.toDate();
+                const now = new Date();
+                const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
+                                  lastUpdated.getMonth() === now.getMonth() &&
+                                  lastUpdated.getDate() === now.getDate();
+                
+                const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
+                dailyMaxSpell = Math.max(oldDailyMax, currentSpellValue);
+            }
+            const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
+            maxSpellRainfall = Math.max(oldMaxSpellRainfall, currentSpellValue);
+
+            const pointDataForDb = { 
+                currentSpell: currentSpellValue,
+                clearedInTime: pointData.clearedInTime ?? '',
+                ponding: newPonding,
+                isRaining: currentSpellValue > 0,
+                dailyMaxSpell,
+                maxSpellRainfall,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+
+            batch.set(pointRef, pointDataForDb, { merge: true });
+        }
+
+        await batch.commit();
+
+        revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
+        return { success: true, message: 'All points updated successfully.' };
+    } catch (error: any) {
+        return { success: false, error: error.message || 'An unknown server error occurred.' };
     }
 }

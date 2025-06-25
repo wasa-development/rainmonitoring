@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, use, useEffect, useRef, useTransition } from 'react';
@@ -24,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine } from 'lucide-react';
 import type { AdminUser, PondingPoint, Spell } from '@/lib/types';
 import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -217,6 +218,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </h1>
             </div>
             <div className="flex items-center gap-2">
+                {claims?.role === 'city-user' && (
+                    <Link href={`/city/${encodeURIComponent(cityName)}/data-entry`} passHref>
+                        <Button variant="outline">
+                            <FilePenLine className="mr-2" />
+                            Bulk Data Entry
+                        </Button>
+                    </Link>
+                )}
                 {claims?.role !== 'viewer' && (
                     <>
                         <Button onClick={handleToggleSpell} disabled={isPending}>
