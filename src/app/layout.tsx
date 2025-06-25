@@ -1,4 +1,4 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/components/theme-provider';
@@ -6,6 +6,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 export const metadata: Metadata = {
   title: 'Pakistan Weather Pulse',
   description: 'Live weather updates for major cities in Pakistan.',
+};
+
+export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "white" },
     { media: "(prefers-color-scheme: dark)", color: "black" },
