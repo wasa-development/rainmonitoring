@@ -9,6 +9,7 @@ export interface WeatherData {
 export interface PondingPoint {
     id: string;
     name: string;
+    cityName: string;
     currentSpell: number;
     clearedInTime: string;
     ponding: number;
