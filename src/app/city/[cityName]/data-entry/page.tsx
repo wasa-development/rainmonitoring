@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, use, useEffect, useRef, useTransition } from 'react';
@@ -197,9 +196,11 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                             <TableBody>
                                 {points.map((point, index) => (
                                     <TableRow key={point.id}>
-                                        <input type="hidden" name={`points[${index}].id`} defaultValue={point.id} />
-                                        <input type="hidden" name={`points[${index}].name`} defaultValue={point.name} />
-                                        <TableCell className="font-medium">{point.name}</TableCell>
+                                        <TableCell className="font-medium">
+                                            <input type="hidden" name={`points[${index}].id`} defaultValue={point.id} />
+                                            <input type="hidden" name={`points[${index}].name`} defaultValue={point.name} />
+                                            {point.name}
+                                        </TableCell>
                                         <TableCell>
                                             <Input
                                                 name={`points[${index}].currentSpell`}
