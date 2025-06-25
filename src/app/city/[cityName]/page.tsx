@@ -2,14 +2,6 @@
 
 import { useState, use, useEffect, useRef, useTransition } from 'react';
 import Link from 'next/link';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -39,19 +31,15 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Home, PlusCircle, Droplets, Trash2, Edit, AlertTriangle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
-import RainAnimation from '@/components/rain-animation';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
 import type { PondingPoint } from '@/lib/types';
-import { cn } from '@/lib/utils';
 import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import PondingPointCard from '@/components/ponding-point-card';
 
-
-const PONDING_THRESHOLD = 3.0; // inches
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -68,6 +56,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
   const [isSpellActive, setIsSpellActive] = useState(false);
+  const [isStopSpellBlocked, setStopSpellBlocked] = useState(false);
 
   const [isPending, startTransition] = useTransition();
 
@@ -79,22 +68,26 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         router.push('/login');
         return;
       }
-
-      if (claims?.role === 'super-admin') {
-        router.push('/admin');
-      } else if (
-        claims?.role === 'city-user' &&
-        claims.assignedCity &&
-        claims.assignedCity !== cityName
-      ) {
-        toast({
-          variant: 'destructive',
-          title: 'Access Denied',
-          description: `You can only view the dashboard for ${claims.assignedCity}.`,
-        });
-        router.push(`/city/${encodeURIComponent(claims.assignedCity)}`);
-      }
     }
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+     if (!authLoading && user) {
+        if (claims?.role === 'super-admin') {
+            router.push('/admin');
+        } else if (
+            claims?.role === 'city-user' &&
+            claims.assignedCity &&
+            claims.assignedCity !== cityName
+        ) {
+            toast({
+            variant: 'destructive',
+            title: 'Access Denied',
+            description: `You can only view the dashboard for ${claims.assignedCity}.`,
+            });
+            router.push(`/city/${encodeURIComponent(claims.assignedCity)}`);
+        }
+     }
   }, [authLoading, user, claims, cityName, router, toast]);
 
   useEffect(() => {
@@ -104,7 +97,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
           getActiveSpell(cityName)
         ]);
 
-        const sortedPoints = points.sort((a, b) => b.currentSpell - a.currentSpell);
+        const sortedPoints = points.sort((a, b) => (b.dailyMaxSpell ?? 0) - (a.dailyMaxSpell ?? 0));
         setPondingPoints(sortedPoints);
         setIsSpellActive(!!activeSpell);
         
@@ -121,7 +114,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         
         setMaxSpellToday(dailyMax);
     }
-    if (user) { // Only fetch data if user is logged in
+    if (user) { 
         fetchData();
     }
   }, [cityName, isPending, user]);
@@ -178,20 +171,22 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const handleToggleSpell = () => {
     startTransition(async () => {
       if (isSpellActive) {
-        // Stop the spell
+        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0);
+        if (hasActiveRain) {
+            setStopSpellBlocked(true);
+            return;
+        }
+
         const result = await stopSpell(cityName);
         if (result.success) {
           toast({ title: 'Spell Ended', description: 'Spell data saved and rainfall values reset.' });
-          setIsSpellActive(false);
         } else {
           toast({ variant: 'destructive', title: 'Error Stopping Spell', description: result.error });
         }
       } else {
-        // Start the spell
         const result = await startSpell(cityName);
         if (result.success) {
           toast({ title: 'Spell Started', description: 'You can now enter rainfall data.' });
-          setIsSpellActive(true);
         } else {
           toast({ variant: 'destructive', title: 'Error Starting Spell', description: result.error });
         }
@@ -199,7 +194,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     });
   };
 
-  const isRainingAnywhere = pondingPoints.some(p => p.isRaining);
   const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
 
   if (authLoading || !user) {
@@ -212,8 +206,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      {isSpellActive && isRainingAnywhere && <RainAnimation />}
-      
       <main className="container mx-auto p-4 sm:p-6 md:p-8 z-10 relative">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
             <div className="flex items-center gap-4">
@@ -244,7 +236,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 <DialogDescription>
                                     {editingPoint
                                         ? "Update the details for this ponding point. Rainfall data can only be entered during an active spell."
-                                        : "Add a new location to track for ponding."
+                                        : "Add a new location to track for ponding. Only a name is needed to start."
                                     }
                                 </DialogDescription>
                                 </DialogHeader>
@@ -275,7 +267,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                                 </div>
                                             </>
                                         )}
-                                        {!editingPoint && (
+                                        {(!editingPoint && !isSpellActive) && (
                                             <p className="text-sm text-muted-foreground text-center col-span-4 pt-4">
                                                 Rainfall data can be added by editing this point during an active spell.
                                             </p>
@@ -295,87 +287,24 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             </div>
         </header>
 
-        <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
-            <Table>
-            <TableHeader>
-                <TableRow>
-                <TableHead className="w-[250px]">Ponding Point</TableHead>
-                <TableHead className="text-right">Current Spell (mm)</TableHead>
-                <TableHead className="text-right">Cleared in (hh:mm)</TableHead>
-                <TableHead className="text-right">Ponding (in)</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                {claims?.role !== 'viewer' && (
-                    <TableHead className="text-right">Actions</TableHead>
-                )}
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {pondingPoints.length > 0 ? pondingPoints.map((point) => (
-                <TableRow
-                    key={point.id}
-                    className={cn({
-                    'ponding-animation': point.ponding > PONDING_THRESHOLD,
-                    })}
-                    style={
-                    point.ponding > PONDING_THRESHOLD
-                        ? ({
-                            '--ponding-height': `${Math.min(
-                                (point.ponding / (PONDING_THRESHOLD + 2)) * 100,
-                                100
-                            )}%`,
-                            } as React.CSSProperties)
-                        : undefined
-                    }
-                >
-                    <TableCell className="font-medium">{point.name}</TableCell>
-                    <TableCell className="text-right">{point.currentSpell.toFixed(1)}</TableCell>
-                    <TableCell className="text-right">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</TableCell>
-                    <TableCell className="text-right font-bold">
-                        <div className="flex items-center justify-end gap-2">
-                        {point.ponding > PONDING_THRESHOLD && (
-                            <AlertTriangle className="w-4 h-4 text-destructive" />
-                        )}
-                        {point.ponding.toFixed(1)}
-                        </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                        {point.isRaining && point.currentSpell > 0 ? (
-                            <Badge variant="secondary" className="bg-blue-900/50 text-blue-300 border-blue-500/50">
-                                <Droplets className="mr-1 h-3 w-3" />
-                                Raining
-                            </Badge>
-                        ) : point.ponding > 0 ? (
-                            <Badge variant="secondary" className="bg-amber-900/60 text-amber-300 border-amber-500/60">
-                                <AlertTriangle className="mr-1 h-3 w-3" />
-                                Ponding
-                            </Badge>
-                        ) : (
-                            <Badge variant="outline">Clear</Badge>
-                        )}
-                    </TableCell>
-                     {claims?.role !== 'viewer' && (
-                         <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(point)}>
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(point)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </TableCell>
-                     )}
-                </TableRow>
-                )) : (
-                    <TableRow>
-                        <TableCell colSpan={claims?.role !== 'viewer' ? 6 : 5} className="text-center h-24 text-muted-foreground">
-                            No ponding points added for {cityName} yet.
-                        </TableCell>
-                    </TableRow>
-                )}
-            </TableBody>
-            </Table>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {pondingPoints.length > 0 ? (
+                pondingPoints.map((point) => (
+                    <PondingPointCard 
+                        key={point.id}
+                        point={point}
+                        onEdit={handleEditClick}
+                        onDelete={handleDeleteClick}
+                        userRole={claims?.role}
+                    />
+                ))
+            ) : (
+                <div className="col-span-full text-center py-24 bg-card rounded-lg border">
+                    <p className="text-muted-foreground">No ponding points added for {cityName} yet.</p>
+                </div>
+            )}
         </div>
+
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
@@ -417,6 +346,20 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         {isPending && <RefreshCw className="animate-spin" />}
                         {isPending ? 'Deleting...' : 'Delete'}
                     </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isStopSpellBlocked} onOpenChange={setStopSpellBlocked}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Cannot Stop Spell</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You cannot stop the spell while rainfall is still being recorded for one or more ponding points. Please ensure all points have a "Current Spell" of 0.0 mm before stopping the spell.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => setStopSpellBlocked(false)}>OK</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
