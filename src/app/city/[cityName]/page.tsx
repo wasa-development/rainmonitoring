@@ -59,6 +59,8 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [isSpellActive, setIsSpellActive] = useState(false);
   const [isStopSpellBlocked, setStopSpellBlocked] = useState(false);
   const [currentPondingInput, setCurrentPondingInput] = useState<number | undefined>(undefined);
+  const [pondingInputValue, setPondingInputValue] = useState('');
+
 
   const [isPending, startTransition] = useTransition();
 
@@ -154,7 +156,9 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   const handleEditClick = (point: PondingPoint) => {
     setEditingPoint(point);
-    setCurrentPondingInput(point.ponding ?? 0);
+    const pondingValue = point.ponding ?? 0;
+    setCurrentPondingInput(pondingValue);
+    setPondingInputValue(String(pondingValue));
     setFormOpen(true);
   };
 
@@ -167,6 +171,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     if (!open) {
         setEditingPoint(null);
         setCurrentPondingInput(undefined);
+        setPondingInputValue('');
         formRef.current?.reset();
     }
     setFormOpen(open);
@@ -278,8 +283,11 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                                         step="0.1" min="0"
                                                         className="col-span-3"
                                                         required
-                                                        defaultValue={editingPoint?.ponding ?? 0}
-                                                        onChange={(e) => setCurrentPondingInput(parseFloat(e.target.value) || 0)}
+                                                        value={pondingInputValue}
+                                                        onChange={(e) => {
+                                                            setPondingInputValue(e.target.value);
+                                                            setCurrentPondingInput(parseFloat(e.target.value) || 0);
+                                                        }}
                                                     />
                                                 </div>
                                             </>
