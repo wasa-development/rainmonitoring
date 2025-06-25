@@ -31,7 +31,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
   const weatherPromises = CITIES.map(async (city) => {
     try {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=${city},PK&appid=${apiKey}&units=metric`;
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)},PK&appid=${apiKey}&units=metric`;
       const response = await fetch(url, { next: { revalidate: 3600 } }); // Revalidate every hour
       
       if (!response.ok) {
@@ -79,7 +79,7 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
   }
 
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city},PK&appid=${apiKey}&units=metric`;
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)},PK&appid=${apiKey}&units=metric`;
     const response = await fetch(url);
     
     if (!response.ok) {
