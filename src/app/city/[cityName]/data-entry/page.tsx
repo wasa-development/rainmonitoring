@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, use, useEffect, useRef, useTransition } from 'react';
@@ -190,7 +191,9 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                                     <TableHead>Rain (mm)</TableHead>
                                     <TableHead>Ponding (in)</TableHead>
                                     <TableHead>Cleared In (hh:mm)</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    {claims?.role !== 'city-user' && (
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    )}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -233,11 +236,13 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                                                 className="max-w-xs"
                                             />
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(point)} disabled={isPending}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
+                                        {claims?.role !== 'city-user' && (
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(point)} disabled={isPending}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>
