@@ -154,7 +154,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </Button>
                 <Dialog open={isFormOpen} onOpenChange={handleDialogClose}>
                     <DialogTrigger asChild>
-                        <Button>
+                         <Button onClick={() => setEditingPoint(null)}>
                             <PlusCircle className="mr-2" />
                             Add Point
                         </Button>
@@ -163,10 +163,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         <DialogHeader>
                         <DialogTitle>{editingPoint ? 'Edit' : 'Add New'} Ponding Point</DialogTitle>
                         <DialogDescription>
-                           {isSpellActive
-                            ? "Enter the details for the location. Click save when you're done."
-                            : "Add a new ponding point name. Start a spell to enter data."
-                           }
+                            {editingPoint
+                                ? "Update the details for this ponding point. Rainfall data can only be entered during an active spell."
+                                : "Add a new location to track for ponding."
+                            }
                         </DialogDescription>
                         </DialogHeader>
                         <form ref={formRef} onSubmit={handleFormSubmit}>
@@ -176,22 +176,26 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                     <Label htmlFor="name" className="text-right">Name</Label>
                                     <Input id="name" name="name" className="col-span-3" required defaultValue={editingPoint?.name} />
                                 </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="currentSpell" className="text-right">Spell (mm)</Label>
-                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell} disabled={!isSpellActive} />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
-                                    <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={!isSpellActive} />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
-                                    <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding} disabled={!isSpellActive} />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="isRaining" className="text-right">Raining?</Label>
-                                    <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} disabled={!isSpellActive} />
-                                </div>
+                                {editingPoint && (
+                                    <>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="currentSpell" className="text-right">Spell (mm)</Label>
+                                            <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell} disabled={!isSpellActive} />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
+                                            <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={!isSpellActive || (editingPoint?.ponding ?? 0) > 0} />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
+                                            <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding} disabled={!isSpellActive} />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="isRaining" className="text-right">Raining?</Label>
+                                            <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} disabled={!isSpellActive} />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                             <DialogFooter>
                                 <Button type="submit" disabled={isPending}>
