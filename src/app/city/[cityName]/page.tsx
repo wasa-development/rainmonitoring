@@ -251,7 +251,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                             <>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="currentSpell" className="text-right">Spell (mm)</Label>
-                                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell ?? 0} />
+                                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" min="0" className="col-span-3" required defaultValue={editingPoint?.currentSpell ?? 0} />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
@@ -259,7 +259,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
-                                                    <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding ?? 0} />
+                                                    <Input id="ponding" name="ponding" type="number" step="0.1" min="0" className="col-span-3" required defaultValue={editingPoint?.ponding ?? 0} />
                                                 </div>
                                             </>
                                         )}

@@ -8,9 +8,9 @@ import { z } from 'zod';
 const PondingPointSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, { message: 'Name is required.' }),
-  currentSpell: z.coerce.number().min(0, { message: 'Spell must be a positive number.' }).optional(),
+  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }).optional(),
   clearedInTime: z.string().optional(),
-  ponding: z.coerce.number().min(0, { message: 'Ponding must be a positive number.' }).optional(),
+  ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }).optional(),
 });
 
 export async function getPondingPoints(cityName: string): Promise<PondingPoint[]> {
