@@ -32,7 +32,8 @@
     --sidebar-primary: 221.2 83.2% 53.3%;
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-ring: 221.2 83.2% 53.3%;
-    --raindrop-gradient-color: rgba(0, 255, 255, 0.5);
+    /* Unified color for light theme water effects */
+    --raindrop-gradient-color: rgba(0, 255, 255, 0.6);
   }
 
   .dark {
@@ -63,6 +64,7 @@
     --sidebar-primary: 217.2 91.2% 59.8%;
     --sidebar-primary-foreground: 222.2 47.4% 11.2%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Unified color for dark theme water effects */
     --raindrop-gradient-color: rgba(173, 216, 230, 0.4);
   }
 }
@@ -125,21 +127,21 @@
 
 .wave-layer.wave1 {
     animation-delay: -3s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(0,255,255,0.5)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(0,255,255,0.6)"/></svg>');
 }
 
 .wave-layer.wave2 {
     animation-direction: reverse;
     animation-duration: 10s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(0,255,255,0.7)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(0,255,255,0.6)"/></svg>');
 }
 
 .dark .wave-layer.wave1 {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(173,216,230,0.3)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(173,216,230,0.4)"/></svg>');
 }
 
 .dark .wave-layer.wave2 {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(173,216,230,0.5)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(173,216,230,0.4)"/></svg>');
 }
 
 
