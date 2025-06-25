@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, use, useEffect, useRef, useTransition } from 'react';
@@ -57,6 +58,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
   const [isSpellActive, setIsSpellActive] = useState(false);
   const [isStopSpellBlocked, setStopSpellBlocked] = useState(false);
+  const [currentPondingInput, setCurrentPondingInput] = useState<number | undefined>(undefined);
 
   const [isPending, startTransition] = useTransition();
 
@@ -152,6 +154,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   const handleEditClick = (point: PondingPoint) => {
     setEditingPoint(point);
+    setCurrentPondingInput(point.ponding ?? 0);
     setFormOpen(true);
   };
 
@@ -163,6 +166,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const handleDialogClose = (open: boolean) => {
     if (!open) {
         setEditingPoint(null);
+        setCurrentPondingInput(undefined);
         formRef.current?.reset();
     }
     setFormOpen(open);
@@ -255,11 +259,28 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
-                                                    <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={(editingPoint?.ponding ?? 0) > 0} />
+                                                    <Input
+                                                        id="clearedInTime"
+                                                        name="clearedInTime"
+                                                        type="text"
+                                                        placeholder="02:30"
+                                                        className="col-span-3"
+                                                        defaultValue={editingPoint?.clearedInTime}
+                                                        disabled={(currentPondingInput ?? 0) > 0}
+                                                    />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
-                                                    <Input id="ponding" name="ponding" type="number" step="0.1" min="0" className="col-span-3" required defaultValue={editingPoint?.ponding ?? 0} />
+                                                    <Input
+                                                        id="ponding"
+                                                        name="ponding"
+                                                        type="number"
+                                                        step="0.1" min="0"
+                                                        className="col-span-3"
+                                                        required
+                                                        defaultValue={editingPoint?.ponding ?? 0}
+                                                        onChange={(e) => setCurrentPondingInput(parseFloat(e.target.value) || 0)}
+                                                    />
                                                 </div>
                                             </>
                                         )}
