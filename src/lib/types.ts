@@ -44,3 +44,16 @@ export interface UserRequest {
     status: 'pending' | 'approved' | 'rejected';
     requestedAt?: Date;
 }
+
+export interface Spell {
+    id: string;
+    cityName: string;
+    startTime: Date;
+    endTime?: Date;
+    status: 'active' | 'completed';
+    spellData: {
+        pointId: string;
+        pointName: string;
+        totalRainfall: number;
+    }[];
+}

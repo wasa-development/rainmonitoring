@@ -44,7 +44,7 @@ import { Home, PlusCircle, Droplets, Trash2, Edit, AlertTriangle, RefreshCw, Pla
 import RainAnimation from '@/components/rain-animation';
 import type { PondingPoint } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint } from './actions';
+import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
@@ -68,7 +68,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
   const [isSpellActive, setIsSpellActive] = useState(false);
-  const [showStopSpellAlert, setShowStopSpellAlert] = useState(false);
 
   const [isPending, startTransition] = useTransition();
 
@@ -100,9 +99,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   useEffect(() => {
     async function fetchData() {
-        const points = await getPondingPoints(cityName);
+        const [points, activeSpell] = await Promise.all([
+          getPondingPoints(cityName),
+          getActiveSpell(cityName)
+        ]);
+
         const sortedPoints = points.sort((a, b) => b.currentSpell - a.currentSpell);
         setPondingPoints(sortedPoints);
+        setIsSpellActive(!!activeSpell);
         
         const now = new Date();
         const dailyMax = Math.max(0, ...points
@@ -172,18 +176,27 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   }
 
   const handleToggleSpell = () => {
-    if (isSpellActive) {
-      // Trying to stop the spell
-      const hasActiveRainfall = pondingPoints.some(p => p.currentSpell > 0);
-      if (hasActiveRainfall) {
-        setShowStopSpellAlert(true);
+    startTransition(async () => {
+      if (isSpellActive) {
+        // Stop the spell
+        const result = await stopSpell(cityName);
+        if (result.success) {
+          toast({ title: 'Spell Ended', description: 'Spell data saved and rainfall values reset.' });
+          setIsSpellActive(false);
+        } else {
+          toast({ variant: 'destructive', title: 'Error Stopping Spell', description: result.error });
+        }
       } else {
-        setIsSpellActive(false);
+        // Start the spell
+        const result = await startSpell(cityName);
+        if (result.success) {
+          toast({ title: 'Spell Started', description: 'You can now enter rainfall data.' });
+          setIsSpellActive(true);
+        } else {
+          toast({ variant: 'destructive', title: 'Error Starting Spell', description: result.error });
+        }
       }
-    } else {
-      // Starting the spell
-      setIsSpellActive(true);
-    }
+    });
   };
 
   const isRainingAnywhere = pondingPoints.some(p => p.isRaining);
@@ -214,8 +227,8 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             <div className="flex items-center gap-2">
                 {claims?.role !== 'viewer' && (
                     <>
-                        <Button onClick={handleToggleSpell}>
-                            {isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
+                        <Button onClick={handleToggleSpell} disabled={isPending}>
+                            {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
                             {isSpellActive ? 'Stop Spell' : 'Start Spell'}
                         </Button>
                         <Dialog open={isFormOpen} onOpenChange={handleDialogClose}>
@@ -242,25 +255,30 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                             <Label htmlFor="name" className="text-right">Name</Label>
                                             <Input id="name" name="name" className="col-span-3" required defaultValue={editingPoint?.name} />
                                         </div>
-                                        {editingPoint && (
+                                        {isSpellActive && editingPoint && (
                                             <>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="currentSpell" className="text-right">Spell (mm)</Label>
-                                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell} disabled={!isSpellActive} />
+                                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell ?? 0} />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
-                                                    <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={!isSpellActive || (editingPoint?.ponding ?? 0) > 0} />
+                                                    <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={(editingPoint?.ponding ?? 0) > 0} />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
-                                                    <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding} disabled={!isSpellActive} />
+                                                    <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding ?? 0} />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="isRaining" className="text-right">Raining?</Label>
-                                                    <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} disabled={!isSpellActive} />
+                                                    <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} />
                                                 </div>
                                             </>
+                                        )}
+                                        {!editingPoint && (
+                                            <p className="text-sm text-muted-foreground text-center col-span-4 pt-4">
+                                                Rainfall data can be added by editing this point during an active spell.
+                                            </p>
                                         )}
                                     </div>
                                     <DialogFooter>
@@ -399,20 +417,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         {isPending && <RefreshCw className="animate-spin" />}
                         {isPending ? 'Deleting...' : 'Delete'}
                     </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={showStopSpellAlert} onOpenChange={setShowStopSpellAlert}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Cannot Stop Spell</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        You cannot stop the spell while rainfall is recorded at one or more points. Please set "Spell (mm)" to 0.0 for all points to proceed.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogAction onClick={() => setShowStopSpellAlert(false)}>OK</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

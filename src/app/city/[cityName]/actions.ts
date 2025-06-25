@@ -1,7 +1,7 @@
 'use server';
 
 import { db, admin } from '@/lib/firebase-admin';
-import type { PondingPoint } from '@/lib/types';
+import type { PondingPoint, Spell } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -87,6 +87,95 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
         }
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         return { success: true, message: `Ponding point ${id ? 'updated' : 'created'} successfully.` };
+    } catch (error: any) {
+        return { success: false, error: error.message || 'An unknown error occurred.' };
+    }
+}
+
+export async function getActiveSpell(cityName: string): Promise<Spell | null> {
+    try {
+        const snapshot = await db.collection('spells')
+            .where('cityName', '==', cityName)
+            .where('status', '==', 'active')
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            return null;
+        }
+
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            startTime: data.startTime.toDate(),
+            endTime: data.endTime ? data.endTime.toDate() : undefined,
+        } as Spell;
+    } catch (error) {
+        console.error("Error fetching active spell:", error);
+        return null;
+    }
+}
+
+export async function startSpell(cityName: string) {
+    try {
+        const activeSpell = await getActiveSpell(cityName);
+        if (activeSpell) {
+            return { success: false, error: 'A spell is already active for this city.' };
+        }
+
+        await db.collection('spells').add({
+            cityName,
+            startTime: admin.firestore.FieldValue.serverTimestamp(),
+            endTime: null,
+            status: 'active',
+            spellData: [],
+        });
+
+        revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        return { success: true, message: 'Spell started successfully.' };
+    } catch (error: any) {
+        return { success: false, error: error.message || 'An unknown error occurred.' };
+    }
+}
+
+
+export async function stopSpell(cityName: string) {
+    try {
+        const activeSpell = await getActiveSpell(cityName);
+        if (!activeSpell) {
+            return { success: false, error: 'No active spell found to stop.' };
+        }
+
+        const pondingPoints = await getPondingPoints(cityName);
+
+        const spellData = pondingPoints.map(point => ({
+            pointId: point.id,
+            pointName: point.name,
+            totalRainfall: point.currentSpell,
+        }));
+
+        const batch = db.batch();
+
+        // Update the spell document
+        const spellRef = db.collection('spells').doc(activeSpell.id);
+        batch.update(spellRef, {
+            status: 'completed',
+            endTime: admin.firestore.FieldValue.serverTimestamp(),
+            spellData: spellData
+        });
+
+        // Reset currentSpell for all ponding points
+        pondingPoints.forEach(point => {
+            const pointRef = db.collection('ponding_points').doc(point.id);
+            batch.update(pointRef, { currentSpell: 0, isRaining: false });
+        });
+
+        await batch.commit();
+
+        revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        return { success: true, message: 'Spell ended and data saved.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
     }
