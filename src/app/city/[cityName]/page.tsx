@@ -64,6 +64,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
   const [isSpellActive, setIsSpellActive] = useState(false);
+  const [showStopSpellAlert, setShowStopSpellAlert] = useState(false);
 
   const [isPending, startTransition] = useTransition();
 
@@ -130,6 +131,21 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     setFormOpen(open);
   }
 
+  const handleToggleSpell = () => {
+    if (isSpellActive) {
+      // Trying to stop the spell
+      const hasActiveRainfall = pondingPoints.some(p => p.currentSpell > 0);
+      if (hasActiveRainfall) {
+        setShowStopSpellAlert(true);
+      } else {
+        setIsSpellActive(false);
+      }
+    } else {
+      // Starting the spell
+      setIsSpellActive(true);
+    }
+  };
+
   const isRainingAnywhere = pondingPoints.some(p => p.isRaining);
   const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
 
@@ -148,7 +164,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </h1>
             </div>
             <div className="flex items-center gap-2">
-                <Button onClick={() => setIsSpellActive(prev => !prev)}>
+                <Button onClick={handleToggleSpell}>
                     {isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
                     {isSpellActive ? 'Stop Spell' : 'Start Spell'}
                 </Button>
@@ -322,6 +338,20 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         {isPending && <RefreshCw className="animate-spin" />}
                         {isPending ? 'Deleting...' : 'Delete'}
                     </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={showStopSpellAlert} onOpenChange={setShowStopSpellAlert}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Cannot Stop Spell</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You cannot stop the spell while rainfall is recorded at one or more points. Please set "Spell (mm)" to 0.0 for all points to proceed.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => setShowStopSpellAlert(false)}>OK</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
