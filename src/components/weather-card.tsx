@@ -19,23 +19,27 @@ export default function WeatherCard({ data }: WeatherCardProps) {
             <CardTitle className="text-lg font-semibold">{data.city}</CardTitle>
             <CardDescription className="text-sm text-muted-foreground">{data.condition}</CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow flex items-center justify-center gap-6 p-4">
-            <div className="flex items-start">
-            <span className="text-5xl font-bold text-primary">{data.temperature}</span>
-            <span className="text-xl font-medium text-muted-foreground mt-1">°C</span>
+        <CardContent className="flex-grow flex flex-col items-center justify-center gap-2 p-4">
+            <div className="flex items-center justify-center gap-6">
+                <div className="flex items-start">
+                <span className="text-5xl font-bold text-primary">{data.temperature}</span>
+                <span className="text-xl font-medium text-muted-foreground mt-1">°C</span>
+                </div>
+                <Icon className="w-16 h-16 text-accent drop-shadow-lg transition-transform group-hover:scale-110" />
             </div>
-            <Icon className="w-16 h-16 text-accent drop-shadow-lg transition-transform group-hover:scale-110" />
+            {data.forecast?.hasPrecipitation ? (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <CloudRain className="h-4 w-4 text-primary" />
+                    <span>Forecast: {data.forecast.precipitationType}</span>
+                </div>
+            ) : (
+                <div className="h-6" />
+            )}
         </CardContent>
-        <CardFooter className="flex items-center justify-between p-4 pt-0">
+        <CardFooter className="flex items-center justify-start p-4 pt-0">
             <p className="text-xs text-muted-foreground">
             Updated {formatDistanceToNow(data.lastUpdated, { addSuffix: true })}
             </p>
-            {data.forecast?.hasPrecipitation && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <CloudRain className="h-4 w-4 text-accent" />
-                    <span>{data.forecast.precipitationType} likely</span>
-                </div>
-            )}
         </CardFooter>
         </Card>
     </Link>
