@@ -68,7 +68,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   const weatherPromises = cities.map(async (city) => {
     try {
       // Step 1: Get Location Key from latitude and longitude
-      const locationUrl = `http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${apiKey}&q=${city.latitude},${city.longitude}`;
+      const locationUrl = `https://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${apiKey}&q=${city.latitude},${city.longitude}`;
       const locationResponse = await fetch(locationUrl, { next: { revalidate: 86400 } }); // Cache location key for a day
 
       if (!locationResponse.ok) {
@@ -87,8 +87,8 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       }
 
       // Step 2 & 3: Get Current Conditions, Forecast and Spell status concurrently
-      const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
-      const forecastUrl = `http://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
+      const weatherUrl = `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
+      const forecastUrl = `https://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
 
       const [weatherResponse, forecastResponse, activeSpell] = await Promise.all([
           fetch(weatherUrl, { next: { revalidate: 3600 } }), // Revalidate every hour
@@ -158,7 +158,7 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
 
   try {
     // Step 1: Get Location Key from city name search
-    const locationUrl = `http://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${encodeURIComponent(city)}`;
+    const locationUrl = `https://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${encodeURIComponent(city)}`;
     const locationResponse = await fetch(locationUrl, { next: { revalidate: 86400 } });
 
     if (!locationResponse.ok) {
@@ -182,8 +182,8 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
     }
 
     // Step 2 & 3: Get Current Conditions, Forecast and Spell status
-    const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
-    const forecastUrl = `http://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
+    const weatherUrl = `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
+    const forecastUrl = `https://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
 
     const [weatherResponse, forecastResponse, activeSpell] = await Promise.all([
         fetch(weatherUrl),
