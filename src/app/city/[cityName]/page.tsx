@@ -47,6 +47,8 @@ import { cn } from '@/lib/utils';
 import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from '@/hooks/use-auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const PONDING_THRESHOLD = 3.0; // inches
@@ -55,6 +57,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const { cityName: encodedCityName } = use(params);
   const cityName = decodeURIComponent(encodedCityName);
   const { toast } = useToast();
+  const { claims, loading: authLoading } = useAuth();
   
   const [pondingPoints, setPondingPoints] = useState<PondingPoint[]>([]);
   const [maxSpellToday, setMaxSpellToday] = useState(0);
@@ -159,6 +162,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const isRainingAnywhere = pondingPoints.some(p => p.isRaining);
   const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
 
+  if (authLoading) {
+    return (
+        <div className="flex min-h-screen items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    )
+  }
+
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       {isSpellActive && isRainingAnywhere && <RainAnimation />}
@@ -174,64 +185,68 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </h1>
             </div>
             <div className="flex items-center gap-2">
-                <Button onClick={handleToggleSpell}>
-                    {isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
-                    {isSpellActive ? 'Stop Spell' : 'Start Spell'}
-                </Button>
-                <Dialog open={isFormOpen} onOpenChange={handleDialogClose}>
-                    <DialogTrigger asChild>
-                         <Button onClick={() => setEditingPoint(null)}>
-                            <PlusCircle className="mr-2" />
-                            Add Point
+                {claims?.role !== 'viewer' && (
+                    <>
+                        <Button onClick={handleToggleSpell}>
+                            {isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
+                            {isSpellActive ? 'Stop Spell' : 'Start Spell'}
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                        <DialogTitle>{editingPoint ? 'Edit' : 'Add New'} Ponding Point</DialogTitle>
-                        <DialogDescription>
-                            {editingPoint
-                                ? "Update the details for this ponding point. Rainfall data can only be entered during an active spell."
-                                : "Add a new location to track for ponding."
-                            }
-                        </DialogDescription>
-                        </DialogHeader>
-                        <form ref={formRef} onSubmit={handleFormSubmit}>
-                            {editingPoint && <input type="hidden" name="id" value={editingPoint.id} />}
-                            <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">Name</Label>
-                                    <Input id="name" name="name" className="col-span-3" required defaultValue={editingPoint?.name} />
-                                </div>
-                                {editingPoint && (
-                                    <>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="currentSpell" className="text-right">Spell (mm)</Label>
-                                            <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell} disabled={!isSpellActive} />
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
-                                            <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={!isSpellActive || (editingPoint?.ponding ?? 0) > 0} />
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
-                                            <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding} disabled={!isSpellActive} />
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="isRaining" className="text-right">Raining?</Label>
-                                            <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} disabled={!isSpellActive} />
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit" disabled={isPending}>
-                                    {isPending && <RefreshCw className="animate-spin" />}
-                                    {isPending ? 'Saving...' : 'Save changes'}
+                        <Dialog open={isFormOpen} onOpenChange={handleDialogClose}>
+                            <DialogTrigger asChild>
+                                 <Button onClick={() => setEditingPoint(null)}>
+                                    <PlusCircle className="mr-2" />
+                                    Add Point
                                 </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                                <DialogHeader>
+                                <DialogTitle>{editingPoint ? 'Edit' : 'Add New'} Ponding Point</DialogTitle>
+                                <DialogDescription>
+                                    {editingPoint
+                                        ? "Update the details for this ponding point. Rainfall data can only be entered during an active spell."
+                                        : "Add a new location to track for ponding."
+                                    }
+                                </DialogDescription>
+                                </DialogHeader>
+                                <form ref={formRef} onSubmit={handleFormSubmit}>
+                                    {editingPoint && <input type="hidden" name="id" value={editingPoint.id} />}
+                                    <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="name" className="text-right">Name</Label>
+                                            <Input id="name" name="name" className="col-span-3" required defaultValue={editingPoint?.name} />
+                                        </div>
+                                        {editingPoint && (
+                                            <>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="currentSpell" className="text-right">Spell (mm)</Label>
+                                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell} disabled={!isSpellActive} />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
+                                                    <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={!isSpellActive || (editingPoint?.ponding ?? 0) > 0} />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
+                                                    <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding} disabled={!isSpellActive} />
+                                                </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="isRaining" className="text-right">Raining?</Label>
+                                                    <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} disabled={!isSpellActive} />
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                    <DialogFooter>
+                                        <Button type="submit" disabled={isPending}>
+                                            {isPending && <RefreshCw className="animate-spin" />}
+                                            {isPending ? 'Saving...' : 'Save changes'}
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </>
+                )}
             </div>
         </header>
 
@@ -244,7 +259,9 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 <TableHead className="text-right">Cleared in (hh:mm)</TableHead>
                 <TableHead className="text-right">Ponding (in)</TableHead>
                 <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {claims?.role !== 'viewer' && (
+                    <TableHead className="text-right">Actions</TableHead>
+                )}
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -286,20 +303,22 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                             <Badge variant="outline">Clear</Badge>
                         )}
                     </TableCell>
-                     <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(point)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(point)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </TableCell>
+                     {claims?.role !== 'viewer' && (
+                         <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(point)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(point)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </TableCell>
+                     )}
                 </TableRow>
                 )) : (
                     <TableRow>
-                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                        <TableCell colSpan={claims?.role !== 'viewer' ? 6 : 5} className="text-center h-24 text-muted-foreground">
                             No ponding points added for {cityName} yet.
                         </TableCell>
                     </TableRow>
