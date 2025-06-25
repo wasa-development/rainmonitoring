@@ -246,7 +246,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                     <div className="grid gap-4 py-4">
                                         <div className="grid grid-cols-4 items-center gap-4">
                                             <Label htmlFor="name" className="text-right">Name</Label>
-                                            <Input id="name" name="name" className="col-span-3" required defaultValue={editingPoint?.name} disabled={!!editingPoint && claims?.role === 'city-user'} />
+                                            <Input id="name" name="name" className="col-span-3" required defaultValue={editingPoint?.name} readOnly={!!editingPoint && claims?.role === 'city-user'} />
                                         </div>
                                         {isSpellActive && editingPoint && (
                                             <>
