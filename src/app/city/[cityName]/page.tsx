@@ -50,6 +50,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [pondingPoints, setPondingPoints] = useState<PondingPoint[]>(
     [...mockPondingPoints].sort((a, b) => b.currentSpell - a.currentSpell)
   );
+  
+  const initialMaxCurrentSpell = Math.max(0, ...mockPondingPoints.map(p => p.currentSpell));
+  const [maxSpellToday, setMaxSpellToday] = useState(Math.max(initialMaxCurrentSpell, 32.5)); // Start with a mock "daily max"
+
   const [isFormOpen, setFormOpen] = useState(false);
 
   const isRainingAnywhere = pondingPoints.some(p => p.isRaining);
@@ -67,6 +71,11 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     };
     const updatedPoints = [...pondingPoints, newPoint].sort((a, b) => b.currentSpell - a.currentSpell);
     setPondingPoints(updatedPoints);
+
+    if (newPoint.currentSpell > maxSpellToday) {
+        setMaxSpellToday(newPoint.currentSpell);
+    }
+
     setFormOpen(false);
   };
 
@@ -204,7 +213,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                      <CardDescription>Highest recorded rainfall today. (Auto-calculated)</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-4xl font-bold">32.5 <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
                 </CardContent>
             </Card>
         </div>
