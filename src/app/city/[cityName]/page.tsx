@@ -35,7 +35,6 @@ import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-rea
 import type { PondingPoint } from '@/lib/types';
 import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import PondingPointCard from '@/components/ponding-point-card';
@@ -261,10 +260,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                     <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
                                                     <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding ?? 0} />
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="isRaining" className="text-right">Raining?</Label>
-                                                    <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} />
                                                 </div>
                                             </>
                                         )}

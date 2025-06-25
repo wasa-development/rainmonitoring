@@ -11,7 +11,6 @@ const PondingPointSchema = z.object({
   currentSpell: z.coerce.number().min(0, { message: 'Spell must be a positive number.' }).optional(),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding must be a positive number.' }).optional(),
-  isRaining: z.preprocess((val) => val === 'on' || val === true, z.boolean()).optional(),
 });
 
 export async function getPondingPoints(cityName: string): Promise<PondingPoint[]> {
@@ -44,14 +43,15 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
     }
 
     const { id, ...data } = validation.data;
+    const currentSpellValue = data.currentSpell ?? 0;
     
     const pointDataForDb: any = { 
         cityName,
         name: data.name,
-        currentSpell: data.currentSpell ?? 0,
+        currentSpell: currentSpellValue,
         clearedInTime: data.clearedInTime ?? '',
         ponding: data.ponding ?? 0,
-        isRaining: data.isRaining ?? false,
+        isRaining: currentSpellValue > 0,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
