@@ -62,27 +62,34 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             const docSnap = await pointRef.get();
             
             let dailyMaxSpell = pointDataForDb.currentSpell;
+            let maxSpellRainfall = pointDataForDb.currentSpell;
 
             if (docSnap.exists) {
                 const existingData = docSnap.data();
-                if (existingData && existingData.updatedAt) {
-                    const lastUpdated = existingData.updatedAt.toDate();
-                    const now = new Date();
+                if (existingData) {
+                    if (existingData.updatedAt) {
+                        const lastUpdated = existingData.updatedAt.toDate();
+                        const now = new Date();
 
-                    const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
-                                      lastUpdated.getMonth() === now.getMonth() &&
-                                      lastUpdated.getDate() === now.getDate();
-                    
-                    const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
-                    dailyMaxSpell = Math.max(oldDailyMax, pointDataForDb.currentSpell);
+                        const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
+                                          lastUpdated.getMonth() === now.getMonth() &&
+                                          lastUpdated.getDate() === now.getDate();
+                        
+                        const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
+                        dailyMaxSpell = Math.max(oldDailyMax, pointDataForDb.currentSpell);
+                    }
+                    const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
+                    maxSpellRainfall = Math.max(oldMaxSpellRainfall, pointDataForDb.currentSpell);
                 }
             }
             
             pointDataForDb.dailyMaxSpell = dailyMaxSpell;
+            pointDataForDb.maxSpellRainfall = maxSpellRainfall;
             await pointRef.set(pointDataForDb, { merge: true });
         } else {
             // Create
             pointDataForDb.dailyMaxSpell = pointDataForDb.currentSpell;
+            pointDataForDb.maxSpellRainfall = pointDataForDb.currentSpell;
             await db.collection('ponding_points').add(pointDataForDb);
         }
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
@@ -169,7 +176,7 @@ export async function stopSpell(cityName: string) {
         // Reset currentSpell for all ponding points
         pondingPoints.forEach(point => {
             const pointRef = db.collection('ponding_points').doc(point.id);
-            batch.update(pointRef, { currentSpell: 0, isRaining: false });
+            batch.update(pointRef, { currentSpell: 0, isRaining: false, maxSpellRainfall: 0 });
         });
 
         await batch.commit();

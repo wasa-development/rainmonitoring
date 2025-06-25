@@ -15,6 +15,7 @@ export interface PondingPoint {
     name: string;
     cityName: string;
     currentSpell: number;
+    maxSpellRainfall?: number;
     clearedInTime: string;
     ponding: number;
     isRaining: boolean;
