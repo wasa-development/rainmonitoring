@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import type { WeatherData } from "@/lib/weather";
+import type { WeatherData } from "@/lib/types";
 import { fetchWeatherData, fetchWeatherForCity } from "@/app/actions";
 import WeatherCard from "@/components/weather-card";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,9 @@ const CitySkeleton = () => (
       <Skeleton className="h-12 w-1/3" />
       <Skeleton className="h-16 w-16 rounded-full" />
     </div>
-    <div className="pt-0">
+    <div className="flex items-center justify-between pt-0">
         <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-4 w-1/3" />
     </div>
   </div>
 );

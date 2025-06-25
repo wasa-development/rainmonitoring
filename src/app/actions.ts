@@ -59,9 +59,14 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         return null;
       }
 
-      // Step 2: Get Current Conditions using the Location Key
+      // Step 2 & 3: Get Current Conditions and 1-Day Forecast concurrently
       const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
-      const weatherResponse = await fetch(weatherUrl, { next: { revalidate: 3600 } }); // Revalidate every hour
+      const forecastUrl = `http://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
+
+      const [weatherResponse, forecastResponse] = await Promise.all([
+          fetch(weatherUrl, { next: { revalidate: 3600 } }), // Revalidate every hour
+          fetch(forecastUrl, { next: { revalidate: 21600 } }) // Revalidate every 6 hours
+      ]);
       
       if (!weatherResponse.ok) {
         console.error(`Failed to fetch weather for ${city.name}: ${weatherResponse.status} ${weatherResponse.statusText}`);
@@ -74,6 +79,23 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         return null;
       }
       
+      // Handle forecast response
+      let forecastData = null;
+      if (forecastResponse.ok) {
+          const forecastJson = await forecastResponse.json();
+          if (forecastJson && forecastJson.DailyForecasts && forecastJson.DailyForecasts.length > 0) {
+              const dayForecast = forecastJson.DailyForecasts[0].Day;
+              if (dayForecast.HasPrecipitation) {
+                forecastData = {
+                    hasPrecipitation: true,
+                    precipitationType: dayForecast.PrecipitationType,
+                };
+              }
+          }
+      } else {
+          console.warn(`Failed to fetch forecast for ${city.name}: ${forecastResponse.status} ${forecastResponse.statusText}`);
+      }
+
       const weatherInfo = weatherDataArr[0];
       const weatherData: WeatherData = {
         id: locationKey,
@@ -81,6 +103,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         condition: mapAccuWeatherCondition(weatherInfo.WeatherText),
         temperature: Math.round(weatherInfo.Temperature.Metric.Value),
         lastUpdated: new Date(weatherInfo.EpochTime * 1000),
+        forecast: forecastData,
       };
       return weatherData;
     } catch (error) {
@@ -129,9 +152,14 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
         return null;
     }
 
-    // Step 2: Get Current Conditions
+    // Step 2 & 3: Get Current Conditions and Forecast
     const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
-    const weatherResponse = await fetch(weatherUrl);
+    const forecastUrl = `http://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
+
+    const [weatherResponse, forecastResponse] = await Promise.all([
+        fetch(weatherUrl),
+        fetch(forecastUrl)
+    ]);
     
     if (!weatherResponse.ok) {
        return null;
@@ -142,6 +170,21 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
       return null;
     }
     
+    // Handle forecast response
+    let forecastData = null;
+    if (forecastResponse.ok) {
+        const forecastJson = await forecastResponse.json();
+        if (forecastJson && forecastJson.DailyForecasts && forecastJson.DailyForecasts.length > 0) {
+            const dayForecast = forecastJson.DailyForecasts[0].Day;
+            if (dayForecast.HasPrecipitation) {
+              forecastData = {
+                  hasPrecipitation: true,
+                  precipitationType: dayForecast.PrecipitationType
+              };
+            }
+        }
+    }
+
     const weatherInfo = weatherDataArr[0];
     const weatherData: WeatherData = {
       id: locationKey,
@@ -149,6 +192,7 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
       condition: mapAccuWeatherCondition(weatherInfo.WeatherText),
       temperature: Math.round(weatherInfo.Temperature.Metric.Value),
       lastUpdated: new Date(weatherInfo.EpochTime * 1000),
+      forecast: forecastData
     };
     return weatherData;
   } catch (error) {

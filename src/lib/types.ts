@@ -4,6 +4,10 @@ export interface WeatherData {
   condition: 'Sunny' | 'Rainy' | 'Clear' | 'Cloudy' | 'Partly Cloudy';
   temperature: number;
   lastUpdated: Date;
+  forecast?: {
+    hasPrecipitation: boolean;
+    precipitationType: string;
+  };
 }
 
 export interface PondingPoint {
