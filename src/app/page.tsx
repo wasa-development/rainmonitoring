@@ -7,9 +7,10 @@ import type { WeatherData } from "@/lib/weather";
 import { fetchWeatherData, fetchWeatherForCity } from "@/app/actions";
 import WeatherCard from "@/components/weather-card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CloudSun, AlertTriangle, Search, LogIn } from 'lucide-react';
+import { RefreshCw, CloudSun, AlertTriangle, Search, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/use-auth';
 
 const CitySkeleton = () => (
     <div className="flex flex-col justify-between rounded-lg border bg-card text-card-foreground p-4 space-y-4">
@@ -35,6 +36,18 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const { toast } = useToast();
+  const { user, claims, loading: authLoading, signOut } = useAuth();
+
+  const getDashboardLink = () => {
+    if (!claims) return '/';
+    if (claims.role === 'super-admin') {
+        return '/admin';
+    }
+    if (claims.role === 'city-user' && claims.assignedCity) {
+        return `/city/${encodeURIComponent(claims.assignedCity)}`;
+    }
+    return '/'; // Viewers or others go to home
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -129,12 +142,32 @@ export default function Home() {
               <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </Button>
-            <Link href="/login" passHref>
-                <Button>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign In
-                </Button>
-            </Link>
+            
+            {authLoading ? (
+                <Skeleton className="h-10 w-28" />
+            ) : user ? (
+                <>
+                    {claims?.role !== 'viewer' && (
+                        <Link href={getDashboardLink()} passHref>
+                            <Button variant="outline">
+                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                Dashboard
+                            </Button>
+                        </Link>
+                    )}
+                    <Button onClick={signOut}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign Out
+                    </Button>
+                </>
+            ) : (
+                <Link href="/login" passHref>
+                    <Button>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Sign In
+                    </Button>
+                </Link>
+            )}
         </div>
       </header>
 
