@@ -4,7 +4,7 @@ import type { WeatherData } from '@/lib/types';
 
 export const CITIES = [
   "Lahore", "Multan", "Rawalpindi", "Gujranwala", "Faisalabad", "Bahawalpur",
-  "Hafizabad", "Sahiwal", "Okara", "Jehlum", "Rahim Yar Khan", "D.G. Khan",
+  "Hafizabad", "Okara", "Jehlum", "Rahim Yar Khan", "Dera Ghazi Khan",
   "Sargodha", "Jhang", "Sialkot"
 ];
 
