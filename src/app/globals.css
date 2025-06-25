@@ -57,3 +57,45 @@
     @apply bg-background text-foreground;
   }
 }
+
+.rain-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.raindrop {
+  position: absolute;
+  bottom: 100%;
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0), rgba(173, 216, 230, 0.4));
+  animation: fall linear infinite;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh);
+  }
+}
+
+.ponding-animation {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, hsla(var(--accent)/0.4), transparent);
+    animation: ponding-rise 2s ease-out forwards;
+    z-index: 5;
+    opacity: 0.7;
+}
+
+@keyframes ponding-rise {
+    from { height: 0%; }
+    to { height: var(--ponding-height, 0%); }
+}

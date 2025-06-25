@@ -1,13 +1,6 @@
 import { Sun, Cloud, CloudRain, CloudSun, type LucideProps } from 'lucide-react';
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
-
-export interface WeatherData {
-  id: string;
-  city: string;
-  condition: 'Sunny' | 'Rainy' | 'Clear' | 'Cloudy' | 'Partly Cloudy';
-  temperature: number;
-  lastUpdated: Date;
-}
+import type { WeatherData } from '@/lib/types';
 
 export const CITIES = [
   "Lahore", "Multan", "Rawalpindi", "Gujranwala", "Faisalabad", "Bahawalpur",
