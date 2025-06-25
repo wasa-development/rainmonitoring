@@ -151,7 +151,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      {isRainingAnywhere && <RainAnimation />}
+      {isSpellActive && isRainingAnywhere && <RainAnimation />}
       
       <main className="container mx-auto p-4 sm:p-6 md:p-8 z-10 relative">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
