@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import type { WeatherData } from "@/lib/weather";
-import { getMockWeatherData } from "@/lib/weather";
+import { fetchWeatherData } from "@/app/actions";
 import WeatherCard from "@/components/weather-card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CloudSun } from 'lucide-react';
+import { RefreshCw, CloudSun, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const CitySkeleton = () => (
@@ -28,20 +29,34 @@ export default function Home() {
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const loadData = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await fetchWeatherData();
+      setWeatherData(data);
+    } catch (e: any) {
+      console.error(e);
+      const errorMessage = e.message || "An unknown error occurred while fetching data.";
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
+    }
+  }, [toast]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setWeatherData(getMockWeatherData());
-      setLoading(false);
-    }, 1500); // Simulate initial loading
-    return () => clearTimeout(timer);
-  }, []);
+    setLoading(true);
+    loadData().finally(() => setLoading(false));
+  }, [loadData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setWeatherData(getMockWeatherData());
+    await loadData();
     setRefreshing(false);
   };
 
@@ -51,7 +66,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <CloudSun className="w-8 h-8 text-accent" />
           <h1 className="text-3xl sm:text-4xl font-bold text-primary">
-            Weather Dashboard
+            Pakistan Weather Pulse
           </h1>
         </div>
         <Button onClick={handleRefresh} disabled={refreshing || loading} variant="outline" className="border-accent text-accent hover:bg-accent/10 hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed">
@@ -62,10 +77,19 @@ export default function Home() {
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 15 }).map((_, i) => (
             <CitySkeleton key={i} />
           ))}
         </div>
+      ) : error ? (
+         <div className="flex flex-col items-center justify-center text-center py-20 bg-card rounded-lg border border-destructive/50">
+            <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+            <h2 className="text-2xl font-semibold text-destructive mb-2">Failed to Load Weather Data</h2>
+            <p className="text-muted-foreground max-w-md">{error}</p>
+            <p className="text-muted-foreground max-w-md mt-2 text-sm">
+                To fix this, get a free API key from <a href="https://openweathermap.org/appid" target="_blank" rel="noopener noreferrer" className="underline hover:text-accent">OpenWeatherMap</a>, add it to a <code>.env.local</code> file in your project, and restart the server.
+            </p>
+         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {weatherData.map((data) => (
