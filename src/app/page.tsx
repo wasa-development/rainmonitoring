@@ -142,9 +142,6 @@ export default function Home() {
             <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
             <h2 className="text-2xl font-semibold text-destructive mb-2">Failed to Load Weather Data</h2>
             <p className="text-muted-foreground max-w-md">{error}</p>
-            <p className="text-muted-foreground max-w-md mt-2 text-sm">
-                To fix this, get a free API key from <a href="https://openweathermap.org/appid" target="_blank" rel="noopener noreferrer" className="underline hover:text-accent">OpenWeatherMap</a>, add it to a <code>.env.local</code> file in your project, and restart the server.
-            </p>
          </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

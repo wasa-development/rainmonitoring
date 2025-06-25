@@ -25,8 +25,8 @@ function mapApiCondition(apiMain: string, apiDesc: string): WeatherData['conditi
 export async function fetchWeatherData(): Promise<WeatherData[]> {
   const apiKey = process.env.OPENWEATHERMAP_API_KEY;
 
-  if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
-    throw new Error("OpenWeatherMap API key is missing. Please add it to your .env.local file and restart the server.");
+  if (!apiKey) {
+    throw new Error("The OpenWeatherMap API key is missing from the environment configuration.");
   }
 
   const weatherPromises = CITIES.map(async (city) => {
@@ -37,7 +37,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       if (!response.ok) {
         if (response.status === 401) {
             // This is a critical error, likely a bad API key. Fail everything.
-            throw new Error("Invalid OpenWeatherMap API key. Please check your .env.local file and restart the server.");
+            throw new Error("The configured OpenWeatherMap API key seems to be invalid.");
         }
         if (response.status === 404) {
             console.warn(`City not found: ${city}`);
@@ -57,7 +57,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       };
       return weatherData;
     } catch (error) {
-      if (error instanceof Error && error.message.includes("Invalid OpenWeatherMap API key")) {
+      if (error instanceof Error && error.message.includes("API key")) {
           // Rethrow critical errors to be caught by the main loader.
           throw error;
       }
@@ -74,8 +74,8 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 export async function fetchWeatherForCity(city: string): Promise<WeatherData | null> {
   const apiKey = process.env.OPENWEATHERMAP_API_KEY;
 
-  if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
-    throw new Error("OpenWeatherMap API key is missing.");
+  if (!apiKey) {
+    throw new Error("The OpenWeatherMap API key is missing from the environment configuration.");
   }
 
   try {
@@ -84,7 +84,7 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
     
     if (!response.ok) {
         if (response.status === 401) {
-            throw new Error("Invalid API key. Please check it in your .env.local file.");
+            throw new Error("The configured OpenWeatherMap API key seems to be invalid.");
         }
         if (response.status === 429) {
             throw new Error("API rate limit exceeded. Please try again later.");
