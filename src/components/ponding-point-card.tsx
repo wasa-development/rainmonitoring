@@ -9,7 +9,7 @@ import React from 'react';
 
 const CardRainAnimation = () => {
   const raindrops = React.useMemo(() => 
-    Array.from({ length: 30 }).map((_, i) => {
+    Array.from({ length: 70 }).map((_, i) => {
       const style = {
         left: `${Math.random() * 100}%`,
         animationDelay: `${Math.random() * 2}s`,
