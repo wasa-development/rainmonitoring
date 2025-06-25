@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import Link from 'next/link';
 import {
   Table,
@@ -46,7 +46,8 @@ const mockPondingPoints: PondingPoint[] = [
 const PONDING_THRESHOLD = 3.0; // inches
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
-  const cityName = decodeURIComponent(params.cityName);
+  const { cityName: encodedCityName } = use(params);
+  const cityName = decodeURIComponent(encodedCityName);
   const [pondingPoints, setPondingPoints] = useState<PondingPoint[]>(
     [...mockPondingPoints].sort((a, b) => b.currentSpell - a.currentSpell)
   );
