@@ -61,31 +61,45 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             const pointRef = db.collection('ponding_points').doc(id);
             const docSnap = await pointRef.get();
             
-            let dailyMaxSpell = pointDataForDb.currentSpell;
-            let maxSpellRainfall = pointDataForDb.currentSpell;
-
             if (docSnap.exists) {
-                const existingData = docSnap.data();
-                if (existingData) {
-                    if (existingData.updatedAt) {
-                        const lastUpdated = existingData.updatedAt.toDate();
-                        const now = new Date();
+                const existingData = docSnap.data() as PondingPoint;
+                const oldPonding = existingData.ponding ?? 0;
+                const newPonding = data.ponding ?? 0;
+                const clearedInTime = data.clearedInTime ?? '';
 
-                        const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
-                                          lastUpdated.getMonth() === now.getMonth() &&
-                                          lastUpdated.getDate() === now.getDate();
-                        
-                        const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
-                        dailyMaxSpell = Math.max(oldDailyMax, pointDataForDb.currentSpell);
-                    }
-                    const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
-                    maxSpellRainfall = Math.max(oldMaxSpellRainfall, pointDataForDb.currentSpell);
+                // The new validation logic
+                if (oldPonding > 0 && newPonding === 0 && !clearedInTime) {
+                    return { 
+                        success: false, 
+                        error: "'Cleared In' time is required when ponding is resolved (set to 0)." 
+                    };
                 }
+
+                // Carry over the existing logic for spell calculation
+                let dailyMaxSpell = pointDataForDb.currentSpell;
+                let maxSpellRainfall = pointDataForDb.currentSpell;
+
+                if (existingData.updatedAt) {
+                    const lastUpdated = existingData.updatedAt.toDate();
+                    const now = new Date();
+
+                    const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
+                                      lastUpdated.getMonth() === now.getMonth() &&
+                                      lastUpdated.getDate() === now.getDate();
+                    
+                    const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
+                    dailyMaxSpell = Math.max(oldDailyMax, pointDataForDb.currentSpell);
+                }
+                const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
+                maxSpellRainfall = Math.max(oldMaxSpellRainfall, pointDataForDb.currentSpell);
+
+                pointDataForDb.dailyMaxSpell = dailyMaxSpell;
+                pointDataForDb.maxSpellRainfall = maxSpellRainfall;
+                await pointRef.set(pointDataForDb, { merge: true });
+
+            } else {
+                return { success: false, error: 'Ponding point not found for update.' };
             }
-            
-            pointDataForDb.dailyMaxSpell = dailyMaxSpell;
-            pointDataForDb.maxSpellRainfall = maxSpellRainfall;
-            await pointRef.set(pointDataForDb, { merge: true });
         } else {
             // Create
             pointDataForDb.dailyMaxSpell = pointDataForDb.currentSpell;
