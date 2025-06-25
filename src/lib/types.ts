@@ -38,4 +38,5 @@ export interface UserRequest {
     role: 'city-user' | 'viewer';
     assignedCity?: string;
     status: 'pending' | 'approved' | 'rejected';
+    requestedAt?: Date;
 }

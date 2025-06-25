@@ -111,10 +111,14 @@ export async function getPendingUserRequests(): Promise<UserRequest[]> {
         if (snapshot.empty) {
             return [];
         }
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        })) as UserRequest[];
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                requestedAt: data.requestedAt?.toDate(), // Convert Firestore Timestamp to Date
+            } as UserRequest;
+        });
     } catch (error) {
         console.error("Error fetching pending user requests:", error);
         return [];
