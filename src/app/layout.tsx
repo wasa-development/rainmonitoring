@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'Pakistan Weather Pulse',
-  description: 'Live weather updates for major cities in Pakistan.',
+  title: 'Punjab WASA Rain Monitoring',
+  description: 'Real-time rainfall and ponding monitoring for cities in Punjab.',
 };
 
 export const viewport: Viewport = {

@@ -79,7 +79,7 @@ export default function SignupPage() {
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-2 mb-2">
                         <CloudSun className="w-8 h-8 text-primary" />
-                        <h1 className="text-2xl font-bold text-primary">Pakistan Weather Pulse</h1>
+                        <h1 className="text-2xl font-bold text-primary">Punjab WASA Rain Monitoring</h1>
                     </div>
                     <CardTitle>Request an Account</CardTitle>
                     <CardDescription>Your request will be reviewed by an administrator.</CardDescription>

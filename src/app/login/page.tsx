@@ -106,7 +106,7 @@ export default function LoginPage() {
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-2 mb-2">
                         <CloudSun className="w-8 h-8 text-primary" />
-                        <h1 className="text-2xl font-bold text-primary">Pakistan Weather Pulse</h1>
+                        <h1 className="text-2xl font-bold text-primary">Punjab WASA Rain Monitoring</h1>
                     </div>
                     <CardTitle>Sign In</CardTitle>
                     <CardDescription>Enter your credentials to access your dashboard.</CardDescription>

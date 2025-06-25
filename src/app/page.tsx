@@ -140,7 +140,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <CloudSun className="w-8 h-8 text-primary" />
           <h1 className="text-3xl sm:text-4xl font-bold text-primary">
-            Pakistan Weather Pulse
+            Punjab WASA Rain Monitoring
           </h1>
         </div>
         <div className="flex w-full sm:w-auto items-center gap-2">
