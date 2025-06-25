@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -52,7 +53,8 @@ export default function LoginPage() {
                     case 'auth/user-not-found':
                     case 'auth/wrong-password':
                     case 'auth/invalid-credential':
-                        errorMessage = "Invalid email or password. Please try again.";
+                    case 'auth/user-disabled':
+                        errorMessage = "Invalid email, password, or your account may be disabled or pending approval.";
                         break;
                     case 'auth/invalid-email':
                         errorMessage = "Please enter a valid email address.";
@@ -121,6 +123,12 @@ export default function LoginPage() {
                             )}
                         </Button>
                     </form>
+                     <div className="mt-4 text-center text-sm">
+                        Don&apos;t have an account?{" "}
+                        <Link href="/signup" className="underline text-accent hover:text-primary/80">
+                            Sign up
+                        </Link>
+                    </div>
                 </CardContent>
             </Card>
         </main>

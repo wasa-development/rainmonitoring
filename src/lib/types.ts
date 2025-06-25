@@ -19,7 +19,7 @@ export interface PondingPoint {
 export interface AdminUser {
     uid: string;
     email: string;
-    role: 'super-admin' | 'city-user';
+    role: 'super-admin' | 'city-user' | 'viewer';
     assignedCity?: string;
 }
 
@@ -28,4 +28,12 @@ export interface City {
     name: string;
     latitude: number;
     longitude: number;
+}
+
+export interface UserRequest {
+    id: string;
+    email: string;
+    role: 'city-user' | 'viewer';
+    assignedCity?: string;
+    status: 'pending' | 'approved' | 'rejected';
 }

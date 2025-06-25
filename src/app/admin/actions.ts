@@ -2,12 +2,13 @@
 
 import { z } from 'zod';
 import { auth, db } from '@/lib/firebase-admin';
-import type { AdminUser, City } from '@/lib/types';
+import type { AdminUser, City, UserRequest } from '@/lib/types';
+import { revalidatePath } from 'next/cache';
 
 const CreateUserSchema = z.object({
     email: z.string().email({ message: "Invalid email address." }),
     password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-    role: z.enum(['super-admin', 'city-user'], { required_error: "Role is required." }),
+    role: z.enum(['super-admin', 'city-user', 'viewer'], { required_error: "Role is required." }),
     assignedCity: z.string().optional(),
 }).refine(data => {
     if (data.role === 'city-user') {
@@ -41,7 +42,7 @@ export async function createNewUser(formData: FormData) {
             role,
         };
 
-        const claims: { role: 'super-admin' | 'city-user', assignedCity?: string } = { role };
+        const claims: { role: 'super-admin' | 'city-user' | 'viewer', assignedCity?: string } = { role };
 
         if (role === 'city-user' && assignedCity) {
             userDoc.assignedCity = assignedCity;
@@ -100,5 +101,94 @@ export async function getCities(): Promise<City[]> {
     } catch (error) {
         console.error("Error fetching cities:", error);
         return [];
+    }
+}
+
+
+export async function getPendingUserRequests(): Promise<UserRequest[]> {
+    try {
+        const snapshot = await db.collection('user_requests').where('status', '==', 'pending').get();
+        if (snapshot.empty) {
+            return [];
+        }
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        })) as UserRequest[];
+    } catch (error) {
+        console.error("Error fetching pending user requests:", error);
+        return [];
+    }
+}
+
+const ApproveUserRequestSchema = z.object({
+    requestId: z.string().min(1, { message: "Request ID is missing." }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+});
+
+
+export async function approveUserRequest(formData: FormData) {
+    const validation = ApproveUserRequestSchema.safeParse(Object.fromEntries(formData.entries()));
+
+    if (!validation.success) {
+        const firstError = Object.values(validation.error.flatten().fieldErrors)[0]?.[0];
+        return { success: false, error: firstError || 'Invalid input.' };
+    }
+    
+    const { requestId, password } = validation.data;
+
+    const requestRef = db.collection('user_requests').doc(requestId);
+    
+    try {
+        const requestDoc = await requestRef.get();
+        if (!requestDoc.exists) {
+            return { success: false, error: "User request not found or already processed." };
+        }
+        const requestData = requestDoc.data() as UserRequest;
+
+        const userRecord = await auth.createUser({
+            email: requestData.email,
+            password,
+        });
+
+        const userDoc: Omit<AdminUser, 'uid'> = {
+            email: requestData.email,
+            role: requestData.role,
+        };
+        
+        const claims: { role: UserRequest['role'], assignedCity?: string } = { role: requestData.role };
+
+        if (requestData.role === 'city-user' && requestData.assignedCity) {
+            userDoc.assignedCity = requestData.assignedCity;
+            claims.assignedCity = requestData.assignedCity;
+        }
+
+        await db.collection('users').doc(userRecord.uid).set(userDoc);
+        await auth.setCustomUserClaims(userRecord.uid, claims);
+        await requestRef.update({ status: 'approved' });
+
+        revalidatePath('/admin');
+        return { success: true, message: `User ${requestData.email} approved and created.` };
+    } catch (error: any) {
+         if (error.code === 'auth/email-already-exists') {
+            await requestRef.update({ status: 'rejected', reason: 'Email already in use.' });
+            revalidatePath('/admin');
+            return { success: false, error: 'This email is already in use. The request has been rejected.' };
+        }
+        return { success: false, error: error.message || "An unknown error occurred during approval." };
+    }
+}
+
+export async function rejectUserRequest(requestId: string) {
+    if (!requestId) {
+        return { success: false, error: 'Request ID is missing.' };
+    }
+
+    try {
+        await db.collection('user_requests').doc(requestId).update({ status: 'rejected' });
+        revalidatePath('/admin');
+        return { success: true, message: 'User request rejected.' };
+    } catch (error: any) {
+        return { success: false, error: error.message || "An unknown error occurred." };
     }
 }
