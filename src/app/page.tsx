@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import type { WeatherData } from "@/lib/weather";
-import { fetchWeatherData } from "@/app/actions";
+import { fetchWeatherData, fetchWeatherForCity } from "@/app/actions";
 import WeatherCard from "@/components/weather-card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CloudSun, AlertTriangle } from 'lucide-react';
+import { RefreshCw, CloudSun, AlertTriangle, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 
 const CitySkeleton = () => (
     <div className="flex flex-col justify-between rounded-lg border bg-card text-card-foreground p-4 space-y-4">
@@ -30,6 +31,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -60,6 +63,43 @@ export default function Home() {
     setRefreshing(false);
   };
 
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return;
+
+    setSearching(true);
+    try {
+        const result = await fetchWeatherForCity(trimmedQuery);
+        if (result) {
+            setWeatherData(prevData => {
+                if (prevData.some(city => city.id === result.id)) {
+                    const otherCities = prevData.filter(city => city.id !== result.id);
+                    return [result, ...otherCities];
+                }
+                return [result, ...prevData];
+            });
+            setSearchQuery('');
+        } else {
+            toast({
+                variant: "destructive",
+                title: "City not found",
+                description: `Could not find weather data for "${trimmedQuery}". Please try another city.`,
+            });
+        }
+    } catch (e: any) {
+        console.error(e);
+        const errorMessage = e.message || "An unknown error occurred while searching.";
+        toast({
+            variant: "destructive",
+            title: "Search Error",
+            description: errorMessage,
+        });
+    } finally {
+        setSearching(false);
+    }
+  };
+
   return (
     <main className="min-h-screen p-4 sm:p-8 md:p-12">
       <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
@@ -69,10 +109,26 @@ export default function Home() {
             Pakistan Weather Pulse
           </h1>
         </div>
-        <Button onClick={handleRefresh} disabled={refreshing || loading} variant="outline" className="border-accent text-accent hover:bg-accent/10 hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed">
-          <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh Data'}
-        </Button>
+        <div className="flex w-full sm:w-auto items-center gap-2">
+            <form onSubmit={handleSearch} className="flex flex-grow sm:flex-grow-0 items-center gap-2">
+                <Input
+                    type="search"
+                    placeholder="Search for a city..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="sm:w-48"
+                    disabled={searching || loading}
+                />
+                <Button type="submit" variant="outline" disabled={searching || loading || !searchQuery} className="px-3">
+                    {searching ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    <span className="sr-only">Search</span>
+                </Button>
+            </form>
+            <Button onClick={handleRefresh} disabled={refreshing || loading || searching} variant="outline" className="border-accent text-accent hover:bg-accent/10 hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed">
+              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </Button>
+        </div>
       </header>
 
       {loading ? (
