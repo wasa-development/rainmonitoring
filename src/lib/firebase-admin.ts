@@ -19,21 +19,34 @@
  */
 import admin from 'firebase-admin';
 
-// Ensure the private key is formatted correctly, especially when deployed.
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
+// Check if admin is already initialized
 if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: privateKey,
-      }),
-    });
-    console.log("Firebase Admin SDK initialized successfully.");
-  } catch (error: any) {
-    console.error('Firebase admin initialization error', error.stack);
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+  // Only attempt to initialize if all credentials are provided
+  if (projectId && clientEmail && privateKey) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey,
+        }),
+      });
+      console.log("Firebase Admin SDK initialized successfully.");
+    } catch (error: any) {
+      console.error('Firebase admin initialization error:', error.stack);
+    }
+  } else {
+    // This provides a clear warning if credentials are not in the environment.
+    if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+            'Firebase Admin credentials are not fully set in .env.local. Skipping initialization. ' +
+            'Required: NEXT_PUBLIC_FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY'
+        );
+    }
   }
 }
 
