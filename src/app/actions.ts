@@ -1,32 +1,34 @@
 'use server';
 
-import type { WeatherData } from "@/lib/weather";
+import type { WeatherData } from "@/lib/types";
 import { getCities } from "./admin/actions";
 
-function mapApiCondition(apiMain: string, apiDesc:string): WeatherData['condition'] {
-    switch (apiMain) {
-        case 'Thunderstorm':
-        case 'Drizzle':
-        case 'Rain':
-            return 'Rainy';
-        case 'Clear':
-            return 'Clear';
-        case 'Clouds':
-            if (apiDesc.includes('few clouds') || apiDesc.includes('scattered clouds')) {
-                return 'Partly Cloudy';
-            }
-            return 'Cloudy';
-        default:
-            return 'Cloudy';
+function mapAccuWeatherCondition(weatherText: string): WeatherData['condition'] {
+    const text = weatherText.toLowerCase();
+    if (text.includes('thunder') || text.includes('rain') || text.includes('shower') || text.includes('drizzle')) {
+        return 'Rainy';
     }
+    if (text.includes('sunny')) {
+        return 'Sunny';
+    }
+    if (text.includes('clear')) {
+        return 'Clear';
+    }
+    if (text.includes('partly') || text.includes('intermittent') || text.includes('some clouds') || text.includes('hazy')) {
+        return 'Partly Cloudy';
+    }
+    if (text.includes('mostly cloudy') || text.includes('cloudy') || text.includes('overcast') || text.includes('fog')) {
+        return 'Cloudy';
+    }
+    return 'Cloudy'; // Default for any other condition
 }
 
 
 export async function fetchWeatherData(): Promise<WeatherData[]> {
-  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+  const apiKey = process.env.ACCUWEATHER_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The OpenWeatherMap API key is missing from the environment configuration.");
+    throw new Error("The AccuWeather API key is missing. Please add ACCUWEATHER_API_KEY to your environment variables.");
   }
   
   const cities = await getCities();
@@ -38,30 +40,51 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
   const weatherPromises = cities.map(async (city) => {
     try {
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${city.latitude}&lon=${city.longitude}&appid=${apiKey}&units=metric`;
-      const response = await fetch(url, { next: { revalidate: 3600 } }); // Revalidate every hour
+      // Step 1: Get Location Key from latitude and longitude
+      const locationUrl = `http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${apiKey}&q=${city.latitude},${city.longitude}`;
+      const locationResponse = await fetch(locationUrl, { next: { revalidate: 86400 } }); // Cache location key for a day
+
+      if (!locationResponse.ok) {
+         if (locationResponse.status === 401) throw new Error("The configured AccuWeather API key seems to be invalid.");
+         if (locationResponse.status === 503) throw new Error("AccuWeather API rate limit exceeded. The free tier allows only 50 calls per day.");
+         console.error(`Failed to get AccuWeather location key for ${city.name}: ${locationResponse.status} ${locationResponse.statusText}`);
+         return null;
+      }
       
-      if (!response.ok) {
-        if (response.status === 401) {
-            // This is a critical error, likely a bad API key. Fail everything.
-            throw new Error("The configured OpenWeatherMap API key seems to be invalid.");
-        }
-        console.error(`Failed to fetch weather for ${city.name}: ${response.status} ${response.statusText}`);
+      const locationData = await locationResponse.json();
+      const locationKey = locationData?.Key;
+
+      if (!locationKey) {
+        console.warn(`Could not find AccuWeather location key for ${city.name}.`);
         return null;
       }
-      const data = await response.json();
+
+      // Step 2: Get Current Conditions using the Location Key
+      const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
+      const weatherResponse = await fetch(weatherUrl, { next: { revalidate: 3600 } }); // Revalidate every hour
       
+      if (!weatherResponse.ok) {
+        console.error(`Failed to fetch weather for ${city.name}: ${weatherResponse.status} ${weatherResponse.statusText}`);
+        return null;
+      }
+      const weatherDataArr = await weatherResponse.json();
+      
+      if (!weatherDataArr || weatherDataArr.length === 0) {
+        console.warn(`No weather data returned from AccuWeather for ${city.name}.`);
+        return null;
+      }
+      
+      const weatherInfo = weatherDataArr[0];
       const weatherData: WeatherData = {
-        id: data.id.toString(),
-        city: city.name, // Use the name from Firestore
-        condition: mapApiCondition(data.weather[0].main, data.weather[0].description),
-        temperature: Math.round(data.main.temp),
-        lastUpdated: new Date(data.dt * 1000),
+        id: locationKey,
+        city: city.name, // Use the name from Firestore for consistency
+        condition: mapAccuWeatherCondition(weatherInfo.WeatherText),
+        temperature: Math.round(weatherInfo.Temperature.Metric.Value),
+        lastUpdated: new Date(weatherInfo.EpochTime * 1000),
       };
       return weatherData;
     } catch (error) {
-      if (error instanceof Error && error.message.includes("API key")) {
-          // Rethrow critical errors to be caught by the main loader.
+      if (error instanceof Error && (error.message.includes("API key") || error.message.includes("rate limit"))) {
           throw error;
       }
       console.error(`Error fetching weather for ${city.name}:`, error);
@@ -75,39 +98,57 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
 
 export async function fetchWeatherForCity(city: string): Promise<WeatherData | null> {
-  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+  const apiKey = process.env.ACCUWEATHER_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The OpenWeatherMap API key is missing from the environment configuration.");
+    throw new Error("The AccuWeather API key is missing. Please add ACCUWEATHER_API_KEY to your environment variables.");
   }
 
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)},PK&appid=${apiKey}&units=metric`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-        if (response.status === 401) {
-            throw new Error("The configured OpenWeatherMap API key seems to be invalid.");
-        }
-        if (response.status === 429) {
-            throw new Error("API rate limit exceeded. Please try again later.");
-        }
-        if (response.status === 404) {
-            console.warn(`City not found: ${city}`);
-            return null;
-        }
-        console.error(`Failed to fetch weather for ${city}: ${response.status} ${response.statusText}`);
-        // For other server errors, return null. The UI will treat this as "not found".
+    // Step 1: Get Location Key from city name search
+    const locationUrl = `http://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${encodeURIComponent(city)}`;
+    const locationResponse = await fetch(locationUrl, { next: { revalidate: 86400 } });
+
+    if (!locationResponse.ok) {
+        if (locationResponse.status === 401) throw new Error("The configured AccuWeather API key seems to be invalid.");
+        if (locationResponse.status === 503) throw new Error("AccuWeather API rate limit exceeded. The free tier allows only 50 calls per day.");
+        console.error(`Failed to search AccuWeather city for ${city}: ${locationResponse.status} ${locationResponse.statusText}`);
         return null;
     }
-    const data = await response.json();
+
+    const locationData = await locationResponse.json();
+    if (!locationData || locationData.length === 0) {
+        console.warn(`City not found via AccuWeather: ${city}`);
+        return null;
+    }
+
+    const locationKey = locationData[0]?.Key;
+    const locationName = locationData[0]?.LocalizedName;
+
+    if (!locationKey) {
+        return null;
+    }
+
+    // Step 2: Get Current Conditions
+    const weatherUrl = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
+    const weatherResponse = await fetch(weatherUrl);
     
+    if (!weatherResponse.ok) {
+       return null;
+    }
+    const weatherDataArr = await weatherResponse.json();
+    
+    if (!weatherDataArr || weatherDataArr.length === 0) {
+      return null;
+    }
+    
+    const weatherInfo = weatherDataArr[0];
     const weatherData: WeatherData = {
-      id: data.id.toString(),
-      city: data.name,
-      condition: mapApiCondition(data.weather[0].main, data.weather[0].description),
-      temperature: Math.round(data.main.temp),
-      lastUpdated: new Date(data.dt * 1000),
+      id: locationKey,
+      city: locationName,
+      condition: mapAccuWeatherCondition(weatherInfo.WeatherText),
+      temperature: Math.round(weatherInfo.Temperature.Metric.Value),
+      lastUpdated: new Date(weatherInfo.EpochTime * 1000),
     };
     return weatherData;
   } catch (error) {
