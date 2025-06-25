@@ -294,10 +294,15 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         </div>
                     </TableCell>
                     <TableCell className="text-center">
-                        {point.isRaining ? (
+                        {point.isRaining && point.currentSpell > 0 ? (
                             <Badge variant="secondary" className="bg-blue-900/50 text-blue-300 border-blue-500/50">
                                 <Droplets className="mr-1 h-3 w-3" />
                                 Raining
+                            </Badge>
+                        ) : point.ponding > 0 ? (
+                            <Badge variant="secondary" className="bg-amber-900/60 text-amber-300 border-amber-500/60">
+                                <AlertTriangle className="mr-1 h-3 w-3" />
+                                Ponding
                             </Badge>
                         ) : (
                             <Badge variant="outline">Clear</Badge>
