@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Pakistan Weather Pulse',
-  description: 'A modern, animated weather monitoring dashboard.',
+  title: 'Weather Dashboard',
+  description: 'A modern, professional weather monitoring dashboard.',
 };
 
 export default function RootLayout({
