@@ -1,7 +1,7 @@
 'use server';
 
 import type { WeatherData } from "@/lib/weather";
-import { CITIES } from "@/lib/weather";
+import { getCities } from "./admin/actions";
 
 function mapApiCondition(apiMain: string, apiDesc: string): WeatherData['condition'] {
     switch (apiMain) {
@@ -28,10 +28,17 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   if (!apiKey) {
     throw new Error("The OpenWeatherMap API key is missing from the environment configuration.");
   }
+  
+  const cities = await getCities();
 
-  const weatherPromises = CITIES.map(async (city) => {
+  if (!cities || cities.length === 0) {
+      console.log("No cities found in the database.");
+      return [];
+  }
+
+  const weatherPromises = cities.map(async (city) => {
     try {
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)},PK&appid=${apiKey}&units=metric`;
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${city.latitude}&lon=${city.longitude}&appid=${apiKey}&units=metric`;
       const response = await fetch(url, { next: { revalidate: 3600 } }); // Revalidate every hour
       
       if (!response.ok) {
@@ -39,11 +46,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
             // This is a critical error, likely a bad API key. Fail everything.
             throw new Error("The configured OpenWeatherMap API key seems to be invalid.");
         }
-        if (response.status === 404) {
-            console.warn(`City not found: ${city}`);
-            return null;
-        }
-        console.error(`Failed to fetch weather for ${city}: ${response.status} ${response.statusText}`);
+        console.error(`Failed to fetch weather for ${city.name}: ${response.status} ${response.statusText}`);
         return null;
       }
       const data = await response.json();
@@ -61,7 +64,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
           // Rethrow critical errors to be caught by the main loader.
           throw error;
       }
-      console.error(`Error fetching weather for ${city}:`, error);
+      console.error(`Error fetching weather for ${city.name}:`, error);
       return null;
     }
   });

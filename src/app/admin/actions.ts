@@ -59,6 +59,8 @@ export async function createNewUser(formData: FormData) {
 
 const CreateCitySchema = z.object({
     name: z.string().min(1, "City name is required."),
+    latitude: z.coerce.number().min(-90, "Invalid latitude.").max(90, "Invalid latitude."),
+    longitude: z.coerce.number().min(-180, "Invalid longitude.").max(180, "Invalid longitude."),
 });
 
 export async function createNewCity(formData: FormData) {
@@ -70,10 +72,10 @@ export async function createNewCity(formData: FormData) {
         return { success: false, error: firstError || 'Invalid input.' };
     }
 
-    const { name } = validation.data;
+    const { name, latitude, longitude } = validation.data;
 
     try {
-        const cityRef = await db.collection('cities').add({ name });
+        const cityRef = await db.collection('cities').add({ name, latitude, longitude });
         return { success: true, message: `City "${name}" created with ID: ${cityRef.id}.` };
     } catch (error: any) {
         return { success: false, error: error.message || "An unknown error occurred." };
@@ -86,7 +88,12 @@ export async function getCities(): Promise<City[]> {
         if (snapshot.empty) {
             return [];
         }
-        return snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
+        return snapshot.docs.map(doc => ({ 
+            id: doc.id, 
+            name: doc.data().name as string,
+            latitude: doc.data().latitude as number,
+            longitude: doc.data().longitude as number,
+        }));
     } catch (error) {
         console.error("Error fetching cities:", error);
         return [];

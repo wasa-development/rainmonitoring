@@ -25,4 +25,6 @@ export interface AdminUser {
 export interface City {
     id: string;
     name: string;
+    latitude: number;
+    longitude: number;
 }

@@ -132,6 +132,16 @@ export default function AdminPage() {
                             <Label htmlFor="name">City Name</Label>
                             <Input id="name" name="name" required />
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                             <div>
+                                <Label htmlFor="latitude">Latitude</Label>
+                                <Input id="latitude" name="latitude" type="number" step="any" required />
+                            </div>
+                             <div>
+                                <Label htmlFor="longitude">Longitude</Label>
+                                <Input id="longitude" name="longitude" type="number" step="any" required />
+                            </div>
+                        </div>
                         <Button type="submit" disabled={isCreateCityPending}>
                              {isCreateCityPending && <RefreshCw className="animate-spin" />}
                             {isCreateCityPending ? 'Creating...' : 'Create City'}
