@@ -35,6 +35,10 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       const response = await fetch(url, { next: { revalidate: 3600 } }); // Revalidate every hour
       
       if (!response.ok) {
+        if (response.status === 401) {
+            // This is a critical error, likely a bad API key. Fail everything.
+            throw new Error("Invalid OpenWeatherMap API key. Please check your .env.local file and restart the server.");
+        }
         if (response.status === 404) {
             console.warn(`City not found: ${city}`);
             return null;
@@ -53,6 +57,10 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       };
       return weatherData;
     } catch (error) {
+      if (error instanceof Error && error.message.includes("Invalid OpenWeatherMap API key")) {
+          // Rethrow critical errors to be caught by the main loader.
+          throw error;
+      }
       console.error(`Error fetching weather for ${city}:`, error);
       return null;
     }
@@ -75,12 +83,19 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
     const response = await fetch(url);
     
     if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error("Invalid API key. Please check it in your .env.local file.");
+        }
+        if (response.status === 429) {
+            throw new Error("API rate limit exceeded. Please try again later.");
+        }
         if (response.status === 404) {
             console.warn(`City not found: ${city}`);
             return null;
         }
         console.error(`Failed to fetch weather for ${city}: ${response.status} ${response.statusText}`);
-        throw new Error(`Could not fetch weather data for ${city}.`);
+        // For other server errors, return null. The UI will treat this as "not found".
+        return null;
     }
     const data = await response.json();
     
