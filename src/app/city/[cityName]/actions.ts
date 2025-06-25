@@ -8,10 +8,10 @@ import { z } from 'zod';
 const PondingPointSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, { message: 'Name is required.' }),
-  currentSpell: z.coerce.number().min(0, { message: 'Spell must be a positive number.' }),
+  currentSpell: z.coerce.number().min(0, { message: 'Spell must be a positive number.' }).optional(),
   clearedInTime: z.string().optional(),
-  ponding: z.coerce.number().min(0, { message: 'Ponding must be a positive number.' }),
-  isRaining: z.preprocess((val) => val === 'on' || val === true, z.boolean()),
+  ponding: z.coerce.number().min(0, { message: 'Ponding must be a positive number.' }).optional(),
+  isRaining: z.preprocess((val) => val === 'on' || val === true, z.boolean()).optional(),
 });
 
 export async function getPondingPoints(cityName: string): Promise<PondingPoint[]> {
@@ -41,7 +41,15 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
     }
 
     const { id, ...data } = validation.data;
-    const pointData = { ...data, cityName };
+    
+    const pointData = { 
+        cityName,
+        name: data.name,
+        currentSpell: data.currentSpell ?? 0,
+        clearedInTime: data.clearedInTime ?? '',
+        ponding: data.ponding ?? 0,
+        isRaining: data.isRaining ?? false,
+    };
 
     try {
         if (id) {

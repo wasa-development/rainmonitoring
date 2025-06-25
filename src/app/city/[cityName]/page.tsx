@@ -40,7 +40,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Home, PlusCircle, Droplets, Trash2, Edit, AlertTriangle, RefreshCw, PlayCircle } from 'lucide-react';
+import { Home, PlusCircle, Droplets, Trash2, Edit, AlertTriangle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
 import RainAnimation from '@/components/rain-animation';
 import type { PondingPoint } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -63,6 +63,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
+  const [isSpellActive, setIsSpellActive] = useState(false);
 
   const [isPending, startTransition] = useTransition();
 
@@ -147,8 +148,9 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </h1>
             </div>
             <div className="flex items-center gap-2">
-                <Button disabled>
-                    <PlayCircle className="mr-2" /> Start Spell
+                <Button onClick={() => setIsSpellActive(prev => !prev)}>
+                    {isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
+                    {isSpellActive ? 'Stop Spell' : 'Start Spell'}
                 </Button>
                 <Dialog open={isFormOpen} onOpenChange={handleDialogClose}>
                     <DialogTrigger asChild>
@@ -161,7 +163,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         <DialogHeader>
                         <DialogTitle>{editingPoint ? 'Edit' : 'Add New'} Ponding Point</DialogTitle>
                         <DialogDescription>
-                           Enter the details for the location. Click save when you're done.
+                           {isSpellActive
+                            ? "Enter the details for the location. Click save when you're done."
+                            : "Add a new ponding point name. Start a spell to enter data."
+                           }
                         </DialogDescription>
                         </DialogHeader>
                         <form ref={formRef} onSubmit={handleFormSubmit}>
@@ -173,19 +178,19 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="currentSpell" className="text-right">Spell (mm)</Label>
-                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell} />
+                                    <Input id="currentSpell" name="currentSpell" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.currentSpell} disabled={!isSpellActive} />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="clearedInTime" className="text-right">Cleared (hh:mm)</Label>
-                                    <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} />
+                                    <Input id="clearedInTime" name="clearedInTime" type="text" placeholder="02:30" className="col-span-3" defaultValue={editingPoint?.clearedInTime} disabled={!isSpellActive} />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
-                                    <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding} />
+                                    <Input id="ponding" name="ponding" type="number" step="0.1" className="col-span-3" required defaultValue={editingPoint?.ponding} disabled={!isSpellActive} />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="isRaining" className="text-right">Raining?</Label>
-                                    <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} />
+                                    <Checkbox id="isRaining" name="isRaining" className="col-span-3 justify-self-start" defaultChecked={editingPoint?.isRaining} disabled={!isSpellActive} />
                                 </div>
                             </div>
                             <DialogFooter>
