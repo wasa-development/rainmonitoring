@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import type { WeatherData } from "@/lib/types";
 import { getWeatherIcon } from "@/lib/weather";
 import { formatDistanceToNow } from "date-fns";
-import { CloudRain } from 'lucide-react';
 import React from 'react';
 
 const CardRainAnimation = () => {
@@ -45,14 +44,8 @@ export default function WeatherCard({ data }: WeatherCardProps) {
                     </div>
                     <Icon className="w-16 h-16 text-primary drop-shadow-lg transition-transform group-hover:scale-110" />
                 </div>
-                {data.forecast?.hasPrecipitation ? (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <CloudRain className="h-4 w-4 text-primary" />
-                        <span>Forecast: {data.forecast.precipitationType}</span>
-                    </div>
-                ) : (
-                    <div className="h-6" />
-                )}
+                 {/* Placeholder for alignment, as forecast is removed */}
+                <div className="h-6" />
             </CardContent>
             <CardFooter className="flex items-center justify-start p-4 pt-0">
                 <p className="text-xs text-muted-foreground">

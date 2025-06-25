@@ -4,25 +4,27 @@ import type { Spell, WeatherData } from "@/lib/types";
 import { getCities } from "./admin/actions";
 import { db } from "@/lib/firebase-admin";
 
-function mapAccuWeatherCondition(weatherText: string): WeatherData['condition'] {
-    const text = weatherText.toLowerCase();
-    if (text.includes('thunder') || text.includes('rain') || text.includes('shower') || text.includes('drizzle')) {
+function mapOpenWeatherCondition(weatherMain: string, weatherDesc: string): WeatherData['condition'] {
+    const main = weatherMain.toLowerCase();
+    const desc = weatherDesc.toLowerCase();
+
+    if (main.includes('thunderstorm') || main.includes('drizzle') || main.includes('rain')) {
         return 'Rainy';
     }
-    if (text.includes('sunny')) {
+    if (main.includes('clear')) {
+        // OpenWeather 'Clear' is equivalent to 'Sunny' for our purposes
         return 'Sunny';
     }
-    if (text.includes('clear')) {
-        return 'Clear';
-    }
-    if (text.includes('partly') || text.includes('intermittent') || text.includes('some clouds') || text.includes('hazy')) {
-        return 'Partly Cloudy';
-    }
-    if (text.includes('mostly cloudy') || text.includes('cloudy') || text.includes('overcast') || text.includes('fog')) {
+    if (main.includes('clouds')) {
+        if (desc.includes('few clouds') || desc.includes('scattered clouds')) {
+            return 'Partly Cloudy';
+        }
         return 'Cloudy';
     }
-    return 'Cloudy'; // Default for any other condition
+    // For Atmosphere group (Mist, Smoke, Haze, Dust, Fog, etc.) or other cases like Snow.
+    return 'Cloudy';
 }
+
 
 async function getActiveSpell(cityName: string): Promise<Spell | null> {
     try {
@@ -52,10 +54,10 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
 
 
 export async function fetchWeatherData(): Promise<WeatherData[]> {
-  const apiKey = process.env.ACCUWEATHER_API_KEY;
+  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The AccuWeather API key is missing. For production, you must set the ACCUWEATHER_API_KEY environment variable in your hosting provider's settings.");
+    throw new Error("The OpenWeatherMap API key is missing. For production, you must set the OPENWEATHERMAP_API_KEY environment variable in your hosting provider's settings.");
   }
   
   const cities = await getCities();
@@ -67,76 +69,38 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
   const weatherPromises = cities.map(async (city) => {
     try {
-      // Step 1: Get Location Key from latitude and longitude
-      const locationUrl = `https://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${apiKey}&q=${city.latitude},${city.longitude}`;
-      const locationResponse = await fetch(locationUrl, { next: { revalidate: 86400 } }); // Cache location key for a day
+      // Use OpenWeatherMap API
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${city.latitude}&lon=${city.longitude}&appid=${apiKey}&units=metric`;
+      
+      const [weatherResponse, activeSpell] = await Promise.all([
+          fetch(weatherUrl, { next: { revalidate: 3600 } }), // Revalidate every hour
+          getActiveSpell(city.name)
+      ]);
 
-      if (!locationResponse.ok) {
-         if (locationResponse.status === 401) throw new Error("The configured AccuWeather API key seems to be invalid.");
-         if (locationResponse.status === 503) throw new Error("AccuWeather API rate limit exceeded. The free tier allows only 50 calls per day.");
-         console.error(`Failed to get AccuWeather location key for ${city.name}: ${locationResponse.status} ${locationResponse.statusText}`);
+      if (!weatherResponse.ok) {
+         if (weatherResponse.status === 401) throw new Error("The configured OpenWeatherMap API key seems to be invalid or has been disabled.");
+         console.error(`Failed to fetch OpenWeatherMap data for ${city.name}: ${weatherResponse.status} ${weatherResponse.statusText}`);
          return null;
       }
       
-      const locationData = await locationResponse.json();
-      const locationKey = locationData?.Key;
-
-      if (!locationKey) {
-        console.warn(`Could not find AccuWeather location key for ${city.name}.`);
-        return null;
-      }
-
-      // Step 2 & 3: Get Current Conditions, Forecast and Spell status concurrently
-      const weatherUrl = `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
-      const forecastUrl = `https://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
-
-      const [weatherResponse, forecastResponse, activeSpell] = await Promise.all([
-          fetch(weatherUrl, { next: { revalidate: 3600 } }), // Revalidate every hour
-          fetch(forecastUrl, { next: { revalidate: 21600 } }), // Revalidate every 6 hours
-          getActiveSpell(city.name)
-      ]);
+      const weatherInfo = await weatherResponse.json();
       
-      if (!weatherResponse.ok) {
-        console.error(`Failed to fetch weather for ${city.name}: ${weatherResponse.status} ${weatherResponse.statusText}`);
-        return null;
-      }
-      const weatherDataArr = await weatherResponse.json();
-      
-      if (!weatherDataArr || weatherDataArr.length === 0) {
-        console.warn(`No weather data returned from AccuWeather for ${city.name}.`);
+      if (!weatherInfo || !weatherInfo.weather || weatherInfo.weather.length === 0) {
+        console.warn(`No weather data returned from OpenWeatherMap for ${city.name}.`);
         return null;
       }
       
-      // Handle forecast response
-      let forecastData = null;
-      if (forecastResponse.ok) {
-          const forecastJson = await forecastResponse.json();
-          if (forecastJson && forecastJson.DailyForecasts && forecastJson.DailyForecasts.length > 0) {
-              const dayForecast = forecastJson.DailyForecasts[0].Day;
-              if (dayForecast.HasPrecipitation) {
-                forecastData = {
-                    hasPrecipitation: true,
-                    precipitationType: dayForecast.PrecipitationType,
-                };
-              }
-          }
-      } else {
-          console.warn(`Failed to fetch forecast for ${city.name}: ${forecastResponse.status} ${forecastResponse.statusText}`);
-      }
-
-      const weatherInfo = weatherDataArr[0];
       const weatherData: WeatherData = {
-        id: locationKey,
+        id: String(weatherInfo.id),
         city: city.name, // Use the name from Firestore for consistency
-        condition: mapAccuWeatherCondition(weatherInfo.WeatherText),
-        temperature: Math.round(weatherInfo.Temperature.Metric.Value),
-        lastUpdated: new Date(weatherInfo.EpochTime * 1000),
-        forecast: forecastData,
+        condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].description),
+        temperature: Math.round(weatherInfo.main.temp),
+        lastUpdated: new Date(weatherInfo.dt * 1000),
         isSpellActive: !!activeSpell,
       };
       return weatherData;
     } catch (error) {
-      if (error instanceof Error && (error.message.includes("API key") || error.message.includes("rate limit"))) {
+      if (error instanceof Error && error.message.includes("API key")) {
           throw error;
       }
       console.error(`Error fetching weather for ${city.name}:`, error);
@@ -150,79 +114,54 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
 
 export async function fetchWeatherForCity(city: string): Promise<WeatherData | null> {
-  const apiKey = process.env.ACCUWEATHER_API_KEY;
+  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The AccuWeather API key is missing. For production, you must set the ACCUWEATHER_API_KEY environment variable in your hosting provider's settings.");
+    throw new Error("The OpenWeatherMap API key is missing. For production, you must set the OPENWEATHERMAP_API_KEY environment variable in your hosting provider's settings.");
   }
 
   try {
-    // Step 1: Get Location Key from city name search
-    const locationUrl = `https://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${encodeURIComponent(city)}`;
-    const locationResponse = await fetch(locationUrl, { next: { revalidate: 86400 } });
+    // Step 1: Get lat/lon from city name using OpenWeatherMap Geocoding API
+    const geocodeUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},PK&limit=1&appid=${apiKey}`;
+    const geocodeResponse = await fetch(geocodeUrl, { next: { revalidate: 86400 } });
 
-    if (!locationResponse.ok) {
-        if (locationResponse.status === 401) throw new Error("The configured AccuWeather API key seems to be invalid.");
-        if (locationResponse.status === 503) throw new Error("AccuWeather API rate limit exceeded. The free tier allows only 50 calls per day.");
-        console.error(`Failed to search AccuWeather city for ${city}: ${locationResponse.status} ${locationResponse.statusText}`);
+    if (!geocodeResponse.ok) {
+        if (geocodeResponse.status === 401) throw new Error("The configured OpenWeatherMap API key seems to be invalid or has been disabled.");
+        console.error(`Failed to search OpenWeatherMap city for ${city}: ${geocodeResponse.status} ${geocodeResponse.statusText}`);
         return null;
     }
 
-    const locationData = await locationResponse.json();
-    if (!locationData || locationData.length === 0) {
-        console.warn(`City not found via AccuWeather: ${city}`);
+    const geocodeData = await geocodeResponse.json();
+    if (!geocodeData || geocodeData.length === 0) {
+        console.warn(`City not found via OpenWeatherMap: ${city}`);
         return null;
     }
 
-    const locationKey = locationData[0]?.Key;
-    const locationName = locationData[0]?.LocalizedName;
+    const { lat, lon, name: locationName } = geocodeData[0];
 
-    if (!locationKey) {
-        return null;
-    }
-
-    // Step 2 & 3: Get Current Conditions, Forecast and Spell status
-    const weatherUrl = `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
-    const forecastUrl = `https://dataservice.accuweather.com/forecasts/v1/daily/1day/${locationKey}?apikey=${apiKey}&metric=true`;
-
-    const [weatherResponse, forecastResponse, activeSpell] = await Promise.all([
+    // Step 2: Get weather data
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+    
+    const [weatherResponse, activeSpell] = await Promise.all([
         fetch(weatherUrl),
-        fetch(forecastUrl),
         getActiveSpell(locationName)
     ]);
     
     if (!weatherResponse.ok) {
        return null;
     }
-    const weatherDataArr = await weatherResponse.json();
+    const weatherInfo = await weatherResponse.json();
     
-    if (!weatherDataArr || weatherDataArr.length === 0) {
+    if (!weatherInfo || !weatherInfo.weather || weatherInfo.weather.length === 0) {
       return null;
     }
-    
-    // Handle forecast response
-    let forecastData = null;
-    if (forecastResponse.ok) {
-        const forecastJson = await forecastResponse.json();
-        if (forecastJson && forecastJson.DailyForecasts && forecastJson.DailyForecasts.length > 0) {
-            const dayForecast = forecastJson.DailyForecasts[0].Day;
-            if (dayForecast.HasPrecipitation) {
-              forecastData = {
-                  hasPrecipitation: true,
-                  precipitationType: dayForecast.PrecipitationType
-              };
-            }
-        }
-    }
 
-    const weatherInfo = weatherDataArr[0];
     const weatherData: WeatherData = {
-      id: locationKey,
+      id: String(weatherInfo.id),
       city: locationName,
-      condition: mapAccuWeatherCondition(weatherInfo.WeatherText),
-      temperature: Math.round(weatherInfo.Temperature.Metric.Value),
-      lastUpdated: new Date(weatherInfo.EpochTime * 1000),
-      forecast: forecastData,
+      condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].description),
+      temperature: Math.round(weatherInfo.main.temp),
+      lastUpdated: new Date(weatherInfo.dt * 1000),
       isSpellActive: !!activeSpell
     };
     return weatherData;
