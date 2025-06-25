@@ -18,8 +18,15 @@ const CardRainAnimation = () => {
       return <div key={i} className="raindrop" style={style} />;
     }), []);
 
-  return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg z-0">{raindrops}</div>;
+  return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg z-10">{raindrops}</div>;
 };
+
+const PondingAnimation = () => (
+    <div className="ponding-animation-container">
+        <div className="wave-layer wave1"></div>
+        <div className="wave-layer wave2"></div>
+    </div>
+);
 
 interface PondingPointCardProps {
     point: PondingPoint;
@@ -30,12 +37,14 @@ interface PondingPointCardProps {
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole }: PondingPointCardProps) {
     const isRaining = point.isRaining && point.currentSpell > 0;
+    const isPonding = point.ponding > 0;
 
     return (
         <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group">
             {isRaining && <CardRainAnimation />}
+            {isPonding && <PondingAnimation />}
             
-            <div className="relative z-10 bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg">
+            <div className="relative z-20 bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg">
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
                         <CardTitle className="text-lg">{point.name}</CardTitle>
@@ -91,7 +100,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                             <Droplets className="mr-1 h-3 w-3" />
                             Raining
                         </Badge>
-                    ) : point.ponding > 0 ? (
+                    ) : isPonding ? (
                         <Badge variant="secondary" className="bg-amber-900/60 text-amber-300 border-amber-500/60">
                             <AlertTriangle className="mr-1 h-3 w-3" />
                             Ponding
