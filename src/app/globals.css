@@ -6,34 +6,34 @@
   :root {
     --background: 220 50% 98%;
     --foreground: 207 79% 20%;
-    --card: 0 0% 100%;
-    --card-foreground: 207 79% 20%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 207 79% 20%;
+    --card: 222.2 84% 6.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
     --primary: 217 89% 52%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 220 50% 94%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 220 50% 94%;
-    --muted-foreground: 220 10% 45%;
-    --accent: 220 50% 90%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 30% 90%;
-    --input: 220 30% 90%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
     --ring: 217 89% 52%;
     --radius: 0.5rem;
-    --sidebar-background: 220 50% 94%;
-    --sidebar-foreground: 207 79% 20%;
-    --sidebar-border: 220 30% 90%;
-    --sidebar-accent: 220 50% 90%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-primary: 217 89% 52%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-ring: 217 89% 52%;
-    /* Unified color for light theme water effects */
-    --raindrop-gradient-color: rgba(30, 136, 229, 0.6);
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Use dark theme's water effect color since components are dark */
+    --raindrop-gradient-color: rgba(173, 216, 230, 0.4);
   }
 
   .dark {
@@ -126,13 +126,13 @@
 
 .wave-layer.wave1 {
     animation-delay: -3s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(30, 136, 229, 0.6)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(173,216,230,0.4)"/></svg>');
 }
 
 .wave-layer.wave2 {
     animation-direction: reverse;
     animation-duration: 10s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(30, 136, 229, 0.6)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(173,216,230,0.4)"/></svg>');
 }
 
 .dark .wave-layer.wave1 {

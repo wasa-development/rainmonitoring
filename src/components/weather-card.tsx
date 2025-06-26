@@ -68,9 +68,9 @@ export default function WeatherCard({ data }: WeatherCardProps) {
   const cardClasses = cn(
     'relative flex flex-col justify-between h-full transition-colors duration-500 border group-hover:border-primary/50 bg-card overflow-hidden',
     {
-        'bg-sky-100 dark:bg-sky-950': data.condition === 'ClearDay',
+        'bg-sky-950': data.condition === 'ClearDay',
         'bg-indigo-900/80 dark:bg-black text-white': data.condition === 'ClearNight',
-        'bg-slate-400/80 dark:bg-slate-800/80': isCloudy || isFoggy || isSnowing,
+        'bg-slate-800/80': isCloudy || isFoggy || isSnowing,
     }
   );
   
