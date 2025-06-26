@@ -32,9 +32,9 @@ function mapOpenWeatherToCondition(icon: string): WeatherCondition {
 
 function getMockWeatherData(): WeatherData[] {
     const mockCities = ["Lahore", "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sialkot", "Sargodha", "Bahawalpur"];
-    const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Cloudy', 'Rainy', 'Thunderstorm', 'Snow', 'Fog'];
+    const conditions: WeatherCondition[] = ['ClearNight', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Cloudy', 'Rainy', 'Thunderstorm', 'Snow', 'Fog'];
 
-    return mockCities.map(city => {
+    const otherCitiesData = mockCities.map(city => {
         const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
         return {
             id: city.toLowerCase().replace(/\s/g, ''),
@@ -45,6 +45,17 @@ function getMockWeatherData(): WeatherData[] {
             isSpellActive: Math.random() > 0.8 // 20% chance of spell being active
         };
     });
+    
+    const islamabadData: WeatherData = {
+        id: 'islamabad',
+        city: 'Islamabad',
+        condition: 'ClearDay',
+        temperature: Math.floor(Math.random() * 15) + 20, // A pleasant temp for clear weather: 20-34 C
+        lastUpdated: new Date(),
+        isSpellActive: false
+    };
+
+    return [islamabadData, ...otherCitiesData];
 }
 
 
@@ -113,6 +124,8 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     cities = await getCities();
   } catch (error) {
      console.error("Critical error fetching cities from Firestore. This might be a database connection or permission issue.", error);
+     // Fall through to allow mock data to be displayed locally
+     cities = [];
   }
 
   const isProduction = process.env.NODE_ENV === 'production';
@@ -181,7 +194,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     
     // For other errors (e.g., network issues, invalid key)
     const firstErrorReason = errors[0]?.reason || "An unknown error occurred.";
-    throw new Error(`Failed to fetch weather for all cities. This is likely a configuration or network issue. Example error: "${firstErrorReason}"`);
+    throw new Error(`Failed to fetch weather for all cities. The OPENWEATHERMAP_API_KEY is likely missing from your environment variables.`);
   }
 
   return successfulData;
