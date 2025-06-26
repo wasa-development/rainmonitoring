@@ -43,11 +43,11 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
     return (
-        <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group bg-white dark:bg-card">
+        <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group">
             {isRaining && <CardRainAnimation />}
             {isPonding && <PondingAnimation height={waveHeightPercentage} />}
             
-            <div className="relative z-20 flex flex-col flex-grow rounded-lg text-foreground dark:text-card-foreground">
+            <div className="relative z-20 flex flex-col flex-grow rounded-lg">
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
                         <CardTitle className="text-lg">{point.name}</CardTitle>
@@ -58,9 +58,11 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(point)}>
                                 <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(point)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {userRole === 'super-admin' && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(point)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
                         </>
                     )}
                     </div>
@@ -70,28 +72,28 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                         <div className="flex items-center gap-2">
                             <Droplets className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-slate-600 dark:text-muted-foreground">Current Rain</p>
+                                <p className="text-muted-foreground">Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <TrendingUp className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-slate-600 dark:text-muted-foreground">Max Today</p>
+                                <p className="text-muted-foreground">Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-primary" />
+                            <AlertTriangle className="h-5 w-5 text-accent" />
                             <div>
-                                <p className="text-slate-600 dark:text-muted-foreground">Ponding</p>
+                                <p className="text-muted-foreground">Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-primary" />
+                            <Clock className="h-5 w-5 text-muted-foreground" />
                             <div>
-                                <p className="text-slate-600 dark:text-muted-foreground">Cleared In</p>
+                                <p className="text-muted-foreground">Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
@@ -99,12 +101,12 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
                     {isRaining ? (
-                        <Badge variant="secondary" className="bg-blue-900/50 text-blue-300 border-blue-500/50">
+                        <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary">
                             <Droplets className="mr-1 h-3 w-3" />
                             Raining
                         </Badge>
                     ) : isPonding ? (
-                        <Badge variant="secondary" className="bg-amber-900/60 text-amber-300 border-amber-500/60">
+                        <Badge variant="destructive" className="bg-destructive/10 border-destructive/50 text-destructive-foreground">
                             <AlertTriangle className="mr-1 h-3 w-3" />
                             Ponding
                         </Badge>
