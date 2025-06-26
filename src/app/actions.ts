@@ -7,30 +7,24 @@ import { db } from "@/lib/firebase-admin";
 import { getWeatherForCity as getAiWeather } from '@/ai/flows/get-weather-flow';
 
 async function getActiveSpell(cityName: string): Promise<Spell | null> {
-    try {
-        const snapshot = await db.collection('spells')
-            .where('cityName', '==', cityName)
-            .where('status', '==', 'active')
-            .limit(1)
-            .get();
+    const snapshot = await db.collection('spells')
+        .where('cityName', '==', cityName)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
 
-        if (snapshot.empty) {
-            return null;
-        }
-
-        const doc = snapshot.docs[0];
-        const data = doc.data();
-        return {
-            id: doc.id,
-            ...data,
-            startTime: data.startTime.toDate(),
-            endTime: data.endTime ? data.endTime.toDate() : undefined,
-        } as Spell;
-    } catch (error) {
-        // This can fail in local dev without credentials, which is fine for this specific check.
-        // We will catch the broader credential issue in the main functions.
+    if (snapshot.empty) {
         return null;
     }
+
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    return {
+        id: doc.id,
+        ...data,
+        startTime: data.startTime.toDate(),
+        endTime: data.endTime ? data.endTime.toDate() : undefined,
+    } as Spell;
 }
 
 
@@ -41,10 +35,10 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   if (!hasGoogleCredentials && !isProduction) {
     console.warn("****************************************************************************************************");
     console.warn("WARNING: Google credentials not found for local development.");
-    console.warn("The application will not be able to fetch real weather data.");
+    console.warn("The application will not be able to fetch real weather data, returning empty.");
     console.warn("Please see the instructions in `src/lib/firebase-admin.ts` to set them up.");
     console.warn("****************************************************************************************************");
-    return []; // Return empty array if no credentials, preventing mock data and crashes.
+    return []; // Return empty array if no credentials, preventing crashes but making it clear why data is missing.
   }
 
   let cities;
@@ -116,8 +110,9 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
 export async function fetchWeatherForCity(cityName: string): Promise<WeatherData | null> {
     const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL;
+    const isProduction = process.env.NODE_ENV === 'production';
   
-    if (!hasGoogleCredentials) {
+    if (!hasGoogleCredentials && !isProduction) {
        console.warn(`Cannot search for city "${cityName}" because Google credentials are not configured for local development.`);
        return null;
     }
