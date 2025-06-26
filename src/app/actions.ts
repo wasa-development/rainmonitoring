@@ -37,42 +37,6 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
 }
 
 
-// New mock data generation function for local development
-function generateMockWeatherData(): WeatherData[] {
-    const mockCities = [
-        { name: 'Lahore', id: '1172451' },
-        { name: 'Karachi', id: '1174872' },
-        { name: 'Islamabad', id: '1176615' },
-        { name: 'Faisalabad', id: '1179400' },
-        { name: 'Rawalpindi', id: '1167151' },
-        { name: 'Multan', id: '1169824' },
-        { name: 'Peshawar', id: '1168243' },
-        { name: 'Quetta', id: '1167429' },
-    ];
-
-    const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog', 'Snow'];
-
-    return mockCities.map(city => {
-        let condition = conditions[Math.floor(Math.random() * conditions.length)];
-        const isSpellActive = Math.random() > 0.5;
-        
-        // If a spell is active, the visual should represent rain.
-        if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
-            condition = 'Rainy';
-        }
-
-        return {
-            id: city.id,
-            city: city.name,
-            condition: condition,
-            temperature: Math.floor(Math.random() * 20) + 15, // Temp between 15 and 35
-            lastUpdated: new Date(),
-            isSpellActive: isSpellActive,
-        };
-    });
-}
-
-
 export async function fetchWeatherData(): Promise<WeatherData[]> {
   // Check if Google credentials are likely available
   const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID;
@@ -82,19 +46,15 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         // In production, credentials should always be available.
         throw new Error("Google Application Credentials are not configured. This is required for production.");
     } else {
-        console.log("Google credentials missing. Generating mock data for development.");
-        return generateMockWeatherData();
+        console.log("Google credentials missing. Returning empty list for development. Please configure credentials to fetch data.");
+        return [];
     }
   }
   
   const cities = await getCities();
 
   if (!cities || cities.length === 0) {
-      if (process.env.NODE_ENV !== 'production') {
-          console.log("No cities found in DB. Generating mock data for local development.");
-          return generateMockWeatherData();
-      }
-      console.log("No cities found in the database.");
+      console.log("No cities found in the database. Returning empty list.");
       return [];
   }
 
@@ -145,23 +105,8 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
         if (process.env.NODE_ENV === 'production') {
             throw new Error("Google Application Credentials are not configured. This is required for production.");
         } else {
-            console.log(`Google credentials missing. Generating mock data for searched city: ${cityName}`);
-            const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog', 'Snow'];
-            let condition = conditions[Math.floor(Math.random() * conditions.length)];
-            const isSpellActive = Math.random() > 0.5;
-            
-            if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
-                condition = 'Rainy';
-            }
-            
-            return {
-                id: cityName.toLowerCase().replace(/\s/g, ''),
-                city: cityName,
-                condition: condition,
-                temperature: Math.floor(Math.random() * 20) + 15,
-                lastUpdated: new Date(),
-                isSpellActive: isSpellActive,
-            };
+            console.log(`Google credentials missing. Cannot fetch data for searched city: ${cityName}`);
+            return null;
         }
     }
 
