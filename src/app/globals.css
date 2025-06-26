@@ -79,6 +79,15 @@
   animation: fall linear infinite;
 }
 
+.blue-raindrop {
+  position: absolute;
+  bottom: 100%;
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(to top, transparent, #007BFF);
+  animation: fall linear infinite;
+}
+
 @keyframes fall {
   to {
     transform: translateY(110vh);
@@ -196,8 +205,8 @@
   inset: 0;
   background: linear-gradient(
     -45deg,
-    hsl(var(--foreground) / 0.4),
-    hsl(var(--foreground) / 0.5)
+    hsl(var(--foreground) / 0.5),
+    hsl(var(--foreground) / 0.6)
   );
   z-index: 12;
   animation: fog-drift 20s ease-in-out infinite alternate;
@@ -244,5 +253,3 @@
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
 }
-
-    

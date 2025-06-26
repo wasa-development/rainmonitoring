@@ -7,20 +7,20 @@ import { Badge } from '@/components/ui/badge';
 import { Droplets, Edit, Trash2, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
 import React from 'react';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
 
-const CardRainAnimation = () => {
-  const raindrops = React.useMemo(() => 
-    Array.from({ length: 70 }).map((_, i) => {
-      const style = {
-        left: `${Math.random() * 100}%`,
-        animationDelay: `${Math.random() * 2}s`,
-        animationDuration: `${1.2 + Math.random() * 0.6}s`,
-      };
-      return <div key={i} className="raindrop" style={style} />;
-    }), []);
+// New animation component for blue raindrops
+const BlueRainAnimation = () => {
+    const raindrops = React.useMemo(() =>
+        Array.from({ length: 70 }).map((_, i) => {
+            const style = {
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${1.2 + Math.random() * 0.6}s`,
+            };
+            return <div key={i} className="blue-raindrop" style={style} />;
+        }), []);
 
-  return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg z-10">{raindrops}</div>;
+    return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg z-10">{raindrops}</div>;
 };
 
 const PondingAnimation = ({ height }: { height: number }) => (
@@ -45,14 +45,20 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
     return (
-        <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group">
-            {isRaining && <Image src="/rainy-day.jpg" alt="A city street on a rainy day" layout="fill" objectFit="cover" className="absolute z-0" />}
-            {isRaining && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/10 z-10" />}
-
-            {isRaining && <CardRainAnimation />}
+        <Card className={cn(
+            "relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group",
+            isRaining && "bg-white" // Force white background when raining
+        )}>
+            
+            {isRaining && <BlueRainAnimation />}
             {isPonding && <PondingAnimation height={waveHeightPercentage} />}
             
-            <div className={cn("relative z-20 flex flex-col flex-grow rounded-lg", isRaining ? "text-white" : "text-card-foreground")}>
+            <div className={cn(
+                "relative z-20 flex flex-col flex-grow rounded-lg",
+                // If raining, text should be dark to be visible on the white background.
+                // Otherwise, use the default card-foreground which adapts to the theme.
+                isRaining ? "text-slate-800" : "text-card-foreground"
+            )}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
                         <CardTitle className="text-lg">{point.name}</CardTitle>
@@ -75,30 +81,30 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 <CardContent className="flex-grow p-4 space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                            <Droplets className="h-5 w-5 text-primary" />
+                            <Droplets className={cn("h-5 w-5", isRaining ? "text-blue-500" : "text-primary")} />
                             <div>
-                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Current Rain</p>
+                                <p className={cn(isRaining ? "text-slate-600" : "text-muted-foreground")}>Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-primary" />
+                            <TrendingUp className={cn("h-5 w-5", isRaining ? "text-blue-500" : "text-primary")} />
                             <div>
-                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Max Today</p>
+                                <p className={cn(isRaining ? "text-slate-600" : "text-muted-foreground")}>Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-accent" />
                             <div>
-                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Ponding</p>
+                                <p className={cn(isRaining ? "text-slate-600" : "text-muted-foreground")}>Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-muted-foreground" />
+                            <Clock className={cn("h-5 w-5", isRaining ? "text-slate-400" : "text-muted-foreground")} />
                             <div>
-                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Cleared In</p>
+                                <p className={cn(isRaining ? "text-slate-600" : "text-muted-foreground")}>Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
@@ -106,7 +112,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
                     {isRaining ? (
-                        <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary">
+                        <Badge variant="outline" className="border-blue-500/50 bg-blue-500/10 text-blue-700">
                             <Droplets className="mr-1 h-3 w-3" />
                             Raining
                         </Badge>
