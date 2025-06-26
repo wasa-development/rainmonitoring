@@ -6,7 +6,7 @@ import Image from 'next/image';
  */
 export const Logo = ({ className, width = 64, height = 64 }: { className?: string, width?: number, height?: number }) => (
   <Image
-    src="/logo.jpg"
+    src="/logo.png"
     alt="Punjab WASA Rain Monitoring Logo"
     width={width}
     height={height}
