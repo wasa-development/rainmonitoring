@@ -4,36 +4,36 @@
 
 @layer base {
   :root {
-    --background: 195 91% 95%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 220 50% 98%;
+    --foreground: 207 79% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 207 79% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --popover-foreground: 207 79% 20%;
+    --primary: 217 89% 52%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
+    --secondary: 220 50% 94%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
+    --muted: 220 50% 94%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 220 50% 90%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 220 30% 90%;
+    --input: 220 30% 90%;
+    --ring: 217 89% 52%;
     --radius: 0.5rem;
-    --sidebar-background: 210 40% 96.1%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-accent: 210 40% 92%;
+    --sidebar-background: 220 50% 94%;
+    --sidebar-foreground: 207 79% 20%;
+    --sidebar-border: 220 30% 90%;
+    --sidebar-accent: 220 50% 90%;
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary: 217 89% 52%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-ring: 221.2 83.2% 53.3%;
+    --sidebar-ring: 217 89% 52%;
     /* Unified color for light theme water effects */
-    --raindrop-gradient-color: rgba(59, 130, 246, 0.6);
+    --raindrop-gradient-color: rgba(30, 136, 229, 0.6);
   }
 
   .dark {
@@ -126,13 +126,13 @@
 
 .wave-layer.wave1 {
     animation-delay: -3s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(59,130,246,0.6)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(30, 136, 229, 0.6)"/></svg>');
 }
 
 .wave-layer.wave2 {
     animation-direction: reverse;
     animation-duration: 10s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(59,130,246,0.6)"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="rgba(30, 136, 229, 0.6)"/></svg>');
 }
 
 .dark .wave-layer.wave1 {
@@ -259,7 +259,7 @@
 }
 
 .cloud-layer.cloud1 {
-    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDMwMCI+PHBhdGggZmlsbD0iI2QxZDVmYSIgZD0iTTExODQuNCAxOTQuM2MtNC40LTYxLjktNTQuMS0xMTAuNy0xMTUuOC0xMTAuN2gtNC41Yy0xMS4xLTU1LjMtNjAuMy05Ni45LTExOS44LTk2LjktMTIuMyAwLTI0LjIgMS44LTM1LjYgNS4xLTMxLjgtNDcuNC04NC4yLTc3LjktMTQ0LjQtNzcuOS01OS4yIDAtMTEwLjcgMzQuNC0xMzcuNiA4My4xLTcuOC0yLjctMTYtNC4xLTI0LjYtNC4xLTY2LjUgMC0xMjAuNCA1My45LTEyMC40IDEyMC40IDAgMS42LjEgMy4yLjMgNC44LTU3LjcgMTIuNS05OS41IDY1LjItOTkuNSAxMjUuMiAwIDcwLjcgNTcuMyAxMjggMTI4IDEyOGg3NzMuNGM1NS40IDAgMTAxLjQtNDAuMyAxMDcuOC05Mi45IDEuOC0xNC45IDIuNy0zMCAyLjctNDUuNiAwLTMxLjQtNy4yLTYxLTExOS44LTk2LjljLTEyLjMgMC0yNC4yIDEuOC0zNS42IDUuMS0zMS44LTQ3LjQtODQuMi03Ny45LTE0NC40LTc3LjktNTkuMiAwLTExMC43IDM0LjQtMTM3LjYgODMuMS03LjgtMi43LTE2LTQuMS0yNC42LTQuMS02Ni41IDAtMTIwLjQgNTMuOS0xMjAuNCAxMjAuNCAwIDEuNi4xIDMuMi4zIDQuOC01Ny43IDEyLjUtOTkuNSA2NS4yLTk5LjUgMTI1LjIgMCA3MC43IDU3LjMgMTI4IDEyOCAxMjhoNzE5LjFjNzAuNyAwIDEyOC01Ny4zIDEyOC0xMjggMCA0LjQtLjIgOC44LS43IDEzLjEtMS41IDMuMi0zLjEgNi4zLTQuNyA5LjV6Ii8+PC9zdmc+');
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDMwMCI+PHBhdGggZmlsbD0iI2QxZDVmYSIgZD0iTTExODQuNCAxOTQuM2MtNC40LTYxLjktNTQuMS0xMTAuNy0xMTUuOC0xMTAuN2gtNC41Yy0xMS4xLTU1LjMtNjAuMy05Ni45LTExOS44LTk2LjktMTIuMyAwLTI0LjIgMS44LTM1LjYgNS4xLTMxLjgtNDcuNC04NC4yLTc3LjktMTQ0LjQtNzcuOS01OS4yIDAtMTEwLjcgMzQuNC0xMzcuNiA4My4xLTcuOC0yLjctMTYtNC4xLTI0LjYtNC4xLTY2LjUgMC0xMjAuNCA1My45LTEyMC40IDEyMC40IDAgMS42LjEgMy4yLjMgNC44LTU3NyAxMi41LTk5LjUgNjUuMi05OS41IDEyNS4yIDAgNzAuNyA1Ny4zIDEyOCAxMjggMTI4aDc3My40YzU1LjQgMCAxMDEuNC00MC4zIDEwNy44LTkyLjkgMS44LTE0LjkgMi43LTMwIDIuNy00NS42IDAtMzEuNC03LjItNjEtMTE5LjgtOTYuOWMtMTIuMyAwLTI0LjIgMS44LTM1LjYgNS4xLTMxLjgtNDcuNC04NC4yLTc3LjktMTQ0LjQtNzcuOS01OS4yIDAtMTEwLjcgMzQuNC0xMzcuNiA4My4xLTcuOC0yLjctMTYtNC4xLTI0LjYtNC4xLTY2LjUgMC0xMjAuNCA1My45LTEyMC40IDEyMC40IDAgMS42LjEgMy4yLjMgNC44LTU3NyAxMi41LTk5LjUgNjUuMi05OS41IDEyNS4yIDAgNzAuNyA1Ny4zIDEyOCAxMjggMTI4aDcxOS4xYzcwLjcgMCAxMjgtNTcuMyAxMjgtMTI4IDAgNC40LS4yIDguOC0uNyAxMy4xLTEuNSAzLjItMy4xIDYuMy00LjcgOS41eiIvPjwvc3ZnPg==');
     animation: move-clouds 35s linear infinite reverse;
 }
 .cloud-layer.cloud2 {
