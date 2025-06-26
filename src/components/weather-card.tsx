@@ -71,7 +71,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
     'relative flex flex-col justify-between h-full transition-colors duration-500 border group-hover:border-primary/50 bg-card overflow-hidden',
     {
         'bg-indigo-900/80 dark:bg-black text-white': data.condition === 'ClearNight',
-        'bg-slate-800/80': isCloudy || isFoggy || isSnowing,
+        'bg-slate-800/80': isFoggy || isSnowing,
     }
   );
   
@@ -79,7 +79,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
     "relative z-20 bg-card/50 dark:bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg h-full",
     {
         'bg-transparent dark:bg-transparent backdrop-blur-none': data.condition === 'ClearNight',
-        'bg-black/10 dark:bg-black/30': isClearDay, // Overlay for text readability on image
+        'bg-black/10 dark:bg-black/30': isClearDay || isCloudy,
     }
   );
 
@@ -93,6 +93,15 @@ export default function WeatherCard({ data }: WeatherCardProps) {
             <Image
                 src="/clear-day.jpg"
                 alt="Clear sunny sky"
+                layout="fill"
+                objectFit="cover"
+                className="absolute z-0"
+            />
+          )}
+          {isCloudy && (
+            <Image
+                src="/cloudy-day.jpg"
+                alt="Cloudy sky"
                 layout="fill"
                 objectFit="cover"
                 className="absolute z-0"
