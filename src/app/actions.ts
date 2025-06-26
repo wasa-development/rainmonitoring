@@ -6,23 +6,6 @@ import { getCities } from "./admin/actions";
 import { db } from "@/lib/firebase-admin";
 import { getWeatherForCity as getAiWeather } from '@/ai/flows/get-weather-flow';
 
-function generateMockWeatherData(): WeatherData[] {
-    const mockCities = ["Lahore", "Karachi", "Islamabad", "Peshawar", "Quetta", "Multan", "Faisalabad", "Sialkot", "Gujranwala", "Rawalpindi", "Hyderabad", "Sukkur", "Bahawalpur", "Sargodha", "Mirpur Khas"];
-    const conditions: WeatherCondition[] = ['ClearDay', 'PartlyCloudyDay', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog', 'Snow', 'ClearNight', 'PartlyCloudyNight'];
-    
-    return mockCities.map(city => {
-        const condition = conditions[Math.floor(Math.random() * conditions.length)];
-        return {
-            id: city.toLowerCase().replace(/\s/g, ''),
-            city: city,
-            condition: condition,
-            temperature: Math.floor(Math.random() * 25) + 15, // Temp between 15 and 40
-            lastUpdated: new Date(Date.now() - Math.random() * 1000 * 60 * 60), // a random time within the last hour
-            isSpellActive: condition === 'Rainy' || condition === 'Thunderstorm',
-        };
-    });
-}
-
 async function getActiveSpell(cityName: string): Promise<Spell | null> {
     try {
         const snapshot = await db.collection('spells')
@@ -52,25 +35,28 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
 
 
 export async function fetchWeatherData(): Promise<WeatherData[]> {
-  const isProduction = process.env.NODE_ENV === 'production';
   const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL;
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  if (!hasGoogleCredentials && !isProduction) {
-    console.log("Google credentials not found for local development. Returning mock data.");
-    return generateMockWeatherData();
+  if (!hasGoogleCredentials) {
+    if (!isProduction) {
+        console.warn("****************************************************************************************************");
+        console.warn("WARNING: Google credentials not found for local development.");
+        console.warn("The application will not be able to fetch real weather data.");
+        console.warn("Please see the instructions in `src/lib/firebase-admin.ts` to set them up.");
+        console.warn("****************************************************************************************************");
+    } else {
+        console.error("CRITICAL: Google credentials not found in production environment. Weather data will be unavailable.");
+    }
+    return []; // Return empty array if no credentials, preventing mock data and crashes.
   }
 
   try {
     const cities = await getCities();
 
     if (!cities || cities.length === 0) {
-      if (isProduction) {
-        console.log("No cities found in the database. Returning empty array for production.");
-        return [];
-      } else {
-        console.log("No cities found in the database. Returning mock data for local development.");
-        return generateMockWeatherData();
-      }
+      console.log("No cities found in the database. Returning empty array.");
+      return [];
     }
 
     const weatherPromises = cities.map(async (city) => {
@@ -111,14 +97,8 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     const results = await Promise.all(weatherPromises);
     return results.filter((data): data is WeatherData => data !== null);
   } catch (error) {
-      console.error("An error occurred fetching real weather data.", error);
-      if (isProduction) {
-        return []; // Return empty array on error in production
-      } else {
-        // In development, it's helpful to see mock data to continue UI work
-        console.log("Falling back to mock data for local development due to an error.");
-        return generateMockWeatherData();
-      }
+      console.error("An error occurred while trying to fetch weather data. This could be a Firestore connection issue.", error);
+      return []; // Return empty array on any top-level error.
   }
 }
 
@@ -127,17 +107,8 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
     const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL;
   
     if (!hasGoogleCredentials) {
-       console.log("Google credentials not found for local development. Returning mock data for searched city.");
-       const conditions: WeatherCondition[] = ['ClearDay', 'PartlyCloudyDay', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog'];
-       const condition = conditions[Math.floor(Math.random() * conditions.length)];
-       return {
-            id: cityName.toLowerCase().replace(/\s/g, ''),
-            city: cityName,
-            condition: condition,
-            temperature: Math.floor(Math.random() * 25) + 15,
-            lastUpdated: new Date(),
-            isSpellActive: condition === 'Rainy' || condition === 'Thunderstorm',
-       }
+       console.warn(`Cannot search for city "${cityName}" because Google credentials are not configured for local development.`);
+       return null;
     }
 
     try {
