@@ -23,7 +23,7 @@
     --border: 210 20% 88%;
     --input: 210 20% 88%;
     --ring: 217 91% 60%;
-    --raindrop-gradient-color: rgba(34, 47, 62, 0.6);
+    --raindrop-gradient-color: rgba(255, 255, 255, 0.6);
   }
 
   .dark {
@@ -196,8 +196,8 @@
   inset: 0;
   background: linear-gradient(
     -45deg,
-    hsl(var(--foreground) / 0.3),
-    hsl(var(--foreground) / 0.4)
+    hsl(var(--foreground) / 0.4),
+    hsl(var(--foreground) / 0.5)
   );
   z-index: 12;
   animation: fog-drift 20s ease-in-out infinite alternate;
