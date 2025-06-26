@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Droplets, Edit, Trash2, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
 import React from 'react';
+import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const CardRainAnimation = () => {
   const raindrops = React.useMemo(() => 
@@ -44,10 +46,13 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
 
     return (
         <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group">
+            {isRaining && <Image src="/rainy-day.jpg" alt="A city street on a rainy day" layout="fill" objectFit="cover" className="absolute z-0" />}
+            {isRaining && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/10 z-10" />}
+
             {isRaining && <CardRainAnimation />}
             {isPonding && <PondingAnimation height={waveHeightPercentage} />}
             
-            <div className="relative z-20 flex flex-col flex-grow rounded-lg">
+            <div className={cn("relative z-20 flex flex-col flex-grow rounded-lg", isRaining ? "text-white" : "text-card-foreground")}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
                         <CardTitle className="text-lg">{point.name}</CardTitle>
@@ -72,28 +77,28 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                         <div className="flex items-center gap-2">
                             <Droplets className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Current Rain</p>
+                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <TrendingUp className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Max Today</p>
+                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-accent" />
                             <div>
-                                <p className="text-muted-foreground">Ponding</p>
+                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5 text-muted-foreground" />
                             <div>
-                                <p className="text-muted-foreground">Cleared In</p>
+                                <p className={cn(isRaining ? "text-white/90" : "text-muted-foreground")}>Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
