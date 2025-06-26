@@ -4,7 +4,63 @@
 import type { Spell, WeatherData, WeatherCondition } from "@/lib/types";
 import { getCities } from "./admin/actions";
 import { db } from "@/lib/firebase-admin";
-import { getWeatherForCity as getAiWeather } from '@/ai/flows/get-weather-flow';
+
+// This function maps the condition code from OpenWeatherMap to our app's WeatherCondition type.
+function mapOpenWeatherToCondition(icon: string): WeatherCondition {
+    const mapping: { [key: string]: WeatherCondition } = {
+        '01d': 'ClearDay',
+        '01n': 'ClearNight',
+        '02d': 'PartlyCloudyDay',
+        '02n': 'PartlyCloudyNight',
+        '03d': 'Cloudy',
+        '03n': 'Cloudy',
+        '04d': 'Cloudy',
+        '04n': 'Cloudy',
+        '09d': 'Rainy',
+        '09n': 'Rainy',
+        '10d': 'Rainy',
+        '10n': 'Rainy',
+        '11d': 'Thunderstorm',
+        '11n': 'Thunderstorm',
+        '13d': 'Snow',
+        '13n': 'Snow',
+        '50d': 'Fog',
+        '50n': 'Fog',
+    };
+    return mapping[icon] || 'ClearDay'; // Default to ClearDay if icon is unknown
+}
+
+async function getWeatherFromOpenWeatherMap(cityName: string): Promise<Omit<WeatherData, 'id' | 'lastUpdated' | 'isSpellActive'>> {
+    const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+    if (!apiKey) {
+        console.error("OpenWeatherMap API key is not configured.");
+        throw new Error("Server configuration error: Weather service is unavailable.");
+    }
+    
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&appid=${apiKey}&units=metric`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error(`City not found: ${cityName}`);
+        } else {
+            const errorData = await response.json();
+            throw new Error(`Failed to fetch weather for ${cityName}: ${errorData.message || response.statusText}`);
+        }
+    }
+    
+    const data = await response.json();
+
+    const condition = mapOpenWeatherToCondition(data.weather[0].icon);
+    
+    return {
+        city: data.name,
+        condition: condition,
+        temperature: Math.round(data.main.temp),
+    };
+}
+
 
 async function getActiveSpell(cityName: string): Promise<Spell | null> {
     try {
@@ -28,57 +84,41 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
         } as Spell;
     } catch (error) {
         console.error(`Error fetching active spell for ${cityName}:`, error);
-        // Re-throw to ensure the calling function is aware of the failure.
         throw new Error(`Database error while checking for active spells for city: ${cityName}.`);
     }
 }
 
 
 export async function fetchWeatherData(): Promise<WeatherData[]> {
-  const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL;
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  if (!hasGoogleCredentials && !isProduction) {
-    console.warn("****************************************************************************************************");
-    console.warn("WARNING: Google credentials not found for local development.");
-    console.warn("The application will not be able to fetch real weather data, returning empty.");
-    console.warn("Please see the instructions in `src/lib/firebase-admin.ts` to set them up.");
-    return []; 
-  }
-
   let cities;
   try {
     cities = await getCities();
   } catch (error) {
      console.error("Critical error fetching cities from Firestore. This might be a database connection or permission issue.", error);
-     // This was throwing an error and crashing the app. By removing the throw,
-     // the code will proceed, see that `cities` is undefined, and log a more
-     // helpful warning to the console below without crashing.
   }
 
-
+  const isProduction = process.env.NODE_ENV === 'production';
   if (!cities || cities.length === 0) {
     if (isProduction) {
       console.log("No cities found in the database. Returning empty array for production.");
     } else {
-      // For local development, this is a strong sign of a configuration issue.
       const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'NOT_FOUND';
       const warningMessage = `WARNING: No cities found in Firestore. This could be a configuration issue. Please verify:\n1. Your environment (.env.local) is configured with the correct Firebase project (Project ID seems to be '${projectId}').\n2. The service account being used has permissions to read from Firestore (e.g., 'Cloud Datastore User' role).\n3. The 'cities' collection in your Firestore database is not empty.`;
       console.warn("****************************************************************************************************");
       console.warn(warningMessage);
       console.warn("****************************************************************************************************");
     }
-    return []; // Return empty array instead of throwing an error to avoid crashing the app.
+    return []; 
   }
 
   const weatherPromises = cities.map(async (city) => {
-    const [aiWeather, activeSpell] = await Promise.all([
-      getAiWeather({ city: city.name }),
+    const [apiWeather, activeSpell] = await Promise.all([
+      getWeatherFromOpenWeatherMap(city.name),
       getActiveSpell(city.name),
     ]);
 
     const isSpellActive = !!activeSpell;
-    let condition = aiWeather.condition;
+    let condition = apiWeather.condition;
 
     if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
       condition = 'Rainy';
@@ -86,9 +126,9 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
     return {
       id: city.id,
-      city: city.name,
+      city: apiWeather.city,
       condition: condition,
-      temperature: Math.round(aiWeather.temperature),
+      temperature: apiWeather.temperature,
       lastUpdated: new Date(),
       isSpellActive: isSpellActive,
     } as WeatherData;
@@ -109,7 +149,9 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       }
   });
 
-  if (successfulData.length === 0 && cities.length > 0) {
+  if (successfulData.length === 0 && cities.length > 0 && !process.env.OPENWEATHERMAP_API_KEY) {
+      throw new Error(`Failed to fetch weather for all cities. The OPENWEATHERMAP_API_KEY is likely missing from your environment variables.`);
+  } else if (successfulData.length === 0 && cities.length > 0) {
       const firstErrorReason = errors[0]?.reason || "An unknown error occurred.";
       throw new Error(`Failed to fetch weather for all cities. This is likely a configuration or network issue. Example error: "${firstErrorReason}"`);
   }
@@ -119,27 +161,23 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
 
 export async function fetchWeatherForCity(cityName: string): Promise<WeatherData | null> {
-    const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL;
-    const isProduction = process.env.NODE_ENV === 'production';
-  
-    if (!hasGoogleCredentials && !isProduction) {
-       console.warn(`Cannot search for city "${cityName}" because Google credentials are not configured for local development.`);
-       return null;
+    if (!process.env.OPENWEATHERMAP_API_KEY) {
+        console.warn(`Cannot search for city "${cityName}" because OPENWEATHERMAP_API_KEY is not configured.`);
+        return null;
     }
 
     try {
-        const [aiWeather, activeSpell] = await Promise.all([
-            getAiWeather({ city: cityName }),
+        const [apiWeather, activeSpell] = await Promise.all([
+            getWeatherFromOpenWeatherMap(cityName),
             getActiveSpell(cityName)
         ]);
 
-        if (!aiWeather) {
-            console.warn(`AI could not find weather for city: ${cityName}`);
+        if (!apiWeather) {
             return null;
         }
 
         const isSpellActive = !!activeSpell;
-        let condition = aiWeather.condition;
+        let condition = apiWeather.condition;
     
         if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
             condition = 'Rainy';
@@ -147,15 +185,15 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
     
         const weatherData: WeatherData = {
           id: cityName.toLowerCase().replace(/\s/g, ''),
-          city: cityName,
+          city: apiWeather.city,
           condition: condition,
-          temperature: Math.round(aiWeather.temperature),
+          temperature: Math.round(apiWeather.temperature),
           lastUpdated: new Date(),
           isSpellActive: isSpellActive
         };
         return weatherData;
     } catch (error) {
-        console.error(`Error fetching AI weather for ${cityName}:`, error);
+        console.error(`Error fetching weather for ${cityName}:`, error);
         return null;
     }
 }
