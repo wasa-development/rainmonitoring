@@ -79,7 +79,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
     "relative z-20 bg-card/50 dark:bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg h-full",
     {
         'bg-transparent dark:bg-transparent backdrop-blur-none': data.condition === 'ClearNight',
-        'bg-black/10 dark:bg-black/30': isClearDay || isCloudy || isRaining,
+        'bg-black/10 dark:bg-black/30': isClearDay || isCloudy || isRaining || isFoggy,
     }
   );
 
@@ -116,10 +116,18 @@ export default function WeatherCard({ data }: WeatherCardProps) {
                 className="absolute z-0"
             />
           )}
+           {isFoggy && (
+            <Image
+                src="/foggy.jpg"
+                alt="A foggy day scene"
+                layout="fill"
+                objectFit="cover"
+                className="absolute z-0"
+            />
+          )}
           {isRaining && <CardRainAnimation />}
           {isSnowing && <SnowAnimation />}
           {isThunderstorm && <ThunderAnimation />}
-          {isFoggy && <FogOverlay />}
           {isCloudy && <CloudyOverlay />}
 
           <div className={cardContentClasses}>
