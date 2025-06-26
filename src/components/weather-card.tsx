@@ -81,9 +81,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
     }
   );
 
-  const mutedTextClasses = cn('text-muted-foreground', {
-      'text-indigo-300': data.condition === 'ClearNight',
-  });
+  const mutedTextClasses = cn('text-white/90');
 
 
   return (
