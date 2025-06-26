@@ -51,22 +51,25 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     cities = await getCities();
   } catch (error) {
      console.error("Critical error fetching cities from Firestore. This might be a database connection or permission issue.", error);
-     throw new Error("Could not connect to the database to fetch the list of cities. Please check your configuration.");
+     console.error("Could not connect to the database to fetch the list of cities. Please check your configuration.");
+     return []; // Return empty to prevent crash
   }
 
 
   if (!cities || cities.length === 0) {
     if (isProduction) {
       console.log("No cities found in the database. Returning empty array for production.");
-      return [];
     } else {
-      // For local development, this is a strong sign of a configuration issue. Provide a helpful error.
+      // For local development, this is a strong sign of a configuration issue.
       const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'NOT_FOUND';
-      throw new Error(`No cities found in Firestore. This is common during local development if credentials aren't configured correctly. Please verify:
-1. Your environment (.env.local) is configured with the correct Firebase project (Project ID seems to be '${projectId}').
-2. The service account being used has permissions to read from Firestore (e.g., 'Cloud Datastore User' role).
-3. The 'cities' collection in your Firestore database is not empty.`);
+      console.warn("****************************************************************************************************");
+      console.warn(`WARNING: No cities found in Firestore. This could be a configuration issue. Please verify:`);
+      console.warn(`1. Your environment (.env.local) is configured with the correct Firebase project (Project ID seems to be '${projectId}').`);
+      console.warn(`2. The service account being used has permissions to read from Firestore (e.g., 'Cloud Datastore User' role).`);
+      console.warn(`3. The 'cities' collection in your Firestore database is not empty.`);
+      console.warn("****************************************************************************************************");
     }
+    return []; // Return empty array instead of throwing an error.
   }
 
   const weatherPromises = cities.map(async (city) => {
@@ -109,7 +112,8 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
   if (successfulData.length === 0 && cities.length > 0) {
       const firstErrorReason = errors[0]?.reason || "An unknown error occurred.";
-      throw new Error(`Failed to fetch weather for all cities. This could be a configuration or network issue. Example error: "${firstErrorReason}"`);
+      console.error(`Failed to fetch weather for all cities. This could be a configuration or network issue. Example error: "${firstErrorReason}"`);
+      return []; // Return empty to prevent crash
   }
 
   return successfulData;
