@@ -38,17 +38,36 @@
  */
 import admin from 'firebase-admin';
 
-// Function to create credentials from environment variables (Method B)
+// Function to validate and create credentials from environment variables (Method B)
 function createCredentialsFromEnv() {
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-        console.log("Found FIREBASE_... environment variables. Attempting to initialize Admin SDK with them.");
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    
+    // If any of the FIREBASE_ variables are set, we assume the user intends to use this method.
+    if (projectId || clientEmail || privateKey) {
+        console.log("Found one or more FIREBASE_... environment variables. Validating...");
+
+        if (!projectId) {
+            throw new Error("FIREBASE_PROJECT_ID is missing in your .env.local file. All three FIREBASE_ variables (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY) are required if you use this authentication method.");
+        }
+        if (!clientEmail) {
+            throw new Error("FIREBASE_CLIENT_EMAIL is missing in your .env.local file. All three FIREBASE_ variables (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY) are required if you use this authentication method.");
+        }
+        if (!privateKey) {
+            throw new Error("FIREBASE_PRIVATE_KEY is missing in your .env.local file. All three FIREBASE_ variables (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY) are required if you use this authentication method.");
+        }
+
+        console.log("All required FIREBASE_ variables found. Attempting to initialize Admin SDK.");
         return {
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            projectId,
+            clientEmail,
             // The private key from .env needs to have its escaped newlines replaced with actual newlines
-            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            privateKey: privateKey.replace(/\\n/g, '\n'),
         };
     }
+
+    // No FIREBASE_... variables found, so we'll fall back to other methods.
     return null;
 }
 
@@ -58,9 +77,9 @@ function getInitializedAdmin() {
     return admin;
   }
   
-  const serviceAccount = createCredentialsFromEnv();
-
   try {
+    const serviceAccount = createCredentialsFromEnv();
+
     if (serviceAccount) {
       // Initialize with service account from env vars if they exist (Method B)
       admin.initializeApp({
@@ -71,7 +90,7 @@ function getInitializedAdmin() {
       // Otherwise, initialize with Application Default Credentials (ADC).
       // This will check for GOOGLE_APPLICATION_CREDENTIALS (Method A) locally,
       // or use the built-in service account in a production environment.
-      console.log("Attempting to initialize Admin SDK using Application Default Credentials...");
+      console.log("No FIREBASE_... variables found. Attempting to initialize Admin SDK using Application Default Credentials...");
       admin.initializeApp();
       console.log("Firebase Admin SDK initialized successfully using Application Default Credentials.");
     }
@@ -80,7 +99,7 @@ function getInitializedAdmin() {
     // This loud error helps diagnose setup issues.
     throw new Error(
       'Failed to initialize Firebase Admin SDK. Please check your setup. ' +
-      'For local development, ensure you have correctly configured either Method A (GOOGLE_APPLICATION_CREDENTIALS) or Method B (direct environment variables) as described in the comments in src/lib/firebase-admin.ts. ' +
+      'For local development, ensure you have correctly configured either Method A (GOOGLE_APPLICATION_CREDENTIALS) or Method B (direct FIREBASE_... variables) as described in the comments in src/lib/firebase-admin.ts. ' +
       'This error usually means your credentials are not set up correctly.'
     );
   }
