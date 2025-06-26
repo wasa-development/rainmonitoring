@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CloudSun, LogIn, RefreshCw } from 'lucide-react';
+import { LogIn, RefreshCw } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Logo } from '@/components/logo';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -105,7 +106,7 @@ export default function LoginPage() {
                 </div>
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-2 mb-2">
-                        <CloudSun className="w-8 h-8 text-primary" />
+                        <Logo />
                         <h1 className="text-2xl font-bold text-primary">Punjab WASA Rain Monitoring</h1>
                     </div>
                     <CardTitle>Sign In</CardTitle>

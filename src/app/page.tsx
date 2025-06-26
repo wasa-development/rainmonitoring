@@ -8,11 +8,12 @@ import type { WeatherData } from "@/lib/types";
 import { fetchWeatherData, fetchWeatherForCity } from "@/app/actions";
 import WeatherCard from "@/components/weather-card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CloudSun, AlertTriangle, Search, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Search, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Logo } from '@/components/logo';
 
 const CitySkeleton = () => (
     <div className="flex flex-col justify-between rounded-lg border bg-card text-card-foreground p-4 space-y-4">
@@ -138,7 +139,7 @@ export default function Home() {
     <main className="min-h-screen p-4 sm:p-8 md:p-12">
       <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
         <div className="flex items-center gap-3">
-          <CloudSun className="w-8 h-8 text-primary" />
+          <Logo />
           <h1 className="text-3xl sm:text-4xl font-bold text-primary">
             Punjab WASA Rain Monitoring
           </h1>

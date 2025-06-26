@@ -10,11 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CloudSun, UserPlus, RefreshCw } from 'lucide-react';
+import { UserPlus, RefreshCw } from 'lucide-react';
 import type { City } from '@/lib/types';
 import { getCities, requestSignup } from './actions';
 import { useAuth } from '@/hooks/use-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Logo } from '@/components/logo';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -78,7 +79,7 @@ export default function SignupPage() {
                 </div>
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-2 mb-2">
-                        <CloudSun className="w-8 h-8 text-primary" />
+                        <Logo />
                         <h1 className="text-2xl font-bold text-primary">Punjab WASA Rain Monitoring</h1>
                     </div>
                     <CardTitle>Request an Account</CardTitle>
