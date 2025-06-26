@@ -62,6 +62,8 @@ const renderBackgroundImage = (condition: WeatherData['condition']) => {
         case 'Rainy':
         case 'Thunderstorm':
             return <Image src="/rainy-day.jpg" alt="A city street on a rainy day" layout="fill" objectFit="cover" className="absolute z-0" />;
+        case 'Fog':
+            return <Image src="/foggy.jpg" alt="A foggy landscape" layout="fill" objectFit="cover" className="absolute z-0" />;
         default:
             return null;
     }
@@ -78,7 +80,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
   const isThunderstorm = data.condition === 'Thunderstorm';
   const isCloudy = ['Cloudy', 'PartlyCloudyDay', 'PartlyCloudyNight'].includes(data.condition);
   const isFoggy = data.condition === 'Fog';
-  const hasImage = ['ClearDay', 'Cloudy', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Rainy', 'Thunderstorm'].includes(data.condition);
+  const hasImage = ['ClearDay', 'Cloudy', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Rainy', 'Thunderstorm', 'Fog'].includes(data.condition);
 
   const formattedCondition = data.condition.replace(/([A-Z])/g, ' $1').trim();
 
@@ -94,7 +96,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
             {isCloudy && <CloudyOverlay />}
             {isFoggy && <FogOverlay />}
 
-            <div className={cn("relative z-20 flex flex-col h-full p-6", hasImage || isFoggy ? "text-white" : "text-card-foreground")}>
+            <div className={cn("relative z-20 flex flex-col h-full p-6", hasImage ? "text-white" : "text-card-foreground")}>
                 <div className="flex justify-between items-start">
                     <span className="text-8xl font-light tracking-tight">{data.temperature}°</span>
                      {data.condition !== 'ClearDay' && (
@@ -102,13 +104,13 @@ export default function WeatherCard({ data }: WeatherCardProps) {
                      )}
                 </div>
                 
-                <p className={cn("text-2xl -mt-3", hasImage || isFoggy ? "text-white/90" : "text-muted-foreground")}>{formattedCondition}</p>
+                <p className={cn("text-2xl -mt-3", hasImage ? "text-white/90" : "text-muted-foreground")}>{formattedCondition}</p>
 
                 <div className="flex-grow" />
 
                 <div>
                     <h2 className="text-3xl font-bold">{data.city}</h2>
-                    <p className={cn("text-sm", hasImage || isFoggy ? "text-white/80" : "text-muted-foreground")}>
+                    <p className={cn("text-sm", hasImage ? "text-white/80" : "text-muted-foreground")}>
                         Updated {formatDistanceToNow(data.lastUpdated, { addSuffix: true })}
                     </p>
                 </div>
