@@ -306,7 +306,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 name="name"
                                 defaultValue={editingPoint?.name || ''}
                                 className="col-span-3"
-                                readOnly={claims?.role === 'city-user'}
+                                readOnly={!!editingPoint && claims?.role === 'city-user'}
                                 required
                             />
                         </div>
