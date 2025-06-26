@@ -64,7 +64,7 @@ const getWeatherPrompt = ai.definePrompt({
     `,
     // Using a model that is good at following instructions and has tool use.
     config: {
-        model: 'googleai/gemini-2.0-flash',
+        model: 'googleai/gemini-pro',
     }
 });
 
