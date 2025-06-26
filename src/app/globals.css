@@ -107,13 +107,13 @@
 
 .wave-layer.wave1 {
     animation-delay: -3s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="%2300FFFF" fill-opacity="0.2"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="%23007BFF" fill-opacity="0.2"/></svg>');
 }
 
 .wave-layer.wave2 {
     animation-direction: reverse;
     animation-duration: 10s;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="%2300FFFF" fill-opacity="0.3"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M-50,50 C150,150 350,-50 550,50 L550,150 L-50,150 Z" fill="%23007BFF" fill-opacity="0.3"/></svg>');
 }
 
 @keyframes wave-flow {
