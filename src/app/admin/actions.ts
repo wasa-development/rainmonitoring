@@ -99,8 +99,9 @@ export async function getCities(): Promise<City[]> {
             longitude: doc.data().longitude as number,
         }));
     } catch (error) {
-        console.error("Error fetching cities:", error);
-        return [];
+        console.error("Error fetching cities from Firestore. This could be a permission or configuration issue.", error);
+        // Re-throw the error so the calling function in the UI can catch it and display a helpful message.
+        throw new Error("A database error occurred while fetching the list of cities. Please check your service account permissions and configuration.");
     }
 }
 
