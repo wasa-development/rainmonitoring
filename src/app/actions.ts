@@ -30,6 +30,24 @@ function mapOpenWeatherToCondition(icon: string): WeatherCondition {
     return mapping[icon] || 'ClearDay'; // Default to ClearDay if icon is unknown
 }
 
+function getMockWeatherData(): WeatherData[] {
+    const mockCities = ["Lahore", "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sialkot", "Sargodha", "Bahawalpur"];
+    const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Cloudy', 'Rainy', 'Thunderstorm', 'Snow', 'Fog'];
+
+    return mockCities.map(city => {
+        const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+        return {
+            id: city.toLowerCase().replace(/\s/g, ''),
+            city: city,
+            condition: randomCondition,
+            temperature: Math.floor(Math.random() * 25) + 15, // Temp between 15 and 40
+            lastUpdated: new Date(),
+            isSpellActive: Math.random() > 0.8 // 20% chance of spell being active
+        };
+    });
+}
+
+
 async function getWeatherFromOpenWeatherMap(cityName: string): Promise<Omit<WeatherData, 'id' | 'lastUpdated' | 'isSpellActive'>> {
     const apiKey = process.env.OPENWEATHERMAP_API_KEY;
     if (!apiKey) {
@@ -101,14 +119,16 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   if (!cities || cities.length === 0) {
     if (isProduction) {
       console.log("No cities found in the database. Returning empty array for production.");
+      return [];
     } else {
       const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'NOT_FOUND';
       const warningMessage = `WARNING: No cities found in Firestore. This could be a configuration issue. Please verify:\n1. Your environment (.env.local) is configured with the correct Firebase project (Project ID seems to be '${projectId}').\n2. The service account being used has permissions to read from Firestore (e.g., 'Cloud Datastore User' role).\n3. The 'cities' collection in your Firestore database is not empty.`;
       console.warn("****************************************************************************************************");
       console.warn(warningMessage);
+      console.warn("----> DISPLAYING MOCK DATA FOR LOCAL DEVELOPMENT <----");
       console.warn("****************************************************************************************************");
+      return getMockWeatherData();
     }
-    return []; 
   }
 
   const weatherPromises = cities.map(async (city) => {
@@ -161,6 +181,19 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
 
 export async function fetchWeatherForCity(cityName: string): Promise<WeatherData | null> {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (!isProduction) {
+        const mockData = getMockWeatherData();
+        const mockCity = mockData.find(c => c.city.toLowerCase() === cityName.toLowerCase());
+        if (mockCity) {
+            console.log(`Returning mock data for searched city: ${cityName}`);
+            return {
+                ...mockCity,
+                lastUpdated: new Date() // Ensure lastUpdated is fresh on search
+            };
+        }
+    }
+    
     if (!process.env.OPENWEATHERMAP_API_KEY) {
         console.warn(`Cannot search for city "${cityName}" because OPENWEATHERMAP_API_KEY is not configured.`);
         return null;
