@@ -197,6 +197,21 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     throw new Error(`Failed to fetch weather for all cities. The OPENWEATHERMAP_API_KEY is likely missing from your environment variables.`);
   }
 
+  if (!isProduction) {
+    const islamabadData: WeatherData = {
+        id: 'islamabad',
+        city: 'Islamabad',
+        condition: 'ClearDay',
+        temperature: Math.floor(Math.random() * 15) + 20, // A pleasant temp for clear weather: 20-34 C
+        lastUpdated: new Date(),
+        isSpellActive: false
+    };
+
+    // Remove any existing Islamabad data to avoid duplicates, then add our mock data to the front.
+    const otherCities = successfulData.filter(city => city.city.toLowerCase() !== 'islamabad');
+    return [islamabadData, ...otherCities];
+  }
+
   return successfulData;
 }
 
