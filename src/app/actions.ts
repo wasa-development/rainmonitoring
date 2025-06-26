@@ -27,11 +27,8 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
             endTime: data.endTime ? data.endTime.toDate() : undefined,
         } as Spell;
     } catch (error) {
-        // This will fail in local dev without credentials, which is fine.
-        if (process.env.NODE_ENV !== 'production') {
-            return null;
-        }
-        console.error("Error fetching active spell:", error);
+        // This can fail in local dev without credentials, which is fine for this specific check.
+        // We will catch the broader credential issue in the main functions.
         return null;
     }
 }
@@ -42,13 +39,8 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID;
 
   if (!hasGoogleCredentials) {
-    if (process.env.NODE_ENV === 'production') {
-        // In production, credentials should always be available.
-        throw new Error("Google Application Credentials are not configured. This is required for production.");
-    } else {
-        console.log("Google credentials missing. Returning empty list for development. Please configure credentials to fetch data.");
-        return [];
-    }
+    // This explicit error will be caught by the UI and shown to the user.
+    throw new Error("Google credentials are not configured for local development. Please see the instructions in `src/lib/firebase-admin.ts` to set them up.");
   }
   
   const cities = await getCities();
@@ -102,12 +94,8 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
     const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID;
   
     if (!hasGoogleCredentials) {
-        if (process.env.NODE_ENV === 'production') {
-            throw new Error("Google Application Credentials are not configured. This is required for production.");
-        } else {
-            console.log(`Google credentials missing. Cannot fetch data for searched city: ${cityName}`);
-            return null;
-        }
+       // Let the UI handle the error state.
+       throw new Error("Google credentials are not configured for local development. Please see the instructions in `src/lib/firebase-admin.ts` to set them up.");
     }
 
     try {
