@@ -103,10 +103,10 @@ export default function WeatherCard({ data }: WeatherCardProps) {
             <CardContent className="flex-grow flex flex-col items-center justify-center gap-2 p-4">
                 <div className="flex items-center justify-center gap-6">
                     <div className="flex items-start">
-                    <span className="text-5xl font-bold text-primary">{data.temperature}</span>
-                    <span className={cn("text-xl font-medium mt-1", mutedTextClasses)}>°C</span>
+                    <span className="text-5xl font-bold text-white">{data.temperature}</span>
+                    <span className="text-xl font-medium mt-1 text-white/90">°C</span>
                     </div>
-                    <Icon className="w-16 h-16 text-primary drop-shadow-lg transition-transform group-hover:scale-110" />
+                    <Icon className="w-16 h-16 text-white drop-shadow-lg transition-transform group-hover:scale-110" />
                 </div>
                  {/* Placeholder for alignment, as forecast is removed */}
                 <div className="h-6" />

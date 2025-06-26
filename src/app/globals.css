@@ -6,8 +6,8 @@
   :root {
     --background: 220 50% 98%;
     --foreground: 207 79% 20%;
-    --card: 196 42% 56%;
-    --card-foreground: 207 79% 20%;
+    --card: 183 41% 56%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
     --primary: 217 89% 52%;
@@ -33,14 +33,14 @@
     --sidebar-primary-foreground: 222.2 47.4% 11.2%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     /* Use dark theme's water effect color since components are dark */
-    --raindrop-gradient-color: rgba(173, 216, 230, 0.4);
+    --raindrop-gradient-color: rgba(255, 255, 255, 0.6);
   }
 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 196 42% 56%;
-    --card-foreground: 207 79% 20%;
+    --card: 183 41% 56%;
+    --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
@@ -65,7 +65,7 @@
     --sidebar-primary-foreground: 222.2 47.4% 11.2%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     /* Unified color for dark theme water effects */
-    --raindrop-gradient-color: rgba(173, 216, 230, 0.4);
+    --raindrop-gradient-color: rgba(255, 255, 255, 0.6);
   }
 }
 
