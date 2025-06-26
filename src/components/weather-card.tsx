@@ -70,7 +70,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
     {
         'bg-sky-100 dark:bg-sky-950': data.condition === 'ClearDay',
         'bg-indigo-900/80 dark:bg-black text-white': data.condition === 'ClearNight',
-        'bg-slate-200/80 dark:bg-slate-800/80': isCloudy || isFoggy || isSnowing,
+        'bg-slate-400/80 dark:bg-slate-800/80': isCloudy || isFoggy || isSnowing,
     }
   );
   
