@@ -52,22 +52,25 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
 
 
 export async function fetchWeatherData(): Promise<WeatherData[]> {
-  // Check if Google credentials are likely available
+  const isProduction = process.env.NODE_ENV === 'production';
   const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL;
 
-  if (!hasGoogleCredentials) {
+  if (!hasGoogleCredentials && !isProduction) {
     console.log("Google credentials not found for local development. Returning mock data.");
     return generateMockWeatherData();
   }
-  
-  // Try to fetch real data, but if it fails (e.g. firestore connection fails locally), fall back to mock data.
+
   try {
     const cities = await getCities();
 
-    // If there are no cities in the database, still show mock data locally for a better dev experience.
     if (!cities || cities.length === 0) {
+      if (isProduction) {
+        console.log("No cities found in the database. Returning empty array for production.");
+        return [];
+      } else {
         console.log("No cities found in the database. Returning mock data for local development.");
         return generateMockWeatherData();
+      }
     }
 
     const weatherPromises = cities.map(async (city) => {
@@ -108,8 +111,14 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     const results = await Promise.all(weatherPromises);
     return results.filter((data): data is WeatherData => data !== null);
   } catch (error) {
-      console.error("An error occurred fetching real weather data, likely due to local credential issues. Falling back to mock data.", error);
-      return generateMockWeatherData();
+      console.error("An error occurred fetching real weather data.", error);
+      if (isProduction) {
+        return []; // Return empty array on error in production
+      } else {
+        // In development, it's helpful to see mock data to continue UI work
+        console.log("Falling back to mock data for local development due to an error.");
+        return generateMockWeatherData();
+      }
   }
 }
 
