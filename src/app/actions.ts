@@ -38,68 +38,79 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   const hasGoogleCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL;
   const isProduction = process.env.NODE_ENV === 'production';
 
-  if (!hasGoogleCredentials) {
-    if (!isProduction) {
-        console.warn("****************************************************************************************************");
-        console.warn("WARNING: Google credentials not found for local development.");
-        console.warn("The application will not be able to fetch real weather data.");
-        console.warn("Please see the instructions in `src/lib/firebase-admin.ts` to set them up.");
-        console.warn("****************************************************************************************************");
-    } else {
-        console.error("CRITICAL: Google credentials not found in production environment. Weather data will be unavailable.");
-    }
+  if (!hasGoogleCredentials && !isProduction) {
+    console.warn("****************************************************************************************************");
+    console.warn("WARNING: Google credentials not found for local development.");
+    console.warn("The application will not be able to fetch real weather data.");
+    console.warn("Please see the instructions in `src/lib/firebase-admin.ts` to set them up.");
+    console.warn("****************************************************************************************************");
     return []; // Return empty array if no credentials, preventing mock data and crashes.
   }
 
+  let cities;
   try {
-    const cities = await getCities();
+    cities = await getCities();
+  } catch (error) {
+     console.error("Critical error fetching cities from Firestore. This might be a database connection or permission issue.", error);
+     // Re-throw as a more user-friendly error to be displayed on the UI.
+     throw new Error("Could not connect to the database to fetch the list of cities. Please check your configuration.");
+  }
 
-    if (!cities || cities.length === 0) {
-      console.log("No cities found in the database. Returning empty array.");
-      return [];
+
+  if (!cities || cities.length === 0) {
+    console.log("No cities found in the database. Returning empty array.");
+    return [];
+  }
+
+  const weatherPromises = cities.map(async (city) => {
+    // This promise will now throw an error on failure, which Promise.allSettled will catch.
+    const [aiWeather, activeSpell] = await Promise.all([
+      getAiWeather({ city: city.name }),
+      getActiveSpell(city.name),
+    ]);
+
+    const isSpellActive = !!activeSpell;
+    let condition = aiWeather.condition;
+
+    // If a spell is active, the visual should represent rain, unless it's a more severe condition.
+    if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+      condition = 'Rainy';
     }
 
-    const weatherPromises = cities.map(async (city) => {
-      try {
-        const [aiWeather, activeSpell] = await Promise.all([
-            getAiWeather({ city: city.name }),
-            getActiveSpell(city.name)
-        ]);
+    return {
+      id: city.id,
+      city: city.name,
+      condition: condition,
+      temperature: Math.round(aiWeather.temperature),
+      lastUpdated: new Date(),
+      isSpellActive: isSpellActive,
+    } as WeatherData;
+  });
+  
+  // Use Promise.allSettled to handle both successful and failed promises
+  const settledResults = await Promise.allSettled(weatherPromises);
+  
+  const successfulData: WeatherData[] = [];
+  const errors: { city: string, reason: string }[] = [];
 
-        if (!aiWeather) {
-           console.error(`Failed to fetch AI weather data for ${city.name}`);
-           return null;
-        }
-        
-        const isSpellActive = !!activeSpell;
-        let condition = aiWeather.condition;
-
-        // If a spell is active, the visual should represent rain, unless it's a more severe condition.
-        if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
-            condition = 'Rainy';
-        }
-
-        const weatherData: WeatherData = {
-          id: city.id, // Using the ID from our DB
-          city: city.name,
-          condition: condition,
-          temperature: Math.round(aiWeather.temperature),
-          lastUpdated: new Date(),
-          isSpellActive: isSpellActive,
-        };
-        return weatherData;
-      } catch (error) {
-        console.error(`Error fetching AI weather for ${city.name}:`, error);
-        return null; // Return null for this city if the AI call fails
+  settledResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+          successfulData.push(result.value);
+      } else {
+          // An error occurred for this city
+          const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          errors.push({ city: cities[index].name, reason });
+          console.error(`Failed to fetch weather for ${cities[index].name}:`, result.reason);
       }
-    });
+  });
 
-    const results = await Promise.all(weatherPromises);
-    return results.filter((data): data is WeatherData => data !== null);
-  } catch (error) {
-      console.error("An error occurred while trying to fetch weather data. This could be a Firestore connection issue.", error);
-      return []; // Return empty array on any top-level error.
+  // If ALL cities failed, it's a critical error. Throw an informative message to the UI.
+  if (successfulData.length === 0 && cities.length > 0) {
+      const firstErrorReason = errors[0]?.reason || "An unknown error occurred.";
+      throw new Error(`Failed to fetch weather for all cities. This could be a configuration or network issue. Example error: "${firstErrorReason}"`);
   }
+
+  return successfulData;
 }
 
 
