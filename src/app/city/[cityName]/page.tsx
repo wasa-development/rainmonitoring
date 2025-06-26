@@ -241,7 +241,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             </div>
         </header>
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {pondingPoints.length > 0 ? (
             pondingPoints.map((point) => (
                 <PondingPointCard 
@@ -253,7 +253,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 />
             ))
           ) : (
-             <Card className="md:col-span-2 lg:col-span-3">
+             <Card className="sm:col-span-2 md:col-span-3 lg:col-span-4">
                 <CardContent className="flex flex-col items-center justify-center h-48">
                     <h3 className="text-lg font-semibold">No Ponding Points Found</h3>
                     <p className="text-muted-foreground">Get started by adding a new ponding point.</p>
