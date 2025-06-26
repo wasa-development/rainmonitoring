@@ -79,7 +79,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
     "relative z-20 bg-card/50 dark:bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg h-full",
     {
         'bg-transparent dark:bg-transparent backdrop-blur-none': data.condition === 'ClearNight',
-        'bg-black/10 dark:bg-black/30': isClearDay || isCloudy,
+        'bg-black/10 dark:bg-black/30': isClearDay || isCloudy || isRaining,
     }
   );
 
@@ -102,6 +102,15 @@ export default function WeatherCard({ data }: WeatherCardProps) {
             <Image
                 src="/cloudy-day.jpg"
                 alt="Cloudy sky"
+                layout="fill"
+                objectFit="cover"
+                className="absolute z-0"
+            />
+          )}
+          {isRaining && (
+            <Image
+                src="/rainy-day.jpg"
+                alt="A city street on a rainy day"
                 layout="fill"
                 objectFit="cover"
                 className="absolute z-0"
