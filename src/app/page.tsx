@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -138,8 +139,8 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 sm:p-8 md:p-12">
       <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <Logo />
+        <div className="flex items-center gap-4">
+          <Logo width={128} height={128} />
           <h1 className="text-3xl sm:text-4xl font-bold text-primary">
             Punjab WASA Rain Monitoring
           </h1>

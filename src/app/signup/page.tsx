@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -78,8 +79,8 @@ export default function SignupPage() {
                     <ThemeToggle />
                 </div>
                 <CardHeader className="text-center">
-                    <div className="flex justify-center items-center gap-2 mb-2">
-                        <Logo />
+                    <div className="flex flex-col justify-center items-center gap-2 mb-2">
+                        <Logo width={96} height={96} />
                         <h1 className="text-2xl font-bold text-primary">Punjab WASA Rain Monitoring</h1>
                     </div>
                     <CardTitle>Request an Account</CardTitle>
