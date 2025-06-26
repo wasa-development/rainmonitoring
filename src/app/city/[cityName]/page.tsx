@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, use, useEffect, useRef, useTransition } from 'react';
@@ -290,10 +289,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>{editingPoint ? 'Edit' : 'Add'} Ponding Point</DialogTitle>
-                    <DialogDescription>
+                     <DialogDescription>
                         {editingPoint
                         ? `Update the details for ${editingPoint.name}.`
-                        : 'Add a new location to track for ponding.'}
+                        : 'Add a new location to track for ponding. You can add rainfall and ponding data after creating it.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form ref={formRef} action={handleFormSubmit}>
@@ -310,51 +309,55 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 required
                             />
                         </div>
-                        {isSpellActive && (
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
-                                <Input
-                                    id="currentSpell"
-                                    name="currentSpell"
-                                    type="number"
-                                    defaultValue={editingPoint?.currentSpell ?? 0}
-                                    className="col-span-3"
-                                    step="0.1"
-                                    min="0"
-                                />
-                            </div>
+                       {editingPoint && (
+                            <>
+                                {isSpellActive && (
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
+                                        <Input
+                                            id="currentSpell"
+                                            name="currentSpell"
+                                            type="number"
+                                            defaultValue={editingPoint?.currentSpell ?? 0}
+                                            className="col-span-3"
+                                            step="0.1"
+                                            min="0"
+                                        />
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
+                                    <Input
+                                        id="ponding"
+                                        name="ponding"
+                                        type="number"
+                                        value={currentPondingValue}
+                                        onChange={handlePondingChange}
+                                        className="col-span-3"
+                                        step="0.1"
+                                        min="0"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="clearedInTime" className="text-right">Cleared In</Label>
+                                    <Input
+                                        id="clearedInTime"
+                                        name="clearedInTime"
+                                        type="text"
+                                        defaultValue={editingPoint?.clearedInTime || ''}
+                                        placeholder="e.g., 02:30"
+                                        className="col-span-3"
+                                        disabled={parseFloat(currentPondingValue) > 0}
+                                    />
+                                </div>
+                            </>
                         )}
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
-                            <Input
-                                id="ponding"
-                                name="ponding"
-                                type="number"
-                                value={currentPondingValue}
-                                onChange={handlePondingChange}
-                                className="col-span-3"
-                                step="0.1"
-                                min="0"
-                            />
-                        </div>
-                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="clearedInTime" className="text-right">Cleared In</Label>
-                            <Input
-                                id="clearedInTime"
-                                name="clearedInTime"
-                                type="text"
-                                defaultValue={editingPoint?.clearedInTime || ''}
-                                placeholder="e.g., 02:30"
-                                className="col-span-3"
-                                disabled={parseFloat(currentPondingValue) > 0}
-                            />
-                        </div>
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={isPending}>
+                         <Button type="submit" disabled={isPending}>
                             {isPending && <RefreshCw className="animate-spin" />}
-                            {isPending ? 'Saving...' : 'Save Changes'}
+                            {isPending ? 'Saving...' : (editingPoint ? 'Save Changes' : 'Add Point')}
                         </Button>
                     </DialogFooter>
                 </form>
