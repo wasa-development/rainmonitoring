@@ -57,7 +57,7 @@ interface WeatherCardProps {
 
 export default function WeatherCard({ data }: WeatherCardProps) {
   const Icon = getWeatherIcon(data.condition);
-  const isRaining = data.condition === 'Rainy' || data.isSpellActive;
+  const isRaining = data.condition === 'Rainy' || data.condition === 'Thunderstorm';
   const isSnowing = data.condition === 'Snow';
   const isThunderstorm = data.condition === 'Thunderstorm';
   const isFoggy = data.condition === 'Fog';

@@ -78,16 +78,26 @@ function generateMockWeatherData(): WeatherData[] {
         { name: 'Quetta', id: '1167429' },
     ];
 
-    const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog'];
+    const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog', 'Snow'];
 
-    return mockCities.map(city => ({
-        id: city.id,
-        city: city.name,
-        condition: conditions[Math.floor(Math.random() * conditions.length)],
-        temperature: Math.floor(Math.random() * 20) + 15, // Temp between 15 and 35
-        lastUpdated: new Date(),
-        isSpellActive: Math.random() > 0.5,
-    }));
+    return mockCities.map(city => {
+        let condition = conditions[Math.floor(Math.random() * conditions.length)];
+        const isSpellActive = Math.random() > 0.5;
+        
+        // If a spell is active, the visual should represent rain.
+        if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+            condition = 'Rainy';
+        }
+
+        return {
+            id: city.id,
+            city: city.name,
+            condition: condition,
+            temperature: Math.floor(Math.random() * 20) + 15, // Temp between 15 and 35
+            lastUpdated: new Date(),
+            isSpellActive: isSpellActive,
+        };
+    });
 }
 
 
@@ -137,13 +147,21 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         return null;
       }
       
+      const isSpellActive = !!activeSpell;
+      let condition = mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].icon);
+
+      // If a spell is active, the visual should represent rain, unless it's a more severe condition.
+      if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+          condition = 'Rainy';
+      }
+
       const weatherData: WeatherData = {
         id: String(weatherInfo.id),
         city: city.name, // Use the name from Firestore for consistency
-        condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].icon),
+        condition: condition,
         temperature: Math.round(weatherInfo.main.temp),
         lastUpdated: new Date(weatherInfo.dt * 1000),
-        isSpellActive: !!activeSpell,
+        isSpellActive: isSpellActive,
       };
       return weatherData;
     } catch (error) {
@@ -168,14 +186,21 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
         throw new Error("The OpenWeatherMap API key is missing. For production, you must set the OPENWEATHERMAP_API_KEY environment variable in your hosting provider's settings.");
     } else {
         console.log(`API key missing or local env. Generating mock data for searched city: ${city}`);
-        const conditions: WeatherCondition[] = ['ClearDay', 'PartlyCloudyDay', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog'];
+        const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog', 'Snow'];
+        let condition = conditions[Math.floor(Math.random() * conditions.length)];
+        const isSpellActive = Math.random() > 0.5;
+        
+        if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+            condition = 'Rainy';
+        }
+        
         return {
             id: city.toLowerCase().replace(/\s/g, ''),
             city: city,
-            condition: conditions[Math.floor(Math.random() * conditions.length)],
+            condition: condition,
             temperature: Math.floor(Math.random() * 20) + 15,
             lastUpdated: new Date(),
-            isSpellActive: Math.random() > 0.5,
+            isSpellActive: isSpellActive,
         };
     }
   }
@@ -216,13 +241,20 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
       return null;
     }
 
+    const isSpellActive = !!activeSpell;
+    let condition = mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].icon);
+
+    if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+        condition = 'Rainy';
+    }
+
     const weatherData: WeatherData = {
       id: String(weatherInfo.id),
       city: locationName,
-      condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].icon),
+      condition: condition,
       temperature: Math.round(weatherInfo.main.temp),
       lastUpdated: new Date(weatherInfo.dt * 1000),
-      isSpellActive: !!activeSpell
+      isSpellActive: isSpellActive
     };
     return weatherData;
   } catch (error) {
