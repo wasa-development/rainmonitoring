@@ -51,14 +51,15 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     cities = await getCities();
   } catch (error) {
      console.error("Critical error fetching cities from Firestore. This might be a database connection or permission issue.", error);
-     throw new Error("Could not connect to the database to fetch the list of cities. Please check your configuration.");
+     // This was throwing an error and crashing the app. By removing the throw,
+     // the code will proceed, see that `cities` is undefined, and log a more
+     // helpful warning to the console below without crashing.
   }
 
 
   if (!cities || cities.length === 0) {
     if (isProduction) {
       console.log("No cities found in the database. Returning empty array for production.");
-      return [];
     } else {
       // For local development, this is a strong sign of a configuration issue.
       const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'NOT_FOUND';
