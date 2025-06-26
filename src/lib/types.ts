@@ -1,7 +1,19 @@
+
+export type WeatherCondition =
+  | 'ClearDay'
+  | 'ClearNight'
+  | 'PartlyCloudyDay'
+  | 'PartlyCloudyNight'
+  | 'Cloudy'
+  | 'Rainy'
+  | 'Thunderstorm'
+  | 'Snow'
+  | 'Fog';
+
 export interface WeatherData {
   id: string;
   city: string;
-  condition: 'Sunny' | 'Rainy' | 'Clear' | 'Cloudy' | 'Partly Cloudy';
+  condition: WeatherCondition;
   temperature: number;
   lastUpdated: Date;
   isSpellActive?: boolean;

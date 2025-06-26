@@ -1,19 +1,28 @@
-import { Sun, Cloud, CloudRain, CloudSun, type LucideProps } from 'lucide-react';
+import { Sun, Moon, CloudSun, CloudMoon, Cloud, CloudRain, CloudLightning, Snowflake, CloudFog, type LucideProps } from 'lucide-react';
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
-import type { WeatherData } from '@/lib/types';
+import type { WeatherCondition } from '@/lib/types';
 
-export const getWeatherIcon = (condition: WeatherData['condition']): ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> => {
+export const getWeatherIcon = (condition: WeatherCondition): ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> => {
   switch (condition) {
-    case 'Sunny':
-    case 'Clear':
+    case 'ClearDay':
       return Sun;
+    case 'ClearNight':
+        return Moon;
+    case 'PartlyCloudyDay':
+        return CloudSun;
+    case 'PartlyCloudyNight':
+        return CloudMoon;
     case 'Cloudy':
       return Cloud;
-    case 'Partly Cloudy':
-      return CloudSun;
     case 'Rainy':
       return CloudRain;
+    case 'Thunderstorm':
+        return CloudLightning;
+    case 'Snow':
+        return Snowflake;
+    case 'Fog':
+        return CloudFog;
     default:
-      return Sun;
+      return Sun; // Fallback
   }
 };

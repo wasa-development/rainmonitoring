@@ -1,28 +1,36 @@
+
 'use server';
 
-import type { Spell, WeatherData } from "@/lib/types";
+import type { Spell, WeatherData, WeatherCondition } from "@/lib/types";
 import { getCities } from "./admin/actions";
 import { db } from "@/lib/firebase-admin";
 
-function mapOpenWeatherCondition(weatherMain: string, weatherDesc: string): WeatherData['condition'] {
+function mapOpenWeatherCondition(weatherMain: string, weatherIcon: string): WeatherCondition {
     const main = weatherMain.toLowerCase();
-    const desc = weatherDesc.toLowerCase();
+    const isDay = weatherIcon.endsWith('d');
 
-    if (main.includes('thunderstorm') || main.includes('drizzle') || main.includes('rain')) {
-        return 'Rainy';
-    }
+    if (main.includes('thunderstorm')) return 'Thunderstorm';
+    if (main.includes('drizzle') || main.includes('rain')) return 'Rainy';
+    if (main.includes('snow')) return 'Snow';
+    if (['mist', 'smoke', 'haze', 'dust', 'fog', 'sand', 'ash', 'squall', 'tornado'].includes(main)) return 'Fog';
+
     if (main.includes('clear')) {
-        // OpenWeather 'Clear' is equivalent to 'Sunny' for our purposes
-        return 'Sunny';
+        return isDay ? 'ClearDay' : 'ClearNight';
     }
+
     if (main.includes('clouds')) {
-        if (desc.includes('few clouds') || desc.includes('scattered clouds')) {
-            return 'Partly Cloudy';
+        // OWM uses different icon codes for cloud coverage. e.g. 02: few, 03: scattered, 04: broken/overcast
+        if (weatherIcon.startsWith('02')) { // few clouds
+            return isDay ? 'PartlyCloudyDay' : 'PartlyCloudyNight';
         }
-        return 'Cloudy';
+         if (weatherIcon.startsWith('03')) { // scattered clouds
+            return isDay ? 'PartlyCloudyDay' : 'PartlyCloudyNight';
+        }
+        return 'Cloudy'; // broken clouds, overcast clouds
     }
-    // For Atmosphere group (Mist, Smoke, Haze, Dust, Fog, etc.) or other cases like Snow.
-    return 'Cloudy';
+
+    // Default fallback
+    return isDay ? 'ClearDay' : 'ClearNight';
 }
 
 
@@ -93,7 +101,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       const weatherData: WeatherData = {
         id: String(weatherInfo.id),
         city: city.name, // Use the name from Firestore for consistency
-        condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].description),
+        condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].icon),
         temperature: Math.round(weatherInfo.main.temp),
         lastUpdated: new Date(weatherInfo.dt * 1000),
         isSpellActive: !!activeSpell,
@@ -159,7 +167,7 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
     const weatherData: WeatherData = {
       id: String(weatherInfo.id),
       city: locationName,
-      condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].description),
+      condition: mapOpenWeatherCondition(weatherInfo.weather[0].main, weatherInfo.weather[0].icon),
       temperature: Math.round(weatherInfo.main.temp),
       lastUpdated: new Date(weatherInfo.dt * 1000),
       isSpellActive: !!activeSpell
