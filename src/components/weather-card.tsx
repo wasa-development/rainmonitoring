@@ -106,7 +106,10 @@ export default function WeatherCard({ data }: WeatherCardProps) {
                     <span className="text-5xl font-bold text-white">{data.temperature}</span>
                     <span className="text-xl font-medium mt-1 text-white/90">°C</span>
                     </div>
-                    <Icon className="w-16 h-16 text-white drop-shadow-lg transition-transform group-hover:scale-110" />
+                    <Icon className={cn(
+                        "w-16 h-16 drop-shadow-lg transition-transform group-hover:scale-110",
+                        data.condition === 'ClearDay' ? 'text-yellow-400' : 'text-white'
+                    )} />
                 </div>
                  {/* Placeholder for alignment, as forecast is removed */}
                 <div className="h-6" />
