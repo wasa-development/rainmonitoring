@@ -97,10 +97,9 @@ export default function WeatherCard({ data }: WeatherCardProps) {
             <div className={cn("relative z-20 flex flex-col h-full p-6", hasImage || isFoggy ? "text-white" : "text-card-foreground")}>
                 <div className="flex justify-between items-start">
                     <span className="text-8xl font-light tracking-tight">{data.temperature}°</span>
-                     <Icon className={cn(
-                        "w-20 h-20 drop-shadow-lg transition-transform group-hover:scale-110 mt-2",
-                        data.condition === 'ClearDay' ? 'text-primary' : 'inherit'
-                    )} />
+                     {data.condition !== 'ClearDay' && (
+                        <Icon className={cn("w-20 h-20 drop-shadow-lg transition-transform group-hover:scale-110 mt-2")} />
+                     )}
                 </div>
                 
                 <p className={cn("text-2xl -mt-3", hasImage || isFoggy ? "text-white/90" : "text-muted-foreground")}>{formattedCondition}</p>
