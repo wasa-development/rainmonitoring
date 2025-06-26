@@ -6,8 +6,8 @@
   :root {
     --background: 220 50% 98%;
     --foreground: 207 79% 20%;
-    --card: 222.2 84% 6.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 196 42% 56%;
+    --card-foreground: 207 79% 20%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
     --primary: 217 89% 52%;
@@ -39,8 +39,8 @@
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 6.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 196 42% 56%;
+    --card-foreground: 207 79% 20%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
@@ -272,3 +272,5 @@
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
 }
+
+    
