@@ -13,6 +13,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase for the client-side
+// This pattern prevents re-initializing the app on every hot-reload.
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
