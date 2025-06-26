@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card } from "@/components/ui/card";
 import type { WeatherData } from "@/lib/types";
 import { getWeatherIcon } from "@/lib/weather";
@@ -57,6 +58,7 @@ interface WeatherCardProps {
 
 export default function WeatherCard({ data }: WeatherCardProps) {
   const Icon = getWeatherIcon(data.condition);
+  const isClearDay = data.condition === 'ClearDay';
   const isRaining = data.condition === 'Rainy' || data.condition === 'Thunderstorm';
   const isSnowing = data.condition === 'Snow';
   const isThunderstorm = data.condition === 'Thunderstorm';
@@ -68,7 +70,6 @@ export default function WeatherCard({ data }: WeatherCardProps) {
   const cardClasses = cn(
     'relative flex flex-col justify-between h-full transition-colors duration-500 border group-hover:border-primary/50 bg-card overflow-hidden',
     {
-        'bg-sky-950': data.condition === 'ClearDay',
         'bg-indigo-900/80 dark:bg-black text-white': data.condition === 'ClearNight',
         'bg-slate-800/80': isCloudy || isFoggy || isSnowing,
     }
@@ -78,6 +79,7 @@ export default function WeatherCard({ data }: WeatherCardProps) {
     "relative z-20 bg-card/50 dark:bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg h-full",
     {
         'bg-transparent dark:bg-transparent backdrop-blur-none': data.condition === 'ClearNight',
+        'bg-black/10 dark:bg-black/30': isClearDay, // Overlay for text readability on image
     }
   );
 
@@ -87,6 +89,16 @@ export default function WeatherCard({ data }: WeatherCardProps) {
   return (
     <Link href={`/city/${encodeURIComponent(data.city)}`} className="block group">
         <Card className={cardClasses}>
+          {isClearDay && (
+            <Image
+                src="https://placehold.co/400x600.png"
+                alt="Clear sunny sky"
+                layout="fill"
+                objectFit="cover"
+                className="absolute z-0"
+                data-ai-hint="sun blue sky"
+            />
+          )}
           {isRaining && <CardRainAnimation />}
           {isSnowing && <SnowAnimation />}
           {isThunderstorm && <ThunderAnimation />}
