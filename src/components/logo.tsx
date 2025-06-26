@@ -4,7 +4,7 @@ import React from 'react';
  * A component that renders an SVG logo representing the Punjab Water & Sanitation Authority.
  * This is a simplified vector representation of the official logo.
  */
-export const Logo = ({ className, width = 56, height = 56 }: { className?: string, width?: number, height?: number }) => (
+export const Logo = ({ className, width = 64, height = 64 }: { className?: string, width?: number, height?: number }) => (
   <svg
     width={width}
     height={height}
