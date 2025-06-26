@@ -116,22 +116,23 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   }
 
   const isProduction = process.env.NODE_ENV === 'production';
-  if (!cities || cities.length === 0) {
-    if (isProduction) {
-      console.log("No cities found in the database. Returning empty array for production.");
-      return [];
-    } else {
-      const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'NOT_FOUND';
-      const warningMessage = `WARNING: No cities found in Firestore. This could be a configuration issue. Please verify:\n1. Your environment (.env.local) is configured with the correct Firebase project (Project ID seems to be '${projectId}').\n2. The service account being used has permissions to read from Firestore (e.g., 'Cloud Datastore User' role).\n3. The 'cities' collection in your Firestore database is not empty.`;
-      console.warn("****************************************************************************************************");
-      console.warn(warningMessage);
-      console.warn("----> DISPLAYING MOCK DATA FOR LOCAL DEVELOPMENT <----");
-      console.warn("****************************************************************************************************");
-      return getMockWeatherData();
-    }
+  if (!isProduction && (!cities || cities.length === 0)) {
+    const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'NOT_FOUND';
+    const warningMessage = `WARNING: No cities found in Firestore. This could be a configuration issue. Please verify:\n1. Your environment (.env.local) is configured with the correct Firebase project (Project ID seems to be '${projectId}').\n2. The service account being used has permissions to read from Firestore (e.g., 'Cloud Datastore User' role).\n3. The 'cities' collection in your Firestore database is not empty.`;
+    console.warn("****************************************************************************************************");
+    console.warn(warningMessage);
+    console.warn("----> DISPLAYING MOCK DATA FOR LOCAL DEVELOPMENT <----");
+    console.warn("****************************************************************************************************");
+    return getMockWeatherData();
   }
 
-  const weatherPromises = cities.map(async (city) => {
+  if (isProduction && (!cities || cities.length === 0)) {
+    console.log("No cities found in the database. Returning empty array for production.");
+    return [];
+  }
+
+
+  const weatherPromises = cities!.map(async (city) => {
     const [apiWeather, activeSpell] = await Promise.all([
       getWeatherFromOpenWeatherMap(city.name),
       getActiveSpell(city.name),
@@ -164,16 +165,23 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
           successfulData.push(result.value);
       } else {
           const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
-          errors.push({ city: cities[index].name, reason });
-          console.error(`Failed to fetch weather for ${cities[index].name}:`, result.reason);
+          errors.push({ city: cities![index].name, reason });
+          console.error(`Failed to fetch weather for ${cities![index].name}:`, result.reason);
       }
   });
 
-  if (successfulData.length === 0 && cities.length > 0 && !process.env.OPENWEATHERMAP_API_KEY) {
-      throw new Error(`Failed to fetch weather for all cities. The OPENWEATHERMAP_API_KEY is likely missing from your environment variables.`);
-  } else if (successfulData.length === 0 && cities.length > 0) {
-      const firstErrorReason = errors[0]?.reason || "An unknown error occurred.";
-      throw new Error(`Failed to fetch weather for all cities. This is likely a configuration or network issue. Example error: "${firstErrorReason}"`);
+  if (successfulData.length === 0 && cities!.length > 0) {
+    if (!isProduction && !process.env.OPENWEATHERMAP_API_KEY) {
+        console.warn("****************************************************************************************************");
+        console.warn("WARNING: OPENWEATHERMAP_API_KEY is missing. Real weather data could not be fetched.");
+        console.warn("----> DISPLAYING MOCK DATA FOR LOCAL DEVELOPMENT <----");
+        console.warn("****************************************************************************************************");
+        return getMockWeatherData();
+    }
+    
+    // For other errors (e.g., network issues, invalid key)
+    const firstErrorReason = errors[0]?.reason || "An unknown error occurred.";
+    throw new Error(`Failed to fetch weather for all cities. This is likely a configuration or network issue. Example error: "${firstErrorReason}"`);
   }
 
   return successfulData;
