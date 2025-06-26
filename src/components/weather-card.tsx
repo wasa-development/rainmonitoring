@@ -12,7 +12,7 @@ const CardRainAnimation = () => {
       const style = {
         left: `${Math.random() * 100}%`,
         animationDelay: `${Math.random() * 2}s`,
-        animationDuration: `${0.5 + Math.random() * 0.5}s`,
+        animationDuration: `${1.2 + Math.random() * 0.6}s`,
       };
       return <div key={i} className="raindrop" style={style} />;
     }), []);
