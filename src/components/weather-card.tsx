@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import type { WeatherData } from "@/lib/types";
 import { getWeatherIcon } from "@/lib/weather";
 import { formatDistanceToNow } from "date-fns";
@@ -94,29 +94,26 @@ export default function WeatherCard({ data }: WeatherCardProps) {
           {isCloudy && <CloudyOverlay />}
 
           <div className={cardContentClasses}>
-            <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
-                <CardTitle className="text-lg font-semibold">{data.city}</CardTitle>
-                <CardDescription className={mutedTextClasses}>{formattedCondition}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow flex flex-col items-center justify-center gap-2 p-4">
-                <div className="flex items-center justify-center gap-6">
-                    <div className="flex items-start">
-                    <span className="text-5xl font-bold text-white">{data.temperature}</span>
-                    <span className="text-xl font-medium mt-1 text-white/90">°C</span>
-                    </div>
-                    <Icon className={cn(
-                        "w-16 h-16 drop-shadow-lg transition-transform group-hover:scale-110",
+             <div className="flex flex-col h-full p-6 text-white">
+                <div className="flex justify-between items-start">
+                    <span className="text-8xl font-light tracking-tight">{data.temperature}°</span>
+                     <Icon className={cn(
+                        "w-20 h-20 drop-shadow-lg transition-transform group-hover:scale-110 mt-2",
                         data.condition === 'ClearDay' ? 'text-yellow-400' : 'text-white'
                     )} />
                 </div>
-                 {/* Placeholder for alignment, as forecast is removed */}
-                <div className="h-6" />
-            </CardContent>
-            <CardFooter className="flex items-center justify-start p-4 pt-0">
-                <p className={cn("text-xs", mutedTextClasses)}>
-                Updated {formatDistanceToNow(data.lastUpdated, { addSuffix: true })}
-                </p>
-            </CardFooter>
+                
+                <p className="text-2xl text-white/90 -mt-3">{formattedCondition}</p>
+
+                <div className="flex-grow" />
+
+                <div>
+                    <h2 className="text-3xl font-bold">{data.city}</h2>
+                    <p className={cn("text-sm", mutedTextClasses)}>
+                        Updated {formatDistanceToNow(data.lastUpdated, { addSuffix: true })}
+                    </p>
+                </div>
+             </div>
           </div>
         </Card>
     </Link>
