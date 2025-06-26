@@ -43,11 +43,11 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
     return (
-        <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group">
+        <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group bg-white dark:bg-card">
             {isRaining && <CardRainAnimation />}
             {isPonding && <PondingAnimation height={waveHeightPercentage} />}
             
-            <div className="relative z-20 bg-card/50 dark:bg-black/20 backdrop-blur-[2px] flex flex-col flex-grow rounded-lg">
+            <div className="relative z-20 flex flex-col flex-grow rounded-lg text-foreground dark:text-card-foreground">
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
                         <CardTitle className="text-lg">{point.name}</CardTitle>
@@ -70,28 +70,28 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                         <div className="flex items-center gap-2">
                             <Droplets className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Current Rain</p>
+                                <p className="text-slate-600 dark:text-muted-foreground">Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <TrendingUp className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Max Today</p>
+                                <p className="text-slate-600 dark:text-muted-foreground">Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Ponding</p>
+                                <p className="text-slate-600 dark:text-muted-foreground">Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5 text-primary" />
                             <div>
-                                <p className="text-muted-foreground">Cleared In</p>
+                                <p className="text-slate-600 dark:text-muted-foreground">Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
