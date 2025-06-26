@@ -55,9 +55,39 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
             endTime: data.endTime ? data.endTime.toDate() : undefined,
         } as Spell;
     } catch (error) {
+        // This will fail in local dev without credentials, which is fine.
+        if (process.env.NODE_ENV !== 'production') {
+            return null;
+        }
         console.error("Error fetching active spell:", error);
         return null;
     }
+}
+
+
+// New mock data generation function for local development
+function generateMockWeatherData(): WeatherData[] {
+    const mockCities = [
+        { name: 'Lahore', id: '1172451' },
+        { name: 'Karachi', id: '1174872' },
+        { name: 'Islamabad', id: '1176615' },
+        { name: 'Faisalabad', id: '1179400' },
+        { name: 'Rawalpindi', id: '1167151' },
+        { name: 'Multan', id: '1169824' },
+        { name: 'Peshawar', id: '1168243' },
+        { name: 'Quetta', id: '1167429' },
+    ];
+
+    const conditions: WeatherCondition[] = ['ClearDay', 'ClearNight', 'PartlyCloudyDay', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog'];
+
+    return mockCities.map(city => ({
+        id: city.id,
+        city: city.name,
+        condition: conditions[Math.floor(Math.random() * conditions.length)],
+        temperature: Math.floor(Math.random() * 20) + 15, // Temp between 15 and 35
+        lastUpdated: new Date(),
+        isSpellActive: Math.random() > 0.5,
+    }));
 }
 
 
@@ -65,12 +95,21 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
   const apiKey = process.env.OPENWEATHERMAP_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The OpenWeatherMap API key is missing. For production, you must set the OPENWEATHERMAP_API_KEY environment variable in your hosting provider's settings.");
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error("The OpenWeatherMap API key is missing. For production, you must set the OPENWEATHERMAP_API_KEY environment variable in your hosting provider's settings.");
+    } else {
+        console.log("OpenWeatherMap API key missing or running locally without credentials. Generating mock data for development.");
+        return generateMockWeatherData();
+    }
   }
   
   const cities = await getCities();
 
   if (!cities || cities.length === 0) {
+      if (process.env.NODE_ENV !== 'production') {
+          console.log("No cities found in DB. Generating mock data for local development.");
+          return generateMockWeatherData();
+      }
       console.log("No cities found in the database.");
       return [];
   }
@@ -125,7 +164,20 @@ export async function fetchWeatherForCity(city: string): Promise<WeatherData | n
   const apiKey = process.env.OPENWEATHERMAP_API_KEY;
 
   if (!apiKey) {
-    throw new Error("The OpenWeatherMap API key is missing. For production, you must set the OPENWEATHERMAP_API_KEY environment variable in your hosting provider's settings.");
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error("The OpenWeatherMap API key is missing. For production, you must set the OPENWEATHERMAP_API_KEY environment variable in your hosting provider's settings.");
+    } else {
+        console.log(`API key missing or local env. Generating mock data for searched city: ${city}`);
+        const conditions: WeatherCondition[] = ['ClearDay', 'PartlyCloudyDay', 'Cloudy', 'Rainy', 'Thunderstorm', 'Fog'];
+        return {
+            id: city.toLowerCase().replace(/\s/g, ''),
+            city: city,
+            condition: conditions[Math.floor(Math.random() * conditions.length)],
+            temperature: Math.floor(Math.random() * 20) + 15,
+            lastUpdated: new Date(),
+            isSpellActive: Math.random() > 0.5,
+        };
+    }
   }
 
   try {
