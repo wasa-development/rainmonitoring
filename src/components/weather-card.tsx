@@ -91,12 +91,11 @@ export default function WeatherCard({ data }: WeatherCardProps) {
         <Card className={cardClasses}>
           {isClearDay && (
             <Image
-                src="https://placehold.co/400x600.png"
+                src="/clear-day.jpg"
                 alt="Clear sunny sky"
                 layout="fill"
                 objectFit="cover"
                 className="absolute z-0"
-                data-ai-hint="sun blue sky"
             />
           )}
           {isRaining && <CardRainAnimation />}
