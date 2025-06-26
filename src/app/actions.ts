@@ -54,8 +54,17 @@ function getMockWeatherData(): WeatherData[] {
         lastUpdated: new Date(),
         isSpellActive: false
     };
+    
+    const karachiData: WeatherData = {
+        id: 'karachi',
+        city: 'Karachi',
+        condition: 'Rainy',
+        temperature: Math.floor(Math.random() * 10) + 25, // Rainy temp: 25-34 C
+        lastUpdated: new Date(),
+        isSpellActive: false
+    };
 
-    return [islamabadData, ...otherCitiesData];
+    return [islamabadData, karachiData, ...otherCitiesData];
 }
 
 
@@ -206,10 +215,19 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         lastUpdated: new Date(),
         isSpellActive: false
     };
+    
+    const karachiData: WeatherData = {
+        id: 'karachi',
+        city: 'Karachi',
+        condition: 'Rainy',
+        temperature: Math.floor(Math.random() * 10) + 25, // Rainy temp: 25-34 C
+        lastUpdated: new Date(),
+        isSpellActive: false
+    };
 
-    // Remove any existing Islamabad data to avoid duplicates, then add our mock data to the front.
-    const otherCities = successfulData.filter(city => city.city.toLowerCase() !== 'islamabad');
-    return [islamabadData, ...otherCities];
+    // Remove any existing mock city data to avoid duplicates, then add our mock data to the front.
+    const otherCities = successfulData.filter(city => !['islamabad', 'karachi'].includes(city.city.toLowerCase()));
+    return [islamabadData, karachiData, ...otherCities];
   }
 
   return successfulData;
