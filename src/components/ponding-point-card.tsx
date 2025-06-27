@@ -9,6 +9,13 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
+const DarkCloudAnimation = () => (
+    <div className="dark-cloud-container">
+        <div className="dark-cloud-layer dark-cloud1" />
+        <div className="dark-cloud-layer dark-cloud2" />
+    </div>
+);
+
 // New animation component for blue raindrops
 const BlueRainAnimation = () => {
     const raindrops = React.useMemo(() =>
@@ -48,7 +55,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
 
     return (
         <Card className={cn(
-            "relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group",
+            "relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group h-full",
             isRaining && "bg-white dark:bg-white" // Force white background when raining, even in dark mode
         )}>
             
@@ -58,6 +65,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10 z-10" />
                 </>
             )}
+            {isRaining && <DarkCloudAnimation />}
             {isRaining && <BlueRainAnimation />}
             {isPonding && <PondingAnimation height={waveHeightPercentage} />}
             
