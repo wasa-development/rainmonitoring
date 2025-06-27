@@ -64,7 +64,16 @@ function getMockWeatherData(): WeatherData[] {
         isSpellActive: false
     };
 
-    return [islamabadData, karachiData, ...otherCitiesData];
+    const quettaData: WeatherData = {
+        id: 'quetta',
+        city: 'Quetta',
+        condition: 'Thunderstorm',
+        temperature: Math.floor(Math.random() * 10) + 18,
+        lastUpdated: new Date(),
+        isSpellActive: true
+    };
+
+    return [quettaData, islamabadData, karachiData, ...otherCitiesData];
 }
 
 
@@ -234,10 +243,19 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
         lastUpdated: new Date(),
         isSpellActive: false
     };
+    
+    const quettaData: WeatherData = {
+        id: 'quetta',
+        city: 'Quetta',
+        condition: 'Thunderstorm',
+        temperature: Math.floor(Math.random() * 10) + 18,
+        lastUpdated: new Date(),
+        isSpellActive: true,
+    };
 
     // Remove any existing mock city data to avoid duplicates, then add our mock data to the front.
-    const otherCities = successfulData.filter(city => !['islamabad', 'karachi'].includes(city.city.toLowerCase()));
-    return [islamabadData, karachiData, ...otherCities];
+    const otherCities = successfulData.filter(city => !['islamabad', 'karachi', 'quetta'].includes(city.city.toLowerCase()));
+    return [quettaData, islamabadData, karachiData, ...otherCities];
   }
 
   return successfulData;
