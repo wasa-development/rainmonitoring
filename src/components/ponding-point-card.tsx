@@ -42,7 +42,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const isPonding = point.ponding > 0;
     const isClear = !isRaining && !isPonding;
 
-    const hasBackgroundImage = isClear || isRaining;
+    const hasBackgroundImage = isClear;
 
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
@@ -57,10 +57,10 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                     </>
                 )}
                  {isRaining && (
-                     <>
-                        <Image src="/cloudy-day.jpg" alt="Cloudy sky" layout="fill" objectFit="cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
-                    </>
+                     <div className="absolute top-0 left-0 w-full h-1/4">
+                        <Image src="/cloudy-day.jpg" alt="Cloudy sky" layout="fill" objectFit="cover" className="rounded-t-lg" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
+                    </div>
                 )}
                 {isPonding && <PondingAnimation height={waveHeightPercentage} />}
                 {isRaining && <BlueRainAnimation />}
@@ -72,16 +72,16 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
             )}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
-                        <CardTitle className="text-lg">{point.name}</CardTitle>
+                        <CardTitle className={cn("text-lg", isRaining && "text-white")}>{point.name}</CardTitle>
                     </div>
                     <div className="flex gap-1">
                     {userRole !== 'viewer' && (
                         <>
-                            <Button variant="ghost" size="icon" className={cn("h-8 w-8", hasBackgroundImage && "text-white hover:bg-white/10 hover:text-white")} onClick={() => onEdit(point)}>
+                            <Button variant="ghost" size="icon" className={cn("h-8 w-8", (hasBackgroundImage || isRaining) && "text-white hover:bg-white/10 hover:text-white")} onClick={() => onEdit(point)}>
                                 <Edit className="h-4 w-4" />
                             </Button>
                             {userRole === 'super-admin' && (
-                                <Button variant="ghost" size="icon" className={cn("h-8 w-8 text-destructive hover:text-destructive", hasBackgroundImage && "text-red-400 hover:bg-white/10 hover:text-red-400")} onClick={() => onDelete(point)}>
+                                <Button variant="ghost" size="icon" className={cn("h-8 w-8 text-destructive hover:text-destructive", (hasBackgroundImage || isRaining) && "text-red-400 hover:bg-white/10 hover:text-red-400")} onClick={() => onDelete(point)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             )}
