@@ -42,15 +42,20 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const isPonding = point.ponding > 0;
     const isClear = !isRaining && !isPonding;
 
-    const hasBackgroundImage = isClear || isRaining;
+    // hasBackgroundImage is now only for the clear state.
+    const hasBackgroundImage = isClear; 
 
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
+    // When raining, we apply a dark background to the whole card to ensure text readability.
     return (
-        <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group h-full">
+        <Card className={cn(
+            "relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group h-full",
+            isRaining && "bg-slate-800"
+        )}>
             
             <div className="absolute inset-0 z-0">
-                {isClear && (
+                {hasBackgroundImage && (
                     <>
                         <Image src="/clear-day.jpg" alt="Clear sunny sky" layout="fill" objectFit="cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
@@ -68,7 +73,8 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
             
             <div className={cn(
                 "relative z-10 flex flex-col flex-grow rounded-lg",
-                (hasBackgroundImage) ? "text-white" : "text-card-foreground",
+                // Text is white if it has a background image (clear) OR if it is raining (dark background)
+                (hasBackgroundImage || isRaining) ? "text-white" : "text-card-foreground",
             )}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
@@ -80,7 +86,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 hover:text-white" onClick={() => onEdit(point)}>
                                 <Edit className="h-4 w-4" />
                             </Button>
-                            {userRole === 'super-admin' && (
+                            {userRole !== 'city-user' && (
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:bg-white/10 hover:text-red-400" onClick={() => onDelete(point)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -92,30 +98,30 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 <CardContent className="flex-grow p-4 space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                            <Droplets className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-primary")} />
+                            <Droplets className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
                             <div>
-                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <TrendingUp className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-primary")} />
+                            <TrendingUp className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
                             <div>
-                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <AlertTriangle className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-accent")} />
+                            <AlertTriangle className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-accent")} />
                             <div>
-                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Clock className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-muted-foreground")} />
+                            <Clock className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-muted-foreground")} />
                             <div>
-                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Cleared In</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
