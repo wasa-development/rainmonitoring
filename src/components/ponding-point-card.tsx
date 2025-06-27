@@ -16,7 +16,6 @@ const DarkCloudAnimation = () => (
     </div>
 );
 
-// New animation component for blue raindrops
 const BlueRainAnimation = () => {
     const raindrops = React.useMemo(() =>
         Array.from({ length: 70 }).map((_, i) => {
@@ -28,7 +27,7 @@ const BlueRainAnimation = () => {
             return <div key={i} className="blue-raindrop" style={style} />;
         }), []);
 
-    return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg z-10">{raindrops}</div>;
+    return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg">{raindrops}</div>;
 };
 
 const PondingAnimation = ({ height }: { height: number }) => (
@@ -50,29 +49,28 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const isPonding = point.ponding > 0;
     const isClear = !isRaining && !isPonding;
 
-    // Scale: Start at 5% height, add 4% for each inch of ponding, up to a max of 40%.
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
     return (
-        <Card className={cn(
-            "relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group h-full",
-            isRaining && "bg-white dark:bg-white" // Force white background when raining, even in dark mode
-        )}>
+        <Card className="relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group h-full">
             
-            {isClear && (
-                <>
-                    <Image src="/clear-day.jpg" alt="Clear sunny sky" layout="fill" objectFit="cover" className="absolute z-0" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10 z-10" />
-                </>
-            )}
-            {isRaining && <DarkCloudAnimation />}
-            {isRaining && <BlueRainAnimation />}
-            {isPonding && <PondingAnimation height={waveHeightPercentage} />}
+            <div className="absolute inset-0 z-0">
+                 {isClear && (
+                    <>
+                        <Image src="/clear-day.jpg" alt="Clear sunny sky" layout="fill" objectFit="cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
+                    </>
+                )}
+                {isRaining && (
+                    <div className="absolute inset-0 bg-white dark:bg-white" />
+                )}
+                {isPonding && <PondingAnimation height={waveHeightPercentage} />}
+                {isRaining && <DarkCloudAnimation />}
+                {isRaining && <BlueRainAnimation />}
+            </div>
             
             <div className={cn(
-                "relative z-20 flex flex-col flex-grow rounded-lg",
-                // If raining, text should be dark to be visible on the white background.
-                // Otherwise, use the default card-foreground which adapts to the theme.
+                "relative z-10 flex flex-col flex-grow rounded-lg",
                 isRaining ? "text-slate-800" : "text-card-foreground",
                 isClear && "text-white"
             )}>
