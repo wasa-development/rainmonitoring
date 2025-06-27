@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
+    --background: 210 20% 98%;
     --foreground: 210 25% 19%;
     --card: 0 0% 100%;
     --card-foreground: 210 25% 19%;
@@ -73,8 +73,8 @@
 .raindrop {
   position: absolute;
   bottom: 100%;
-  width: 2px;
-  height: 60px;
+  width: 1.5px;
+  height: 75px;
   background: linear-gradient(to top, transparent, var(--raindrop-gradient-color));
   animation: fall linear infinite;
 }
@@ -82,15 +82,18 @@
 .blue-raindrop {
   position: absolute;
   bottom: 100%;
-  width: 2px;
-  height: 60px;
+  width: 1.5px;
+  height: 75px;
   background: linear-gradient(to top, transparent, #007BFF);
   animation: fall linear infinite;
 }
 
 @keyframes fall {
+  from {
+    transform: translate(0, 0) rotate(15deg);
+  }
   to {
-    transform: translateY(110vh);
+    transform: translate(-30vh, 110vh) rotate(15deg);
   }
 }
 
