@@ -47,7 +47,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     return (
         <Card className={cn(
             "relative flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/50 group",
-            isRaining && "bg-white" // Force white background when raining
+            isRaining && "bg-white dark:bg-white" // Force white background when raining, even in dark mode
         )}>
             
             {isRaining && <BlueRainAnimation />}
@@ -117,7 +117,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                             Raining
                         </Badge>
                     ) : isPonding ? (
-                        <Badge variant="destructive" className="bg-destructive/10 border-destructive/50 text-destructive-foreground">
+                        <Badge variant="destructive" className="bg-destructive/10 border-destructive/50 text-destructive">
                             <AlertTriangle className="mr-1 h-3 w-3" />
                             Ponding
                         </Badge>
