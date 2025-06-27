@@ -1,7 +1,7 @@
 
 'use server';
 
-import type { Spell, WeatherData, WeatherCondition } from "@/lib/types";
+import type { Spell, WeatherData, WeatherCondition, PondingPoint } from "@/lib/types";
 import { getCities } from "./admin/actions";
 import { db } from "@/lib/firebase-admin";
 
@@ -135,6 +135,25 @@ async function getActiveSpell(cityName: string): Promise<Spell | null> {
     }
 }
 
+async function getPondingPointsForCity(cityName: string): Promise<Pick<PondingPoint, 'id' | 'currentSpell'>[]> {
+    try {
+        const snapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
+        if (snapshot.empty) {
+            return [];
+        }
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                currentSpell: data.currentSpell ?? 0,
+            } as Pick<PondingPoint, 'id' | 'currentSpell'>;
+        });
+    } catch (error) {
+        console.error(`Error fetching ponding points for ${cityName}:`, error);
+        return [];
+    }
+}
+
 
 export async function fetchWeatherData(): Promise<WeatherData[]> {
   let cities;
@@ -164,15 +183,21 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
 
 
   const weatherPromises = cities!.map(async (city) => {
-    const [apiWeather, activeSpell] = await Promise.all([
+    const [apiWeather, activeSpell, pondingPoints] = await Promise.all([
       getWeatherFromOpenWeatherMap(city.name),
       getActiveSpell(city.name),
+      getPondingPointsForCity(city.name),
     ]);
 
     const isSpellActive = !!activeSpell;
     let condition = apiWeather.condition;
+    
+    // Check for heavy rain condition from ponding points (over 50mm)
+    const isHeavyRain = pondingPoints.some(p => p.currentSpell > 50);
 
-    if (isSpellActive) {
+    if (isHeavyRain) {
+        condition = 'Thunderstorm';
+    } else if (isSpellActive) {
       // If a spell is active, force a 'Rainy' condition to reflect it on the map,
       // unless the API already reports a more severe precipitation type.
       if (!['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
@@ -192,7 +217,7 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
       condition: condition,
       temperature: apiWeather.temperature,
       lastUpdated: new Date(),
-      isSpellActive: isSpellActive,
+      isSpellActive: isSpellActive || isHeavyRain,
     } as WeatherData;
   });
   
@@ -282,9 +307,10 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
     }
 
     try {
-        const [apiWeather, activeSpell] = await Promise.all([
+        const [apiWeather, activeSpell, pondingPoints] = await Promise.all([
             getWeatherFromOpenWeatherMap(cityName),
-            getActiveSpell(cityName)
+            getActiveSpell(cityName),
+            getPondingPointsForCity(cityName)
         ]);
 
         if (!apiWeather) {
@@ -294,7 +320,11 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
         const isSpellActive = !!activeSpell;
         let condition = apiWeather.condition;
     
-        if (isSpellActive) {
+        const isHeavyRain = pondingPoints.some(p => p.currentSpell > 50);
+
+        if (isHeavyRain) {
+            condition = 'Thunderstorm';
+        } else if (isSpellActive) {
             // If a spell is active, force a 'Rainy' condition to reflect it on the map,
             // unless the API already reports a more severe precipitation type.
             if (!['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
@@ -314,7 +344,7 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
           condition: condition,
           temperature: Math.round(apiWeather.temperature),
           lastUpdated: new Date(),
-          isSpellActive: isSpellActive
+          isSpellActive: isSpellActive || isHeavyRain,
         };
         return weatherData;
     } catch (error) {
