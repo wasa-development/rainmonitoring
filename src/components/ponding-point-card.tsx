@@ -42,7 +42,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
     const isPonding = point.ponding > 0;
     const isClear = !isRaining && !isPonding;
 
-    const hasBackgroundImage = isClear;
+    const hasBackgroundImage = isClear || isRaining;
 
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
@@ -58,7 +58,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 )}
                  {isRaining && (
                      <div className="absolute top-0 left-0 w-full h-1/4">
-                        <Image src="/clo.png" alt="Raining weather background" layout="fill" objectFit="cover" className="rounded-t-lg" />
+                        <Image src="/cloudy-day.jpg" alt="Raining weather background" layout="fill" objectFit="cover" className="rounded-t-lg" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
                     </div>
                 )}
@@ -68,7 +68,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
             
             <div className={cn(
                 "relative z-10 flex flex-col flex-grow rounded-lg",
-                (hasBackgroundImage || isRaining) ? "text-white" : "text-card-foreground",
+                (hasBackgroundImage) ? "text-white" : "text-card-foreground",
             )}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
@@ -92,30 +92,30 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 <CardContent className="flex-grow p-4 space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                            <Droplets className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
+                            <Droplets className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-primary")} />
                             <div>
-                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
+                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <TrendingUp className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
+                            <TrendingUp className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-primary")} />
                             <div>
-                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
+                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <AlertTriangle className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-accent")} />
+                            <AlertTriangle className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-accent")} />
                             <div>
-                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
+                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Clock className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-muted-foreground")} />
+                            <Clock className={cn("h-5 w-5", (hasBackgroundImage) ? "text-white/90" : "text-muted-foreground")} />
                             <div>
-                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Cleared In</p>
+                                <p className={cn((hasBackgroundImage) ? "text-white/80" : "text-muted-foreground")}>Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
