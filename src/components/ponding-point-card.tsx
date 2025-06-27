@@ -63,7 +63,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 )}
                  {isRaining && (
                      <div className="absolute top-0 left-0 w-full h-1/4">
-                        <Image src="/cloudy-day.jpg" alt="Raining weather background" layout="fill" objectFit="cover" className="rounded-t-lg" />
+                        <Image src="/rainy-day.jpg" alt="Raining weather background" layout="fill" objectFit="cover" className="rounded-t-lg" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
                     </div>
                 )}
