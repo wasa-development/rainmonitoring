@@ -9,13 +9,6 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
-const DarkCloudAnimation = () => (
-    <div className="dark-cloud-container">
-        <div className="dark-cloud-layer dark-cloud1" />
-        <div className="dark-cloud-layer dark-cloud2" />
-    </div>
-);
-
 const BlueRainAnimation = () => {
     const raindrops = React.useMemo(() =>
         Array.from({ length: 70 }).map((_, i) => {
@@ -65,7 +58,6 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                     <div className="absolute inset-0 bg-white dark:bg-white" />
                 )}
                 {isPonding && <PondingAnimation height={waveHeightPercentage} />}
-                {isRaining && <DarkCloudAnimation />}
                 {isRaining && <BlueRainAnimation />}
             </div>
             
