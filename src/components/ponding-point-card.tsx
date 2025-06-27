@@ -58,7 +58,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 )}
                  {isRaining && (
                      <div className="absolute top-0 left-0 w-full h-1/4">
-                        <Image src="/cloudy-day.jpg" alt="Cloudy sky" layout="fill" objectFit="cover" className="rounded-t-lg" />
+                        <Image src="/clo.png" alt="Raining weather background" layout="fill" objectFit="cover" className="rounded-t-lg" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
                     </div>
                 )}
@@ -68,20 +68,20 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
             
             <div className={cn(
                 "relative z-10 flex flex-col flex-grow rounded-lg",
-                hasBackgroundImage ? "text-white" : "text-card-foreground",
+                (hasBackgroundImage || isRaining) ? "text-white" : "text-card-foreground",
             )}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                     <div>
-                        <CardTitle className={cn("text-lg", isRaining && "text-white")}>{point.name}</CardTitle>
+                        <CardTitle className="text-lg">{point.name}</CardTitle>
                     </div>
                     <div className="flex gap-1">
                     {userRole !== 'viewer' && (
                         <>
-                            <Button variant="ghost" size="icon" className={cn("h-8 w-8", (hasBackgroundImage || isRaining) && "text-white hover:bg-white/10 hover:text-white")} onClick={() => onEdit(point)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10 hover:text-white" onClick={() => onEdit(point)}>
                                 <Edit className="h-4 w-4" />
                             </Button>
                             {userRole === 'super-admin' && (
-                                <Button variant="ghost" size="icon" className={cn("h-8 w-8 text-destructive hover:text-destructive", (hasBackgroundImage || isRaining) && "text-red-400 hover:bg-white/10 hover:text-red-400")} onClick={() => onDelete(point)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:bg-white/10 hover:text-red-400" onClick={() => onDelete(point)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             )}
@@ -92,30 +92,30 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 <CardContent className="flex-grow p-4 space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                            <Droplets className={cn("h-5 w-5", hasBackgroundImage ? "text-white/90" : "text-primary")} />
+                            <Droplets className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
                             <div>
-                                <p className={cn(hasBackgroundImage ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
                                 <p className="font-semibold">{point.currentSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <TrendingUp className={cn("h-5 w-5", hasBackgroundImage ? "text-white/90" : "text-primary")} />
+                            <TrendingUp className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
                             <div>
-                                <p className={cn(hasBackgroundImage ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
                                 <p className="font-semibold">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <AlertTriangle className={cn("h-5 w-5", hasBackgroundImage ? "text-white/90" : "text-accent")} />
+                            <AlertTriangle className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-accent")} />
                             <div>
-                                <p className={cn(hasBackgroundImage ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
                                 <p className="font-semibold">{point.ponding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Clock className={cn("h-5 w-5", hasBackgroundImage ? "text-white/90" : "text-muted-foreground")} />
+                            <Clock className={cn("h-5 w-5", (hasBackgroundImage || isRaining) ? "text-white/90" : "text-muted-foreground")} />
                             <div>
-                                <p className={cn(hasBackgroundImage ? "text-white/80" : "text-muted-foreground")}>Cleared In</p>
+                                <p className={cn((hasBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Cleared In</p>
                                 <p className="font-semibold">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
@@ -123,7 +123,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
                     {isRaining ? (
-                        <Badge variant="outline" className={cn(hasBackgroundImage && "bg-black/20 border-white/50 text-white")}>
+                        <Badge variant="outline" className="bg-black/20 border-white/50 text-white">
                             <Droplets className="mr-1 h-3 w-3" />
                             Raining
                         </Badge>
@@ -133,7 +133,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole }: 
                             Ponding
                         </Badge>
                     ) : (
-                        <Badge variant="outline" className={cn(hasBackgroundImage && "bg-black/20 border-white/50 text-white")}>Clear</Badge>
+                        <Badge variant="outline" className="bg-black/20 border-white/50 text-white">Clear</Badge>
                     )}
                 </CardFooter>
             </div>
