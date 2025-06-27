@@ -163,8 +163,18 @@ export async function fetchWeatherData(): Promise<WeatherData[]> {
     const isSpellActive = !!activeSpell;
     let condition = apiWeather.condition;
 
-    if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
-      condition = 'Rainy';
+    if (isSpellActive) {
+      // If a spell is active, force a 'Rainy' condition to reflect it on the map,
+      // unless the API already reports a more severe precipitation type.
+      if (!['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+        condition = 'Rainy';
+      }
+    } else {
+      // If no spell is active, suppress any rain-like conditions from the API
+      // and show 'Cloudy' instead to prevent false alarms.
+      if (['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+        condition = 'Cloudy';
+      }
     }
 
     return {
@@ -266,8 +276,18 @@ export async function fetchWeatherForCity(cityName: string): Promise<WeatherData
         const isSpellActive = !!activeSpell;
         let condition = apiWeather.condition;
     
-        if (isSpellActive && !['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
-            condition = 'Rainy';
+        if (isSpellActive) {
+            // If a spell is active, force a 'Rainy' condition to reflect it on the map,
+            // unless the API already reports a more severe precipitation type.
+            if (!['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+              condition = 'Rainy';
+            }
+        } else {
+            // If no spell is active, suppress any rain-like conditions from the API
+            // and show 'Cloudy' instead to prevent false alarms.
+            if (['Rainy', 'Thunderstorm', 'Snow'].includes(condition)) {
+              condition = 'Cloudy';
+            }
         }
     
         const weatherData: WeatherData = {
