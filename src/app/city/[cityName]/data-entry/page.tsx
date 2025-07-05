@@ -103,6 +103,16 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     const formRef = useRef<HTMLFormElement>(null);
     const addPointFormRef = useRef<HTMLFormElement>(null);
 
+    const fetchData = async () => {
+        const [pointsData, activeSpell] = await Promise.all([
+            getPondingPoints(cityName),
+            getActiveSpell(cityName)
+        ]);
+        const sortedPoints = pointsData.sort((a, b) => a.name.localeCompare(b.name));
+        setPoints(sortedPoints);
+        setIsSpellActive(!!activeSpell);
+    };
+    
     useEffect(() => {
         if (!authLoading) {
           if (!user) {
@@ -117,19 +127,10 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     }, [authLoading, user, claims, router, toast, cityName]);
 
     useEffect(() => {
-        async function fetchData() {
-            const [pointsData, activeSpell] = await Promise.all([
-                getPondingPoints(cityName),
-                getActiveSpell(cityName)
-            ]);
-            const sortedPoints = pointsData.sort((a, b) => a.name.localeCompare(b.name));
-            setPoints(sortedPoints);
-            setIsSpellActive(!!activeSpell);
-        }
         if (user) {
             fetchData();
         }
-    }, [cityName, user, isPending]);
+    }, [cityName, user]);
 
     const handleBatchUpdateSubmit = (formData: FormData) => {
         const submittedPoints = parsePointsFromFormData(formData);
@@ -159,6 +160,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             const result = await batchUpdatePondingPoints(formData, cityName);
             if (result.success) {
                 toast({ title: 'Success', description: result.message });
+                await fetchData();
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.error });
             }
@@ -183,6 +185,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                 toast({ title: 'Success', description: result.message });
                 setClearanceDialogOpen(false);
                 setPendingFormData(null);
+                await fetchData();
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.error });
                 setClearanceDialogOpen(false); // Close dialog on error
@@ -204,6 +207,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             const result = await startSpell(cityName);
             toast({ title: 'Spell Started', description: 'You can now enter rainfall data.' });
           }
+          await fetchData();
         });
     };
     
@@ -214,6 +218,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                 toast({ title: 'Success', description: 'New point added.' });
                 setFormOpen(false);
                 addPointFormRef.current?.reset();
+                await fetchData();
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.error });
             }
@@ -232,6 +237,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             toast({ title: 'Success', description: result.message });
             setDeleteAlertOpen(false);
             setPointToDelete(null);
+            await fetchData();
         });
     };
 
@@ -295,7 +301,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                                                 name={`points[${index}].currentSpell`}
                                                 type="number"
                                                 defaultValue={point.currentSpell ?? 0}
-                                                step="0.1"
+                                                step="1"
                                                 min="0"
                                                 disabled={!isSpellActive || isPending}
                                                 className="max-w-xs"

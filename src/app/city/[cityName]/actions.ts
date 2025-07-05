@@ -8,7 +8,7 @@ import { z } from 'zod';
 const PondingPointSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, { message: 'Name is required.' }),
-  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }).optional(),
+  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }).int({ message: 'Rainfall must be a whole number.' }).optional(),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }).optional(),
 });
@@ -239,7 +239,7 @@ function parsePointsFromFormData(formData: FormData) {
 const BatchPondingPointSchema = z.object({
   id: z.string().min(1, { message: 'ID is missing.' }),
   name: z.string(), // for error messages
-  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }),
+  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }).int({ message: 'Rainfall must be a whole number.' }),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }),
 });

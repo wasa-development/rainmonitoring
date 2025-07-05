@@ -100,14 +100,14 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <Droplets className={cn("h-3.5 w-3.5", (hasClearBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
                             <div>
                                 <p className={cn("text-xs", (hasClearBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
-                                <p className="font-semibold text-xs">{point.currentSpell.toFixed(1)} mm</p>
+                                <p className="font-semibold text-xs">{point.currentSpell.toFixed(0)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <TrendingUp className={cn("h-3.5 w-3.5", (hasClearBackgroundImage || isRaining) ? "text-white/90" : "text-primary")} />
                             <div>
                                 <p className={cn("text-xs", (hasClearBackgroundImage || isRaining) ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
-                                <p className="font-semibold text-xs">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
+                                <p className="font-semibold text-xs">{(point.dailyMaxSpell ?? 0).toFixed(0)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">

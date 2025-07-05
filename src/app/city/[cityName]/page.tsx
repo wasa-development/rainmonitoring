@@ -62,6 +62,31 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const formRef = useRef<HTMLFormElement>(null);
   const clearanceFormRef = useRef<HTMLFormElement>(null);
 
+  const fetchData = async () => {
+    const [points, activeSpell] = await Promise.all([
+      getPondingPoints(cityName),
+      getActiveSpell(cityName)
+    ]);
+
+    const sortedPoints = points.sort((a, b) => a.name.localeCompare(b.name));
+    setPondingPoints(sortedPoints);
+    
+    setIsSpellActive(!!activeSpell);
+    
+    const now = new Date();
+    const dailyMax = Math.max(0, ...points
+        .filter(p => {
+            if (!p.updatedAt) return false;
+            const lastUpdated = p.updatedAt;
+            return lastUpdated.getFullYear() === now.getFullYear() &&
+                    lastUpdated.getMonth() === now.getMonth() &&
+                    lastUpdated.getDate() === now.getDate();
+        })
+        .map(p => p.dailyMaxSpell ?? 0));
+    
+    setMaxSpellToday(dailyMax);
+  };
+  
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
@@ -90,34 +115,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
 
   useEffect(() => {
-    async function fetchData() {
-        const [points, activeSpell] = await Promise.all([
-          getPondingPoints(cityName),
-          getActiveSpell(cityName)
-        ]);
-
-        const sortedPoints = points.sort((a, b) => a.name.localeCompare(b.name));
-        setPondingPoints(sortedPoints);
-        
-        setIsSpellActive(!!activeSpell);
-        
-        const now = new Date();
-        const dailyMax = Math.max(0, ...points
-            .filter(p => {
-                if (!p.updatedAt) return false;
-                const lastUpdated = p.updatedAt;
-                return lastUpdated.getFullYear() === now.getFullYear() &&
-                       lastUpdated.getMonth() === now.getMonth() &&
-                       lastUpdated.getDate() === now.getDate();
-            })
-            .map(p => p.dailyMaxSpell ?? 0));
-        
-        setMaxSpellToday(dailyMax);
-    }
     if (user) { 
         fetchData();
     }
-  }, [cityName, isPending, user]);
+  }, [cityName, user]);
 
   const submitPondingPointForm = (formData: FormData) => {
     startTransition(async () => {
@@ -129,6 +130,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             setClearanceDialogOpen(false);
             setPendingFormData(null);
             formRef.current?.reset();
+            await fetchData();
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
             setClearanceDialogOpen(false); // Close dialog even on error
@@ -190,6 +192,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         }
         setDeleteAlertOpen(false);
         setPointToDelete(null);
+        await fetchData();
     });
   };
 
@@ -216,6 +219,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
           toast({ variant: 'destructive', title: 'Error Starting Spell', description: result.error });
         }
       }
+      await fetchData();
     });
   };
   
@@ -277,6 +281,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                     onEdit={() => handleEditClick(point)} 
                     onDelete={() => handleDeleteClick(point)}
                     userRole={claims?.role}
+                    isSpellActive={isSpellActive}
                 />
             ))
           ) : (
@@ -296,7 +301,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                     <CardDescription>Highest recorded rainfall in the current spell across all points.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                    <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
                 </CardContent>
             </Card>
             <Card>
@@ -305,7 +310,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                      <CardDescription>Highest recorded rainfall today across all spells.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
                 </CardContent>
             </Card>
         </div>
@@ -347,7 +352,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                             type="number"
                                             defaultValue={editingPoint?.currentSpell ?? 0}
                                             className="col-span-3"
-                                            step="0.1"
+                                            step="1"
                                             min="0"
                                         />
                                     </div>
