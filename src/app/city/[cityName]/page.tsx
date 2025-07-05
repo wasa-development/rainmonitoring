@@ -103,15 +103,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             claims.assignedCity &&
             claims.assignedCity !== cityName
         ) {
-            toast({
-            variant: 'destructive',
-            title: 'Access Denied',
-            description: `You can only view the dashboard for ${claims.assignedCity}.`,
-            });
             router.push(`/city/${encodeURIComponent(claims.assignedCity)}`);
         }
      }
-  }, [authLoading, user, claims, cityName, router, toast]);
+  }, [authLoading, user, claims, cityName, router]);
 
 
   useEffect(() => {
@@ -252,12 +247,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             <div className="flex items-center gap-2">
                 {claims?.role !== 'viewer' && (
                     <>
-                        <Button asChild variant="outline">
-                            <Link href={`/city/${encodeURIComponent(cityName)}/report`}>
-                                <FileText className="mr-2" />
-                                View Report
-                            </Link>
-                        </Button>
                         <Button asChild variant="outline">
                             <Link href={`/city/${encodeURIComponent(cityName)}/data-entry`}>
                                 <FilePenLine className="mr-2" />
