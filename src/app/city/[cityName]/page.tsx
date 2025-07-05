@@ -215,16 +215,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </h1>
             </div>
             <div className="flex items-center gap-2">
-                {claims?.role === 'city-user' && (
-                    <Link href={`/city/${encodeURIComponent(cityName)}/data-entry`} passHref>
-                        <Button variant="outline">
-                            <FilePenLine className="mr-2" />
-                            Bulk Data Entry
-                        </Button>
-                    </Link>
-                )}
                 {claims?.role !== 'viewer' && (
                     <>
+                        <Button asChild variant="outline">
+                            <Link href={`/city/${encodeURIComponent(cityName)}/data-entry`}>
+                                <FilePenLine className="mr-2" />
+                                Bulk Data Entry
+                            </Link>
+                        </Button>
                         <Button onClick={handleToggleSpell} disabled={isPending}>
                             {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
                             {isSpellActive ? 'Stop Spell' : 'Start Spell'}
