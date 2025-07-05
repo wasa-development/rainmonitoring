@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import type { Spell } from '@/lib/types';
 
 export default function ReportPage({ params }: { params: { cityName: string } }) {
-    const { cityName: encodedCityName } = params;
+    const { cityName: encodedCityName } = use(params);
     const cityName = decodeURIComponent(encodedCityName);
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
