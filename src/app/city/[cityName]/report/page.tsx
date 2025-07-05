@@ -108,6 +108,7 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                                 <tr>
                                     <th scope="col" className="px-2 py-2 border-2 border-black w-16 text-center font-bold">Sr No</th>
                                     <th scope="col" className="px-2 py-2 border-2 border-black text-left font-bold">Name of Ponding Point</th>
+                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Total Rainfall (mm)</th>
                                     <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Ponding at Stop Time (Inches)</th>
                                     <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Total Clearance Time</th>
                                 </tr>
@@ -119,6 +120,9 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                                     <tr key={point.pointId} style={{ backgroundColor: '#F2F2F2' }} className="h-8">
                                         <td className="px-2 py-1 border-2 border-black text-center">{index + 1}</td>
                                         <td className="px-2 py-1 border-2 border-black">{point.pointName}</td>
+                                        <td className="px-2 py-1 border-2 border-black text-center">
+                                            {point.totalRainfall.toFixed(0)}
+                                        </td>
                                         <td className="px-2 py-1 border-2 border-black text-center">
                                             {point.pondingLevel > 0 ? point.pondingLevel.toFixed(1) : 'No Ponding'}
                                         </td>

@@ -176,7 +176,7 @@ export async function stopSpell(cityName: string) {
         const spellData = pondingPoints.map(point => ({
             pointId: point.id,
             pointName: point.name,
-            totalRainfall: point.currentSpell,
+            totalRainfall: point.maxSpellRainfall ?? 0,
             pondingLevel: point.ponding ?? 0,
             clearedInTime: point.clearedInTime ?? '',
         }));
