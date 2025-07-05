@@ -53,10 +53,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [isStopSpellBlocked, setStopSpellBlocked] = useState(false);
   
   const [currentPondingValue, setCurrentPondingValue] = useState('0');
+
+  const [isClearanceDialogOpen, setClearanceDialogOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   
   const [isPending, startTransition] = useTransition();
 
   const formRef = useRef<HTMLFormElement>(null);
+  const clearanceFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -115,19 +119,46 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     }
   }, [cityName, isPending, user]);
 
-  
-  const handleFormSubmit = (formData: FormData) => {
+  const submitPondingPointForm = (formData: FormData) => {
     startTransition(async () => {
         const result = await addOrUpdatePondingPoint(formData, cityName);
         if (result.success) {
             toast({ title: 'Success', description: result.message });
             setFormOpen(false);
             setEditingPoint(null);
+            setClearanceDialogOpen(false);
+            setPendingFormData(null);
             formRef.current?.reset();
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
+            setClearanceDialogOpen(false); // Close dialog even on error
         }
     });
+  }
+  
+  const handleFormSubmit = (formData: FormData) => {
+    const newPondingValue = parseFloat(formData.get('ponding') as string ?? '0');
+    const oldPondingValue = editingPoint?.ponding ?? 0;
+    const clearedInTime = formData.get('clearedInTime') as string;
+
+    if (editingPoint && oldPondingValue > 0 && newPondingValue === 0 && !clearedInTime) {
+        setPendingFormData(formData);
+        setClearanceDialogOpen(true);
+        return;
+    }
+    submitPondingPointForm(formData);
+  };
+  
+  const handleClearanceTimeSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!pendingFormData) return;
+
+    const clearanceTimeForm = event.currentTarget;
+    const clearanceTimeInput = clearanceTimeForm.elements.namedItem('clearedInTime') as HTMLInputElement;
+    const clearanceTime = clearanceTimeInput.value;
+
+    pendingFormData.set('clearedInTime', clearanceTime);
+    submitPondingPointForm(pendingFormData);
   };
 
   const handleEditClick = (point: PondingPoint) => {
@@ -398,6 +429,31 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             </AlertDialogContent>
         </AlertDialog>
 
+        <Dialog open={isClearanceDialogOpen} onOpenChange={setClearanceDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Clearance Time Required</DialogTitle>
+                    <DialogDescription>
+                        You have set the ponding value to 0. Please enter the time it took to clear the ponding for <span className="font-bold">{editingPoint?.name}</span>.
+                    </DialogDescription>
+                </DialogHeader>
+                <form ref={clearanceFormRef} onSubmit={handleClearanceTimeSubmit}>
+                    <div className="py-4">
+                        <Label htmlFor="clearance-time-input">Cleared In (hh:mm)</Label>
+                        <Input id="clearance-time-input" name="clearedInTime" type="text" placeholder="e.g., 02:30" required />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending ? 'Saving...' : 'Confirm & Save'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
     </div>
   );
 }
+
+    
