@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
@@ -13,24 +13,36 @@ import { format } from 'date-fns';
 import type { Spell } from '@/lib/types';
 
 export default function ReportPage({ params }: { params: { cityName: string } }) {
-    const { cityName: encodedCityName } = use(params);
+    const { cityName: encodedCityName } = params;
     const cityName = decodeURIComponent(encodedCityName);
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
 
-    const reportData: Spell | null = use(getLatestReportData(cityName));
+    const [reportData, setReportData] = useState<Spell | null>(null);
+    const [dataLoading, setDataLoading] = useState(true);
 
     useEffect(() => {
-        if (!authLoading && !user) {
-            router.push('/login');
+        if (!authLoading) {
+            if (!user) {
+                router.push('/login');
+            } else {
+                getLatestReportData(cityName)
+                    .then(data => {
+                        setReportData(data);
+                    })
+                    .finally(() => {
+                        setDataLoading(false);
+                    });
+            }
         }
-    }, [authLoading, user, router]);
+    }, [authLoading, user, router, cityName]);
+
 
     const handlePrint = () => {
         window.print();
     };
 
-    if (authLoading || !user) {
+    if (authLoading || dataLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center">
                 <RefreshCw className="h-8 w-8 animate-spin text-primary" />
