@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db, admin } from '@/lib/firebase-admin';
@@ -155,6 +156,7 @@ export async function startSpell(cityName: string) {
 
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/report`);
         return { success: true, message: 'Spell started successfully.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
@@ -175,6 +177,8 @@ export async function stopSpell(cityName: string) {
             pointId: point.id,
             pointName: point.name,
             totalRainfall: point.currentSpell,
+            pondingLevel: point.ponding ?? 0,
+            clearedInTime: point.clearedInTime ?? '',
         }));
 
         const batch = db.batch();
@@ -195,6 +199,7 @@ export async function stopSpell(cityName: string) {
 
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/report`);
         return { success: true, message: 'Spell ended and data saved.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };

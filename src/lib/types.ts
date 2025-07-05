@@ -65,5 +65,7 @@ export interface Spell {
         pointId: string;
         pointName: string;
         totalRainfall: number;
+        pondingLevel: number;
+        clearedInTime: string;
     }[];
 }

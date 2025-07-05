@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine } from 'lucide-react';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine, FileText } from 'lucide-react';
 import type { AdminUser, PondingPoint, Spell } from '@/lib/types';
 import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -253,6 +253,12 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 {claims?.role !== 'viewer' && (
                     <>
                         <Button asChild variant="outline">
+                            <Link href={`/city/${encodeURIComponent(cityName)}/report`}>
+                                <FileText className="mr-2" />
+                                View Report
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline">
                             <Link href={`/city/${encodeURIComponent(cityName)}/data-entry`}>
                                 <FilePenLine className="mr-2" />
                                 Bulk Data Entry
@@ -460,5 +466,3 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     </div>
   );
 }
-
-    
