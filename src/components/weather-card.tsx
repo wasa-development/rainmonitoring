@@ -80,12 +80,16 @@ export default function WeatherCard({ data }: WeatherCardProps) {
   const isThunderstorm = data.condition === 'Thunderstorm';
   const isCloudy = ['Cloudy', 'PartlyCloudyDay', 'PartlyCloudyNight'].includes(data.condition);
   const isFoggy = data.condition === 'Fog';
+  const isClearNight = data.condition === 'ClearNight';
   const hasImage = ['ClearDay', 'Cloudy', 'PartlyCloudyDay', 'PartlyCloudyNight', 'Rainy', 'Thunderstorm', 'Fog'].includes(data.condition);
 
   const formattedCondition = data.condition.replace(/([A-Z])/g, ' $1').trim();
 
   return (
-    <Card className="relative flex flex-col justify-between h-full transition-colors duration-500 border hover:border-primary/50 bg-card overflow-hidden group">
+    <Card className={cn(
+        "relative flex flex-col justify-between h-full transition-colors duration-500 border hover:border-primary/50 bg-card overflow-hidden group",
+        isClearNight && "bg-slate-900 border-slate-800"
+    )}>
       {/* This link is a stretched overlay, ensuring the whole card is clickable */}
       <Link href={`/city/${encodeURIComponent(data.city)}`} className="absolute inset-0 z-30" aria-label={`View dashboard for ${data.city}`} />
 
@@ -100,7 +104,10 @@ export default function WeatherCard({ data }: WeatherCardProps) {
       {isFoggy && <FogOverlay />}
 
       {/* The content is visually on top but not interactive, allowing the link underneath to be clicked. */}
-      <div className={cn("relative z-20 flex flex-col h-full p-6 pointer-events-none", hasImage ? "text-white" : "text-card-foreground")}>
+      <div className={cn(
+          "relative z-20 flex flex-col h-full p-6 pointer-events-none",
+          (hasImage || isClearNight) ? "text-white" : "text-card-foreground"
+      )}>
           <div className="flex justify-between items-start">
               <span className="text-8xl font-light tracking-tight">{data.temperature}°</span>
                {data.condition !== 'ClearDay' && (
@@ -108,13 +115,13 @@ export default function WeatherCard({ data }: WeatherCardProps) {
                )}
           </div>
           
-          <p className={cn("text-2xl -mt-3", hasImage ? "text-white/90" : "text-muted-foreground")}>{formattedCondition}</p>
+          <p className={cn("text-2xl -mt-3", (hasImage || isClearNight) ? "text-white/90" : "text-muted-foreground")}>{formattedCondition}</p>
 
           <div className="flex-grow" />
 
           <div>
               <h2 className="text-3xl font-bold">{data.city}</h2>
-              <p className={cn("text-sm", hasImage ? "text-white/80" : "text-muted-foreground")}>
+              <p className={cn("text-sm", (hasImage || isClearNight) ? "text-white/80" : "text-muted-foreground")}>
                   Updated {formatDistanceToNow(data.lastUpdated, { addSuffix: true })}
               </p>
           </div>
