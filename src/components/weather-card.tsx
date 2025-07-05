@@ -85,37 +85,40 @@ export default function WeatherCard({ data }: WeatherCardProps) {
   const formattedCondition = data.condition.replace(/([A-Z])/g, ' $1').trim();
 
   return (
-    <Link href={`/city/${encodeURIComponent(data.city)}`} className="block group">
-        <Card className="relative flex flex-col justify-between h-full transition-colors duration-500 border group-hover:border-primary/50 bg-card overflow-hidden">
-            {renderBackgroundImage(data.condition)}
-            {hasImage && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/10 z-10" />}
+    <Card className="relative flex flex-col justify-between h-full transition-colors duration-500 border hover:border-primary/50 bg-card overflow-hidden group">
+      {/* This link is a stretched overlay, ensuring the whole card is clickable */}
+      <Link href={`/city/${encodeURIComponent(data.city)}`} className="absolute inset-0 z-30" aria-label={`View dashboard for ${data.city}`} />
+
+      {/* Backgrounds and animations sit below the link overlay */}
+      {renderBackgroundImage(data.condition)}
+      {hasImage && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/10 z-10 pointer-events-none" />}
+    
+      {isRaining && <CardRainAnimation />}
+      {isSnowing && <SnowAnimation />}
+      {isThunderstorm && <ThunderAnimation />}
+      {isCloudy && <CloudyOverlay />}
+      {isFoggy && <FogOverlay />}
+
+      {/* The content is visually on top but not interactive, allowing the link underneath to be clicked. */}
+      <div className={cn("relative z-20 flex flex-col h-full p-6 pointer-events-none", hasImage ? "text-white" : "text-card-foreground")}>
+          <div className="flex justify-between items-start">
+              <span className="text-8xl font-light tracking-tight">{data.temperature}°</span>
+               {data.condition !== 'ClearDay' && (
+                  <Icon className={cn("w-20 h-20 drop-shadow-lg transition-transform group-hover:scale-110 mt-2")} />
+               )}
+          </div>
           
-            {isRaining && <CardRainAnimation />}
-            {isSnowing && <SnowAnimation />}
-            {isThunderstorm && <ThunderAnimation />}
-            {isCloudy && <CloudyOverlay />}
-            {isFoggy && <FogOverlay />}
+          <p className={cn("text-2xl -mt-3", hasImage ? "text-white/90" : "text-muted-foreground")}>{formattedCondition}</p>
 
-            <div className={cn("relative z-20 flex flex-col h-full p-6", hasImage ? "text-white" : "text-card-foreground")}>
-                <div className="flex justify-between items-start">
-                    <span className="text-8xl font-light tracking-tight">{data.temperature}°</span>
-                     {data.condition !== 'ClearDay' && (
-                        <Icon className={cn("w-20 h-20 drop-shadow-lg transition-transform group-hover:scale-110 mt-2")} />
-                     )}
-                </div>
-                
-                <p className={cn("text-2xl -mt-3", hasImage ? "text-white/90" : "text-muted-foreground")}>{formattedCondition}</p>
+          <div className="flex-grow" />
 
-                <div className="flex-grow" />
-
-                <div>
-                    <h2 className="text-3xl font-bold">{data.city}</h2>
-                    <p className={cn("text-sm", hasImage ? "text-white/80" : "text-muted-foreground")}>
-                        Updated {formatDistanceToNow(data.lastUpdated, { addSuffix: true })}
-                    </p>
-                </div>
-            </div>
-        </Card>
-    </Link>
+          <div>
+              <h2 className="text-3xl font-bold">{data.city}</h2>
+              <p className={cn("text-sm", hasImage ? "text-white/80" : "text-muted-foreground")}>
+                  Updated {formatDistanceToNow(data.lastUpdated, { addSuffix: true })}
+              </p>
+          </div>
+      </div>
+    </Card>
   );
 }

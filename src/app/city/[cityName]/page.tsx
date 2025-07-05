@@ -69,9 +69,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   useEffect(() => {
      if (!authLoading && user) {
-        if (claims?.role === 'super-admin') {
-            router.push('/admin');
-        } else if (
+        if (
             claims?.role === 'city-user' &&
             claims.assignedCity &&
             claims.assignedCity !== cityName
