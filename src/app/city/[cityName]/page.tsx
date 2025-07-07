@@ -54,7 +54,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   
   const [currentPondingValue, setCurrentPondingValue] = useState('0');
   const [currentRainValue, setCurrentRainValue] = useState('0');
-  const [isTrace, setIsTrace] = useState(false);
+  const isTrace = currentRainValue === '0.1';
 
   const [isClearanceDialogOpen, setClearanceDialogOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
@@ -108,18 +108,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   useEffect(() => {
     if (editingPoint) {
       setCurrentPondingValue(String(editingPoint.ponding ?? 0));
-      const spell = editingPoint.currentSpell;
-      if (spell === 0.1) {
-          setIsTrace(true);
-          setCurrentRainValue('Trace');
-      } else {
-          setIsTrace(false);
-          setCurrentRainValue(String(spell ?? 0));
-      }
+      setCurrentRainValue(String(editingPoint.currentSpell ?? 0));
     } else {
-        setCurrentPondingValue('0');
-        setCurrentRainValue('0');
-        setIsTrace(false);
+      setCurrentPondingValue('0');
+      setCurrentRainValue('0');
     }
   }, [editingPoint]);
 
@@ -229,17 +221,11 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   };
 
   const handleRainInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (isTrace) setIsTrace(false);
       setCurrentRainValue(e.target.value);
   };
 
   const handleTraceChange = (checked: boolean) => {
-      setIsTrace(checked);
-      if (checked) {
-          setCurrentRainValue('Trace');
-      } else {
-          setCurrentRainValue('0');
-      }
+      setCurrentRainValue(checked ? '0.1' : '0');
   };
 
 
@@ -351,11 +337,12 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                             <Input
                                                 id="currentSpell"
                                                 name="currentSpell"
-                                                type="text"
+                                                type="number"
                                                 value={currentRainValue}
                                                 onChange={handleRainInputChange}
                                                 className="w-24"
-                                                disabled={isTrace}
+                                                step="0.1"
+                                                min="0"
                                             />
                                             <div className="flex items-center gap-1.5 whitespace-nowrap">
                                                 <Checkbox id="trace-checkbox" checked={isTrace} onCheckedChange={handleTraceChange} />

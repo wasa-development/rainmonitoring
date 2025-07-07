@@ -422,27 +422,18 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
 }
 
 function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, onDelete }: { point: PondingPoint, index: number, isSpellActive: boolean, isPending: boolean, userRole?: string, onDelete: (point: PondingPoint) => void }) {
-    const [isTrace, setIsTrace] = useState(point.currentSpell === 0.1);
-    const [rainValue, setRainValue] = useState(
-        point.currentSpell === 0.1 ? 'Trace' : (point.currentSpell ?? 0).toString()
-    );
+    const [rainValue, setRainValue] = useState((point.currentSpell ?? 0).toString());
+    const isTrace = rainValue === '0.1';
 
     useEffect(() => {
-        setIsTrace(point.currentSpell === 0.1);
-        setRainValue(point.currentSpell === 0.1 ? 'Trace' : (point.currentSpell ?? 0).toString());
+        setRainValue((point.currentSpell ?? 0).toString());
     }, [point.currentSpell]);
 
     const handleTraceChange = (checked: boolean) => {
-        setIsTrace(checked);
-        if (checked) {
-            setRainValue('Trace');
-        } else {
-            setRainValue('0');
-        }
+        setRainValue(checked ? '0.1' : '0');
     };
 
     const handleRainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (isTrace) setIsTrace(false);
         setRainValue(e.target.value);
     };
 
@@ -457,10 +448,12 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                 <div className="flex items-center gap-2">
                     <Input
                         name={`points[${index}].currentSpell`}
-                        type="text"
+                        type="number"
                         value={rainValue}
                         onChange={handleRainChange}
-                        disabled={isTrace || !isSpellActive || isPending}
+                        step="0.1"
+                        min="0"
+                        disabled={!isSpellActive || isPending}
                         className="w-24"
                     />
                     <div className="flex items-center gap-1.5 whitespace-nowrap">

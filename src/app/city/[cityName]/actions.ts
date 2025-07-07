@@ -37,11 +37,6 @@ export async function getPondingPoints(cityName: string): Promise<PondingPoint[]
 
 export async function addOrUpdatePondingPoint(formData: FormData, cityName: string) {
     const rawData = Object.fromEntries(formData.entries());
-    
-    // Handle "Trace" rainfall
-    if (rawData.currentSpell && typeof rawData.currentSpell === 'string' && rawData.currentSpell.toLowerCase() === 'trace') {
-        rawData.currentSpell = 0.1;
-    }
 
     const validation = PondingPointSchema.safeParse(rawData);
 
@@ -271,13 +266,6 @@ const BatchPondingPointSchema = z.object({
 export async function batchUpdatePondingPoints(formData: FormData, cityName: string) {
     const parsedPoints = parsePointsFromFormData(formData);
 
-    // Handle "Trace" rainfall
-    parsedPoints.forEach(p => {
-      if (p.currentSpell && typeof p.currentSpell === 'string' && p.currentSpell.toLowerCase() === 'trace') {
-        p.currentSpell = 0.1;
-      }
-    });
-    
     const validationResults = parsedPoints.map(p => BatchPondingPointSchema.safeParse(p));
 
     // Find the first validation error, if any
