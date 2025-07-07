@@ -79,15 +79,6 @@
   animation: fall linear infinite;
 }
 
-.blue-raindrop {
-  position: absolute;
-  bottom: 100%;
-  width: 1.5px;
-  height: 75px;
-  background: linear-gradient(to top, transparent, #007BFF);
-  animation: fall linear infinite;
-}
-
 @keyframes fall {
   from {
     transform: translate(0, 0) rotate(15deg);

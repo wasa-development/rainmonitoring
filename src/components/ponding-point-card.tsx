@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import type { AdminUser, PondingPoint } from '@/lib/types';
@@ -19,7 +17,7 @@ const WhiteRainAnimation = () => {
                 animationDelay: `${Math.random() * 2}s`,
                 animationDuration: `${1.2 + Math.random() * 0.6}s`,
             };
-            return <div key={i} className="blue-raindrop" style={style} />;
+            return <div key={i} className="raindrop" style={style} />;
         }), []);
 
     return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg">{raindrops}</div>;
