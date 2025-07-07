@@ -42,12 +42,14 @@ interface PondingPointCardProps {
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
     const isRaining = point.currentSpell > 0;
     const isPonding = (point.ponding ?? 0) > 0;
-    const isClear = !isRaining && !isPonding;
-    const isJustPonding = isPonding && !isRaining;
 
-    // Determine if we should use a background image that necessitates light-colored text.
-    const useImageBg = isRaining || isClear || isJustPonding;
-
+    let cardState: 'raining' | 'ponding_only' | 'clear' = 'clear';
+    if (isRaining) {
+        cardState = 'raining';
+    } else if (isPonding) {
+        cardState = 'ponding_only';
+    }
+    
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
 
     return (
@@ -56,21 +58,20 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
         )}>
             
             <div className="absolute inset-0 z-0">
-                {isRaining && (
+                {cardState === 'raining' && (
                      <>
                         <Image src="/rainy-day.jpg" alt="Raining weather background" layout="fill" objectFit="cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
                     </>
                 )}
-                {isClear && (
+                {cardState === 'clear' && (
                     <>
                         <Image src="/clear-day.jpg" alt="Clear sunny sky" layout="fill" objectFit="cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
                     </>
                 )}
-                 {isJustPonding && (
+                 {cardState === 'ponding_only' && (
                     <>
-                        {/* Use a blue-ish background for ponding state */}
                         <Image src="/cloudy-day.jpg" alt="Cloudy sky with ponding" layout="fill" objectFit="cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-blue-900/60 via-blue-800/40 to-black/10" />
                     </>
@@ -80,9 +81,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
             </div>
             
             <div className={cn(
-                "relative z-10 flex flex-col flex-grow rounded-lg",
-                // If we use an image background, text should be white. Otherwise, use theme color.
-                useImageBg ? "text-white" : "text-card-foreground",
+                "relative z-10 flex flex-col flex-grow rounded-lg text-white"
             )}>
                 <CardHeader className="flex flex-row items-start justify-between p-2">
                     <div>
@@ -91,11 +90,10 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                     <div className="flex gap-1">
                     {userRole !== 'viewer' && (
                         <>
-                            {/* Buttons now work on any background since text color is consistently white with image BGs */}
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/10 hover:text-white" onClick={() => onEdit(point)}>
                                 <Edit className="h-4 w-4" />
                             </Button>
-                            {userRole !== 'city-admin' && (
+                            {userRole !== 'city-user' && (
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:bg-white/10 hover:text-red-400" onClick={() => onDelete(point)} disabled={isSpellActive}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -107,42 +105,42 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                 <CardContent className="flex-grow p-2 space-y-2">
                     <div className="grid grid-cols-2 gap-2">
                         <div className="flex items-center gap-1.5">
-                            <Droplets className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-primary")} />
+                            <Droplets className="h-3.5 w-3.5 text-white/90" />
                             <div>
-                                <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
+                                <p className="text-xs text-white/80">Current Rain</p>
                                 <p className="font-semibold text-xs">{point.currentSpell === 0.1 ? 'Trace' : `${(point.currentSpell ?? 0).toFixed(1)} mm`}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <TrendingUp className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-primary")} />
+                            <TrendingUp className="h-3.5 w-3.5 text-white/90" />
                             <div>
-                                <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
+                                <p className="text-xs text-white/80">Max Today</p>
                                 <p className="font-semibold text-xs">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <AlertTriangle className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-accent")} />
+                            <AlertTriangle className="h-3.5 w-3.5 text-white/90" />
                             <div>
-                                <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
+                                <p className="text-xs text-white/80">Ponding</p>
                                 <p className="font-semibold text-xs">{(point.ponding ?? 0).toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <Clock className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-muted-foreground")} />
+                            <Clock className="h-3.5 w-3.5 text-white/90" />
                             <div>
-                                <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Cleared In</p>
+                                <p className="text-xs text-white/80">Cleared In</p>
                                 <p className="font-semibold text-xs">{point.ponding > 0 ? '—' : point.clearedInTime || '—'}</p>
                             </div>
                         </div>
                     </div>
                 </CardContent>
                 <CardFooter className="p-2 pt-0">
-                    {isRaining ? (
+                    {cardState === 'raining' ? (
                         <Badge variant="outline" className="bg-black/20 border-white/50 text-white">
                             <Droplets className="mr-1 h-3 w-3" />
                             Raining
                         </Badge>
-                    ) : isPonding ? (
+                    ) : cardState === 'ponding_only' ? (
                          <Badge variant="destructive" className="bg-red-500/80 border-red-400 text-white shadow-lg">
                             <AlertTriangle className="mr-1 h-3 w-3" />
                             Ponding
