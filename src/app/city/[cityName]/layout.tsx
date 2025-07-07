@@ -50,7 +50,7 @@ export default function CityLayout({
     },
     {
       href: `/city/${encodedCityName}/report`,
-      label: 'Status Report',
+      label: 'Ponding Report',
       icon: FileClock,
       active: pathname === `/city/${encodedCityName}/report`,
     },

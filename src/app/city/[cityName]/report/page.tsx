@@ -77,7 +77,7 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                     <Link href={`/city/${encodeURIComponent(cityName)}`}>
                          <Button variant="outline"><ArrowLeft className="mr-2" /> Back to Dashboard</Button>
                     </Link>
-                    <h1 className="text-xl font-bold text-foreground">{isLive ? 'Live Spell Report' : 'Ponding Report'}</h1>
+                    <h1 className="text-xl font-bold text-foreground">Ponding Report</h1>
                     <Button onClick={handlePrint}><Printer className="mr-2" /> Print Report</Button>
                 </header>
                 
@@ -93,7 +93,7 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                             </div>
                         </div>
                         <div className="text-center">
-                            <h2 className="text-3xl font-bold">{isLive ? 'Live Spell Report' : 'Ponding Report'}</h2>
+                            <h2 className="text-3xl font-bold">Ponding Report</h2>
                              {isLive ? (
                                 <p className="text-lg">Report as of {format(new Date(), 'dd-MM-yyyy')}</p>
                             ) : (
@@ -118,7 +118,8 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                                     <th scope="col" className="px-2 py-2 border-2 border-black w-16 text-center font-bold">Sr No</th>
                                     <th scope="col" className="px-2 py-2 border-2 border-black text-left font-bold">Name of Ponding Point</th>
                                     <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">{isLive ? 'Current Rain (mm)' : 'Total Rainfall (mm)'}</th>
-                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Ponding (Inches)</th>
+                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Max Ponding (in)</th>
+                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Current Ponding (in)</th>
                                     <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Clearance Time</th>
                                 </tr>
                             </thead>
@@ -131,6 +132,9 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                                         <td className="px-2 py-1 border-2 border-black">{point.pointName}</td>
                                         <td className="px-2 py-1 border-2 border-black text-center">
                                             {point.totalRainfall.toFixed(0)}
+                                        </td>
+                                        <td className="px-2 py-1 border-2 border-black text-center">
+                                            {(point.maxPondingLevel ?? 0).toFixed(1)}
                                         </td>
                                         <td className="px-2 py-1 border-2 border-black text-center">
                                             {point.pondingLevel > 0 ? point.pondingLevel.toFixed(1) : 'No Ponding'}

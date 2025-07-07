@@ -27,6 +27,7 @@ export interface PondingPoint {
     maxSpellRainfall?: number;
     clearedInTime: string;
     ponding: number;
+    maxPondingLevel?: number;
     isRaining: boolean;
     dailyMaxSpell?: number;
     updatedAt?: Date;
@@ -66,6 +67,7 @@ export interface Spell {
         pointName: string;
         totalRainfall: number;
         pondingLevel: number;
+        maxPondingLevel: number;
         clearedInTime: string;
     }[];
 }
