@@ -24,20 +24,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine, Users, Download, Calendar as CalendarIcon } from 'lucide-react';
-import type { AdminUser, PondingPoint } from '@/lib/types';
-import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell, getDailyReportData } from './actions';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
+import type { PondingPoint } from '@/lib/types';
+import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { ThemeToggle } from '@/components/theme-toggle';
 import PondingPointCard from '@/components/ponding-point-card';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { generateDailyReportPdf } from '@/lib/report-generator';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -63,9 +57,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   
   const [isPending, startTransition] = useTransition();
-
-  const [reportDate, setReportDate] = useState<Date | undefined>(new Date());
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const clearanceFormRef = useRef<HTMLFormElement>(null);
@@ -218,43 +209,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       setCurrentPondingValue(e.target.value);
   };
 
-  const handleGenerateReport = async () => {
-    if (!reportDate) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Please select a date for the report.",
-        });
-        return;
-    }
-
-    setIsGeneratingReport(true);
-    try {
-        const data = await getDailyReportData(cityName, reportDate);
-        if (data) {
-            generateDailyReportPdf(data, cityName);
-            toast({
-                title: "Report Generated",
-                description: "Your PDF report is downloading.",
-            });
-        } else {
-            toast({
-                variant: "destructive",
-                title: "No Data",
-                description: `No completed rain spells found for ${format(reportDate, 'PPP')}.`,
-            });
-        }
-    } catch (e: any) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: e.message || "Failed to generate report.",
-        });
-    } finally {
-        setIsGeneratingReport(false);
-    }
-  };
-
   const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
 
   if (authLoading || !user) {
@@ -266,32 +220,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   }
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
-      <main className="container mx-auto p-4 sm:p-6 md:p-8 z-10 relative">
+    <div className="p-4 sm:p-6 md:p-8">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-            <div className="flex items-center gap-4">
-                <Link href="/" className="text-primary hover:text-primary/80">
-                    <Home className="w-7 h-7" />
-                </Link>
-                <h1 className="text-3xl sm:text-4xl font-bold text-primary">
-                    Ponding Points: {cityName}
-                </h1>
-            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-primary">
+                Ponding Points Dashboard
+            </h1>
             <div className="flex items-center gap-2">
                 {claims?.role !== 'viewer' && (
                     <>
-                        <Link href="/admin" passHref>
-                          <Button variant="outline">
-                            <Users className="mr-2 h-4 w-4" />
-                            Manage Users
-                          </Button>
-                        </Link>
-                        <Button asChild variant="outline">
-                            <Link href={`/city/${encodeURIComponent(cityName)}/data-entry`}>
-                                <FilePenLine className="mr-2" />
-                                Bulk Data Entry
-                            </Link>
-                        </Button>
                         <Button onClick={handleToggleSpell} disabled={isPending}>
                             {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
                             {isSpellActive ? 'Stop Spell' : 'Start Spell'}
@@ -302,9 +238,29 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         </Button>
                     </>
                 )}
-                 <ThemeToggle />
             </div>
         </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Card>
+                <CardHeader className="pb-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">Max Spell (Current)</h3>
+                    <p className="text-xs text-muted-foreground">Highest recorded rainfall in the current spell across all points.</p>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="pb-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">Max Spell (Today)</h3>
+                     <p className="text-xs text-muted-foreground">Highest recorded rainfall today across all spells.</p>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                </CardContent>
+            </Card>
+        </div>
 
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {pondingPoints.length > 0 ? (
@@ -327,73 +283,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             </Card>
           )}
         </div>
-
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Max Spell (Current)</CardTitle>
-                    <CardDescription>Highest recorded rainfall in the current spell across all points.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Max Spell (Today)</CardTitle>
-                     <CardDescription>Highest recorded rainfall today across all spells.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
-                </CardContent>
-            </Card>
-            <Card className="md:col-span-2">
-                <CardHeader>
-                    <CardTitle>Generate Daily Report</CardTitle>
-                    <CardDescription>Select a date to generate a PDF summary of all rain spells.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row items-center gap-4">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full sm:w-[280px] justify-start text-left font-normal",
-                                    !reportDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {reportDate ? format(reportDate, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={reportDate}
-                                onSelect={setReportDate}
-                                initialFocus
-                                disabled={(date) => date > new Date() || date < new Date("2024-01-01")}
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <Button onClick={handleGenerateReport} disabled={isGeneratingReport}>
-                        {isGeneratingReport ? (
-                            <>
-                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <Download className="mr-2 h-4 w-4" />
-                                Generate Rain Report
-                            </>
-                        )}
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-
-      </main>
 
         <Dialog open={isFormOpen} onOpenChange={setFormOpen}>
             <DialogContent className="sm:max-w-[425px]">

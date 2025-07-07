@@ -39,7 +39,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { Home, PlayCircle, PauseCircle, RefreshCw, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 
 // Helper function to parse form data with array-like keys into an array of objects
@@ -250,17 +249,12 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     }
     
     return (
-        <main className="container mx-auto p-4 sm:p-6 md:p-8">
+        <main className="p-4 sm:p-6 md:p-8">
             <header className="flex flex-col sm:flex-row justify-between items-start mb-8 gap-4">
-                <div className="flex items-center gap-4">
-                     <Link href={`/city/${encodeURIComponent(cityName)}`} className="text-primary hover:text-primary/80">
-                        <ArrowLeft className="w-7 h-7" />
-                    </Link>
-                    <h1 className="text-3xl sm:text-4xl font-bold text-primary">
-                        Bulk Data Entry: {cityName}
-                    </h1>
-                </div>
-                 <div className="flex items-center gap-2">
+                <h1 className="text-3xl sm:text-4xl font-bold text-primary">
+                    Bulk Data Entry
+                </h1>
+                <div className="flex items-center gap-2">
                     <Button onClick={handleToggleSpell} disabled={isPending}>
                         {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
                         {isSpellActive ? 'Stop Spell' : 'Start Spell'}
@@ -269,7 +263,6 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                         <PlusCircle className="mr-2" />
                         Add Point
                     </Button>
-                    <ThemeToggle />
                 </div>
             </header>
 
