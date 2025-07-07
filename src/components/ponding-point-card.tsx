@@ -40,14 +40,17 @@ interface PondingPointCardProps {
 }
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
+    // --- Simplified and Corrected Logic ---
     const isRaining = point.currentSpell > 0;
     const isPonding = (point.ponding ?? 0) > 0;
 
-    let cardState: 'raining' | 'ponding_only' | 'clear' = 'clear';
+    let cardState: 'raining' | 'ponding_only' | 'clear';
     if (isRaining) {
         cardState = 'raining';
     } else if (isPonding) {
         cardState = 'ponding_only';
+    } else {
+        cardState = 'clear';
     }
     
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
