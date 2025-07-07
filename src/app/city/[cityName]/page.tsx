@@ -54,15 +54,12 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   
   const [currentPondingValue, setCurrentPondingValue] = useState('0');
   const [currentRainValue, setCurrentRainValue] = useState('0');
+  const [currentClearedInTime, setCurrentClearedInTime] = useState('');
   const isTrace = currentRainValue === '0.1';
-
-  const [isClearanceDialogOpen, setClearanceDialogOpen] = useState(false);
-  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   
   const [isPending, startTransition] = useTransition();
 
   const formRef = useRef<HTMLFormElement>(null);
-  const clearanceFormRef = useRef<HTMLFormElement>(null);
 
   const fetchData = async () => {
     const [points, activeSpell] = await Promise.all([
@@ -109,69 +106,28 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     if (editingPoint) {
       setCurrentPondingValue(String(editingPoint.ponding ?? 0));
       setCurrentRainValue(String(editingPoint.currentSpell ?? 0));
+      setCurrentClearedInTime(editingPoint.clearedInTime || '');
     } else {
       setCurrentPondingValue('0');
       setCurrentRainValue('0');
+      setCurrentClearedInTime('');
     }
   }, [editingPoint]);
 
-  const submitPondingPointForm = (formData: FormData) => {
+  const handleFormSubmit = (formData: FormData) => {
     startTransition(async () => {
         const result = await addOrUpdatePondingPoint(formData, cityName);
         if (result.success) {
             toast({ title: 'Success', description: result.message });
             setFormOpen(false);
             setEditingPoint(null);
-            setClearanceDialogOpen(false);
-            setPendingFormData(null);
             formRef.current?.reset();
             await fetchData();
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
-            setClearanceDialogOpen(false); // Close dialog even on error
         }
     });
   }
-  
-  const handleFormSubmit = (formData: FormData) => {
-    const newPondingValue = parseFloat(formData.get('ponding') as string ?? '0');
-    const oldPondingValue = editingPoint?.ponding ?? 0;
-    const clearedInTime = formData.get('clearedInTime') as string;
-
-    if (editingPoint && oldPondingValue > 0 && newPondingValue === 0 && !clearedInTime) {
-        setPendingFormData(formData);
-        setClearanceDialogOpen(true);
-        return;
-    }
-    submitPondingPointForm(formData);
-  };
-  
-  const handleClearanceTimeSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!pendingFormData) return;
-
-    const clearanceTimeForm = event.currentTarget;
-    const clearanceTimeInput = clearanceTimeForm.elements.namedItem('clearedInTime') as HTMLInputElement;
-    const clearanceTime = clearanceTimeInput.value;
-    
-    if (!clearanceTime) {
-        toast({
-            variant: 'destructive',
-            title: 'Input Required',
-            description: "Please enter a clearance time or select 'Cleared During Rain'.",
-        });
-        return;
-    }
-
-    pendingFormData.set('clearedInTime', clearanceTime);
-    submitPondingPointForm(pendingFormData);
-  };
-  
-  const handleClearedDuringRain = () => {
-    if (!pendingFormData) return;
-    pendingFormData.set('clearedInTime', 'Cleared During Rain');
-    submitPondingPointForm(pendingFormData);
-  };
 
   const handleEditClick = (point: PondingPoint) => {
     setEditingPoint(point);
@@ -381,14 +337,25 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="clearedInTime" className="text-right">Cleared In</Label>
-                                    <Input
-                                        id="clearedInTime"
-                                        name="clearedInTime"
-                                        type="text"
-                                        defaultValue={editingPoint?.clearedInTime || ''}
-                                        placeholder="e.g., 02:30"
-                                        className="col-span-3"
-                                    />
+                                    <div className="col-span-3 flex items-center gap-2">
+                                        <Input
+                                            id="clearedInTime"
+                                            name="clearedInTime"
+                                            type="text"
+                                            value={currentClearedInTime}
+                                            onChange={(e) => setCurrentClearedInTime(e.target.value)}
+                                            placeholder="e.g., 02:30"
+                                            className="flex-grow"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            className="h-8 text-xs"
+                                            onClick={() => setCurrentClearedInTime('Cleared During Rain')}>
+                                            During Rain
+                                        </Button>
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -441,32 +408,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
-        <Dialog open={isClearanceDialogOpen} onOpenChange={setClearanceDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Clearance Time Required</DialogTitle>
-                    <DialogDescription>
-                        You have set the ponding value to 0. Please enter the time it took to clear the ponding for <span className="font-bold">{editingPoint?.name}</span>, or specify if it was cleared during the rain.
-                    </DialogDescription>
-                </DialogHeader>
-                <form ref={clearanceFormRef} onSubmit={handleClearanceTimeSubmit}>
-                    <div className="py-4">
-                        <Label htmlFor="clearance-time-input">Cleared In (hh:mm)</Label>
-                        <Input id="clearance-time-input" name="clearedInTime" type="text" placeholder="e.g., 02:30" />
-                    </div>
-                    <DialogFooter className="sm:justify-between gap-2">
-                        <Button type="button" variant="secondary" onClick={handleClearedDuringRain} disabled={isPending}>Cleared During Rain</Button>
-                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-                            <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>Cancel</Button>
-                            <Button type="submit" disabled={isPending}>
-                                {isPending ? 'Saving...' : 'Confirm & Save'}
-                            </Button>
-                        </div>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
 
     </div>
   );

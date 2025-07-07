@@ -42,41 +42,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Home, PlayCircle, PauseCircle, RefreshCw, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
-// Helper function to parse form data with array-like keys into an array of objects
-function parsePointsFromFormData(formData: FormData) {
-    const pointsMap = new Map<string, any>();
-    
-    for (const [key, value] of formData.entries()) {
-        const match = key.match(/^points\[(\d+)\]\.(.+)$/);
-        if (match) {
-            const [, index, field] = match;
-            if (!pointsMap.has(index)) {
-                pointsMap.set(index, { index: parseInt(index, 10) });
-            }
-            pointsMap.get(index)[field] = value;
-        }
-    }
-    
-    return Array.from(pointsMap.values()).sort((a, b) => a.index - b.index);
-}
-
-
-function parseClearanceFormData(formData: FormData) {
-    const pointsMap = new Map<string, any>();
-    for (const [key, value] of formData.entries()) {
-        const match = key.match(/^clearancePoints\[(\d+)\]\.(.+)$/);
-        if (match) {
-            const [, index, field] = match;
-            if (!pointsMap.has(index)) {
-                pointsMap.set(index, {});
-            }
-            pointsMap.get(index)[field] = value;
-        }
-    }
-    return Array.from(pointsMap.values());
-}
-
-
 export default function DataEntryPage({ params }: { params: { cityName: string } }) {
     const { cityName: encodedCityName } = use(params);
     const cityName = decodeURIComponent(encodedCityName);
@@ -96,9 +61,6 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     const [isFormOpen, setFormOpen] = useState(false);
     const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
     const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
-    const [clearancePoints, setClearancePoints] = useState<any[]>([]);
-    const [isClearanceDialogOpen, setClearanceDialogOpen] = useState(false);
-    const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
     const formRef = useRef<HTMLFormElement>(null);
     const addPointFormRef = useRef<HTMLFormElement>(null);
@@ -133,90 +95,10 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     }, [cityName, user]);
 
     const handleBatchUpdateSubmit = (formData: FormData) => {
-        const submittedPoints = parsePointsFromFormData(formData);
-        const pointsRequiringClearance = [];
-    
-        for (const submittedPoint of submittedPoints) {
-            const originalPoint = points.find(p => p.id === submittedPoint.id);
-            if (originalPoint) {
-                const oldPonding = originalPoint.ponding ?? 0;
-                const newPonding = parseFloat(submittedPoint.ponding ?? '0');
-                const clearedInTime = submittedPoint.clearedInTime ?? '';
-    
-                if (oldPonding > 0 && newPonding === 0 && !clearedInTime) {
-                    pointsRequiringClearance.push({ ...submittedPoint, originalIndex: submittedPoint.index, name: originalPoint.name });
-                }
-            }
-        }
-    
-        if (pointsRequiringClearance.length > 0) {
-            setClearancePoints(pointsRequiringClearance);
-            setPendingFormData(formData);
-            setClearanceDialogOpen(true);
-            return;
-        }
-
         startTransition(async () => {
             const result = await batchUpdatePondingPoints(formData, cityName);
             if (result.success) {
                 toast({ title: 'Success', description: result.message });
-                await fetchData();
-            } else {
-                toast({ variant: 'destructive', title: 'Error', description: result.error });
-            }
-        });
-    };
-
-    const handleBatchClearanceSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!pendingFormData) return;
-    
-        const clearanceForm = new FormData(event.currentTarget);
-        const parsedClearancePoints = parseClearanceFormData(clearanceForm);
-    
-        // Check if all inputs are filled
-        const allFilled = parsedClearancePoints.every(p => p.clearedInTime);
-        if (!allFilled) {
-            toast({
-                variant: 'destructive',
-                title: 'Input Required',
-                description: 'Please provide a clearance time for all listed points.',
-            });
-            return;
-        }
-    
-        // Update the original pendingFormData with the new clearance times
-        for (const clearancePoint of parsedClearancePoints) {
-            pendingFormData.set(`points[${clearancePoint.originalIndex}].clearedInTime`, clearancePoint.clearedInTime);
-        }
-        
-        startTransition(async () => {
-            const result = await batchUpdatePondingPoints(pendingFormData, cityName);
-            if (result.success) {
-                toast({ title: 'Success', description: result.message });
-                setClearanceDialogOpen(false);
-                setPendingFormData(null);
-                await fetchData();
-            } else {
-                toast({ variant: 'destructive', title: 'Error', description: result.error });
-                setClearanceDialogOpen(false); // Close dialog on error
-            }
-        });
-    };
-
-    const handleClearAllDuringRain = () => {
-        if (!pendingFormData || !clearancePoints) return;
-
-        for (const clearancePoint of clearancePoints) {
-            pendingFormData.set(`points[${clearancePoint.originalIndex}].clearedInTime`, 'Cleared During Rain');
-        }
-
-        startTransition(async () => {
-            const result = await batchUpdatePondingPoints(pendingFormData, cityName);
-            if (result.success) {
-                toast({ title: 'Success', description: result.message });
-                setClearanceDialogOpen(false);
-                setPendingFormData(null);
                 await fetchData();
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.error });
@@ -413,55 +295,19 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
-             <Dialog open={isClearanceDialogOpen} onOpenChange={setClearanceDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Clearance Time Required</DialogTitle>
-                        <DialogDescription>
-                            The following points have been cleared. Please provide the clearance time for each, or mark all as cleared during rain.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleBatchClearanceSubmit}>
-                        <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                            {clearancePoints.map((point, index) => (
-                                <div key={point.id} className="space-y-1">
-                                    <Label htmlFor={`clearance-time-${point.id}`} className="font-semibold">{point.name}</Label>
-                                    <Input
-                                        id={`clearance-time-${point.id}`}
-                                        name={`clearancePoints[${index}].clearedInTime`}
-                                        type="text"
-                                        placeholder="e.g., 02:30"
-                                        required
-                                    />
-                                    <input type="hidden" name={`clearancePoints[${index}].originalIndex`} value={point.originalIndex} />
-                                </div>
-                            ))}
-                        </div>
-                        <DialogFooter className="sm:justify-between gap-2">
-                            <Button type="button" variant="secondary" onClick={handleClearAllDuringRain} disabled={isPending}>Clear All During Rain</Button>
-                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-                                <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>Cancel</Button>
-                                <Button type="submit" disabled={isPending}>
-                                    {isPending ? 'Saving...' : 'Confirm & Save'}
-                                </Button>
-                            </div>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
         </main>
     );
 }
 
 function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, onDelete }: { point: PondingPoint, index: number, isSpellActive: boolean, isPending: boolean, userRole?: string, onDelete: (point: PondingPoint) => void }) {
     const [rainValue, setRainValue] = useState((point.currentSpell ?? 0).toString());
+    const [clearedInTimeValue, setClearedInTimeValue] = useState(point.clearedInTime || '');
     const isTrace = rainValue === '0.1';
 
     useEffect(() => {
         setRainValue((point.currentSpell ?? 0).toString());
-    }, [point.currentSpell]);
+        setClearedInTimeValue(point.clearedInTime || '');
+    }, [point.currentSpell, point.clearedInTime]);
 
     const handleTraceChange = (checked: boolean) => {
         setRainValue(checked ? '0.1' : '0');
@@ -513,14 +359,26 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                 />
             </TableCell>
             <TableCell>
-                <Input
-                    name={`points[${index}].clearedInTime`}
-                    type="text"
-                    defaultValue={point.clearedInTime || ''}
-                    placeholder="e.g., 02:30"
-                    disabled={isPending}
-                    className="max-w-xs"
-                />
+                <div className="flex items-center gap-2">
+                    <Input
+                        name={`points[${index}].clearedInTime`}
+                        type="text"
+                        value={clearedInTimeValue}
+                        onChange={(e) => setClearedInTimeValue(e.target.value)}
+                        placeholder="e.g., 02:30"
+                        disabled={isPending}
+                        className="w-28"
+                    />
+                    <Button 
+                        type="button" 
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => setClearedInTimeValue('Cleared During Rain')}
+                        disabled={isPending}>
+                        During Rain
+                    </Button>
+                </div>
             </TableCell>
             {userRole !== 'city-user' && (
                 <TableCell className="text-right">
