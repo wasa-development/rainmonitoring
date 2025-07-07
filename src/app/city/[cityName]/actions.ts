@@ -446,7 +446,7 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
                     if (spellIndex === spells.length - 1) {
                          currentPoint.finalStatus = pointSpellData.pondingLevel > 0 
                             ? `${pointSpellData.pondingLevel.toFixed(1)} in` 
-                            : 'Clear';
+                            : (pointSpellData.clearedInTime || 'Clear');
                     }
                 });
             }

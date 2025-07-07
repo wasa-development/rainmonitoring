@@ -174,6 +174,17 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
         const clearanceForm = new FormData(event.currentTarget);
         const parsedClearancePoints = parseClearanceFormData(clearanceForm);
     
+        // Check if all inputs are filled
+        const allFilled = parsedClearancePoints.every(p => p.clearedInTime);
+        if (!allFilled) {
+            toast({
+                variant: 'destructive',
+                title: 'Input Required',
+                description: 'Please provide a clearance time for all listed points.',
+            });
+            return;
+        }
+    
         // Update the original pendingFormData with the new clearance times
         for (const clearancePoint of parsedClearancePoints) {
             pendingFormData.set(`points[${clearancePoint.originalIndex}].clearedInTime`, clearancePoint.clearedInTime);
@@ -189,6 +200,26 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.error });
                 setClearanceDialogOpen(false); // Close dialog on error
+            }
+        });
+    };
+
+    const handleClearAllDuringRain = () => {
+        if (!pendingFormData || !clearancePoints) return;
+
+        for (const clearancePoint of clearancePoints) {
+            pendingFormData.set(`points[${clearancePoint.originalIndex}].clearedInTime`, 'Cleared During Rain');
+        }
+
+        startTransition(async () => {
+            const result = await batchUpdatePondingPoints(pendingFormData, cityName);
+            if (result.success) {
+                toast({ title: 'Success', description: result.message });
+                setClearanceDialogOpen(false);
+                setPendingFormData(null);
+                await fetchData();
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
             }
         });
     };
@@ -388,7 +419,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                     <DialogHeader>
                         <DialogTitle>Clearance Time Required</DialogTitle>
                         <DialogDescription>
-                            The following points have been cleared. Please provide the clearance time for each.
+                            The following points have been cleared. Please provide the clearance time for each, or mark all as cleared during rain.
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleBatchClearanceSubmit}>
@@ -407,11 +438,14 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                                 </div>
                             ))}
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>Cancel</Button>
-                            <Button type="submit" disabled={isPending}>
-                                {isPending ? 'Saving...' : 'Confirm & Save'}
-                            </Button>
+                        <DialogFooter className="sm:justify-between gap-2">
+                            <Button type="button" variant="secondary" onClick={handleClearAllDuringRain} disabled={isPending}>Clear All During Rain</Button>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                                <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>Cancel</Button>
+                                <Button type="submit" disabled={isPending}>
+                                    {isPending ? 'Saving...' : 'Confirm & Save'}
+                                </Button>
+                            </div>
                         </DialogFooter>
                     </form>
                 </DialogContent>

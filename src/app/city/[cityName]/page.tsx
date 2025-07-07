@@ -153,8 +153,23 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     const clearanceTimeForm = event.currentTarget;
     const clearanceTimeInput = clearanceTimeForm.elements.namedItem('clearedInTime') as HTMLInputElement;
     const clearanceTime = clearanceTimeInput.value;
+    
+    if (!clearanceTime) {
+        toast({
+            variant: 'destructive',
+            title: 'Input Required',
+            description: "Please enter a clearance time or select 'Cleared During Rain'.",
+        });
+        return;
+    }
 
     pendingFormData.set('clearedInTime', clearanceTime);
+    submitPondingPointForm(pendingFormData);
+  };
+  
+  const handleClearedDuringRain = () => {
+    if (!pendingFormData) return;
+    pendingFormData.set('clearedInTime', 'Cleared During Rain');
     submitPondingPointForm(pendingFormData);
   };
 
@@ -373,7 +388,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                         defaultValue={editingPoint?.clearedInTime || ''}
                                         placeholder="e.g., 02:30"
                                         className="col-span-3"
-                                        disabled={parseFloat(currentPondingValue) > 0}
                                     />
                                 </div>
                             </>
@@ -433,19 +447,22 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 <DialogHeader>
                     <DialogTitle>Clearance Time Required</DialogTitle>
                     <DialogDescription>
-                        You have set the ponding value to 0. Please enter the time it took to clear the ponding for <span className="font-bold">{editingPoint?.name}</span>.
+                        You have set the ponding value to 0. Please enter the time it took to clear the ponding for <span className="font-bold">{editingPoint?.name}</span>, or specify if it was cleared during the rain.
                     </DialogDescription>
                 </DialogHeader>
                 <form ref={clearanceFormRef} onSubmit={handleClearanceTimeSubmit}>
                     <div className="py-4">
                         <Label htmlFor="clearance-time-input">Cleared In (hh:mm)</Label>
-                        <Input id="clearance-time-input" name="clearedInTime" type="text" placeholder="e.g., 02:30" required />
+                        <Input id="clearance-time-input" name="clearedInTime" type="text" placeholder="e.g., 02:30" />
                     </div>
-                    <DialogFooter>
-                        <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={isPending}>
-                            {isPending ? 'Saving...' : 'Confirm & Save'}
-                        </Button>
+                    <DialogFooter className="sm:justify-between gap-2">
+                        <Button type="button" variant="secondary" onClick={handleClearedDuringRain} disabled={isPending}>Cleared During Rain</Button>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                            <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={isPending}>
+                                {isPending ? 'Saving...' : 'Confirm & Save'}
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </form>
             </DialogContent>
