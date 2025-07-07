@@ -77,7 +77,7 @@ export default function CityLayout({
         <SidebarHeader>
           <div className="flex items-center gap-2">
             <Logo width={40} height={40} />
-            <span className="text-lg font-semibold">{cityName}</span>
+            <span className="text-lg font-semibold group-data-[state=collapsed]:hidden">{cityName}</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -116,10 +116,10 @@ export default function CityLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex items-center justify-between p-4 border-b md:hidden sticky top-0 bg-background z-20">
+        <header className="flex items-center justify-between p-4 border-b sticky top-0 bg-background z-20">
             <div className="flex items-center gap-2">
                  <SidebarTrigger />
-                 <h2 className="text-lg font-semibold">{cityName}</h2>
+                 <h2 className="text-lg font-semibold md:hidden">{cityName}</h2>
             </div>
             <ThemeToggle />
         </header>
