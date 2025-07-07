@@ -353,41 +353,64 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
     const dayEnd = endOfDay(date);
 
     try {
-        // WORKAROUND for missing Firestore index.
-        // The ideal, most efficient query filters by date directly in the database.
-        // However, that requires a composite index: (cityName ASC, status ASC, startTime ASC).
-        // If this index is not created in the Firebase Console, the query will fail.
-        //
-        // This workaround fetches all completed spells for the city and then filters/sorts
-        // them in the code. This is less performant but works without the index.
-        // For production environments, creating the Firestore index is strongly recommended.
+        // --- 1. Fetch Completed Spells for the day ---
         const allCompletedSpellsQuery = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
             .get();
 
-        const spells: Spell[] = allCompletedSpellsQuery.docs
+        const completedSpells: Spell[] = allCompletedSpellsQuery.docs
             .map(doc => {
                 const data = doc.data();
                 return {
                     id: doc.id,
                     ...data,
                     startTime: data.startTime.toDate(),
-                    // Ensure endTime exists and is a Date object
                     endTime: data.endTime ? data.endTime.toDate() : undefined,
                 } as Spell;
             })
-            // Filter by the selected date range and ensure the spell is valid (has an end time)
-            .filter(spell => spell.endTime && spell.startTime >= dayStart && spell.startTime <= dayEnd)
-            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+            .filter(spell => spell.endTime && spell.startTime >= dayStart && spell.startTime <= dayEnd);
 
+        // --- 2. Fetch Active Spell for the day ---
+        const activeSpell = await getActiveSpell(cityName);
+        let activeSpellForDay: Spell | null = null;
+        
+        if (activeSpell && activeSpell.startTime >= dayStart && activeSpell.startTime <= dayEnd) {
+            const pondingPoints = await getPondingPoints(cityName);
+            const liveSpellData = pondingPoints.map(point => ({
+                pointId: point.id,
+                pointName: point.name,
+                totalRainfall: point.currentSpell ?? 0,
+                pondingLevel: point.ponding ?? 0,
+                maxPondingLevel: point.maxPondingLevel ?? 0,
+                clearedInTime: point.clearedInTime ?? '',
+            }));
+
+            activeSpellForDay = {
+                ...activeSpell,
+                endTime: new Date(), // Use current time for display
+                status: 'active',
+                spellData: liveSpellData,
+            };
+        }
+
+        // --- 3. Combine and sort all spells for the day ---
+        const allSpells = [...completedSpells];
+        if (activeSpellForDay) {
+            allSpells.push(activeSpellForDay);
+        }
+        
+        const spells = allSpells.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        
         if (spells.length === 0) {
             return null;
         }
-
+        
+        // --- 4. Process spells into report format ---
         const reportSpells: DailyReportSpellInfo[] = spells.map(spell => ({
             startTime: spell.startTime,
             endTime: spell.endTime!,
+            status: spell.status,
         }));
 
         const pointDataMap = new Map<string, DailyReportPointData>();
@@ -403,7 +426,7 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
                             pointName: pointName,
                             spellRainfall: Array(spells.length).fill(0),
                             totalRainfall: 0,
-                            finalStatus: 'Clear', // Default status
+                            finalStatus: 'Clear',
                         });
                     }
 
@@ -411,7 +434,6 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
                     currentPoint.spellRainfall[spellIndex] = pointSpellData.totalRainfall;
                     currentPoint.totalRainfall += pointSpellData.totalRainfall;
                     
-                    // The final status is the ponding level after the last spell of the day for that point
                     if (spellIndex === spells.length - 1) {
                          currentPoint.finalStatus = pointSpellData.pondingLevel > 0 
                             ? `${pointSpellData.pondingLevel.toFixed(1)} in` 

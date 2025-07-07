@@ -75,6 +75,7 @@ export interface Spell {
 export interface DailyReportSpellInfo {
     startTime: Date;
     endTime: Date;
+    status: 'active' | 'completed';
 }
 
 export interface DailyReportPointData {

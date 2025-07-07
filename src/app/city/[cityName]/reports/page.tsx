@@ -46,7 +46,7 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
             toast({
                 variant: "destructive",
                 title: "No Data",
-                description: `No completed rain spells found for ${format(reportDate, 'PPP')}.`,
+                description: `No completed or active rain spells found for ${format(reportDate, 'PPP')}.`,
             });
         }
     } catch (e: any) {
@@ -159,7 +159,7 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
                             <TableHead className="font-bold text-black">Ponding Point</TableHead>
                             {reportData.spells.map((spell, index) => (
                             <TableHead key={index} className="text-center font-bold text-black">
-                                Spell {index + 1} <br />
+                                Spell {index + 1} {spell.status === 'active' && <span className="text-red-500 font-bold">(Live)</span>} <br />
                                 <span className="font-normal text-xs text-black/60">
                                 ({format(spell.startTime, 'HH:mm')}-{format(spell.endTime, 'HH:mm')})
                                 </span>
