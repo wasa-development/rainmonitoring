@@ -134,7 +134,7 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                                             {point.totalRainfall.toFixed(0)}
                                         </td>
                                         <td className="px-2 py-1 border-2 border-black text-center">
-                                            {(point.maxPondingLevel ?? 0).toFixed(1)}
+                                            {(point.maxPondingLevel ?? 0) > 0 ? (point.maxPondingLevel ?? 0).toFixed(1) : 'No Ponding'}
                                         </td>
                                         <td className="px-2 py-1 border-2 border-black text-center">
                                             {point.pondingLevel > 0 ? point.pondingLevel.toFixed(1) : 'No Ponding'}
@@ -182,3 +182,4 @@ export default function ReportPage({ params }: { params: { cityName: string } })
         </main>
     );
 }
+
