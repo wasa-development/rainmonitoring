@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import PondingPointCard from '@/components/ponding-point-card';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -369,7 +369,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the ponding point
+                        This will permanently delete the ponding point
                         for <span className="font-bold">{pointToDelete?.name}</span>.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
