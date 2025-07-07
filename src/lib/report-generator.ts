@@ -1,3 +1,4 @@
+
 'use client';
 
 import jsPDF from 'jspdf';
@@ -19,22 +20,31 @@ export function generateDailyReportPdf(reportData: DailyReportData, cityName: st
     doc.setFillColor(0, 115, 196); // #0073C4
     doc.rect(0, 0, doc.internal.pageSize.getWidth(), 30, 'F');
     doc.setTextColor(255, 255, 255);
+    
+    // Left side
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`WASA ${cityName.toUpperCase()}`, 14, 18);
+
+    // Center
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Daily Rain Report - ${cityName}`, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-    
-    doc.setFontSize(10);
+    doc.text(`Daily Rain Report`, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     const reportDateStr = format(reportData.reportDate, 'MMMM do, yyyy');
+    doc.text(`Dated: ${reportDateStr}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+    // Right side
+    doc.setFontSize(10);
     const earliestStartTimeStr = format(reportData.earliestStartTime, 'hh:mm a');
     const generationTimeStr = format(new Date(), 'hh:mm a');
-    
-    doc.text(`Date: ${reportDateStr}`, 14, 25);
-    doc.text(`Rain Started: ${earliestStartTimeStr}`, doc.internal.pageSize.getWidth() / 2, 25, { align: 'center' });
-    doc.text(`Generated: ${generationTimeStr}`, doc.internal.pageSize.getWidth() - 14, 25, { align: 'right' });
+    doc.text(`Rain Started: ${earliestStartTimeStr}`, doc.internal.pageSize.getWidth() - 14, 15, { align: 'right' });
+    doc.text(`Generated: ${generationTimeStr}`, doc.internal.pageSize.getWidth() - 14, 22, { align: 'right' });
 
 
     const tableColumnTitles: string[] = [
+        "Sr No",
         "Ponding Point",
         ...reportData.spells.map((spell, index) => 
             `Spell ${index + 1} (${format(spell.startTime, 'HH:mm')}-${format(spell.endTime, 'HH:mm')})`
@@ -42,8 +52,11 @@ export function generateDailyReportPdf(reportData: DailyReportData, cityName: st
         "Total Rain (mm)",
         "Final Status"
     ];
+    
+    const sortedPoints = reportData.points.sort((a,b) => a.pointName.localeCompare(b.pointName));
 
-    const tableRows = reportData.points.map(point => [
+    const tableRows = sortedPoints.map((point, index) => [
+        index + 1,
         point.pointName,
         ...point.spellRainfall.map(rainfall => rainfall.toFixed(0)),
         point.totalRainfall.toFixed(0),
@@ -63,6 +76,11 @@ export function generateDailyReportPdf(reportData: DailyReportData, cityName: st
         styles: {
             cellPadding: 2,
             fontSize: 8,
+            halign: 'center', // Center-align all cells by default
+        },
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 15 }, // Sr No
+            1: { halign: 'left' }, // Ponding Point Name left aligned
         },
         alternateRowStyles: {
             fillColor: [242, 242, 242], // light grey #F2F2F2

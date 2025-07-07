@@ -155,6 +155,7 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
                     <Table>
                         <TableHeader>
                         <TableRow style={{ backgroundColor: '#DDEBF7' }} className="hover:bg-blue-100/70">
+                            <TableHead className="font-bold text-black text-center w-16">Sr No</TableHead>
                             <TableHead className="font-bold text-black">Ponding Point</TableHead>
                             {reportData.spells.map((spell, index) => (
                             <TableHead key={index} className="text-center font-bold text-black">
@@ -169,8 +170,9 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {reportData.points.map((point) => (
+                        {reportData.points.sort((a,b) => a.pointName.localeCompare(b.pointName)).map((point, index) => (
                             <TableRow key={point.pointName} style={{ backgroundColor: '#F2F2F2' }} className="hover:bg-stone-300/50">
+                            <TableCell className="font-medium text-center">{index + 1}</TableCell>
                             <TableCell className="font-medium">{point.pointName}</TableCell>
                             {point.spellRainfall.map((rainfall, index) => (
                                 <TableCell key={index} className="text-center">{rainfall.toFixed(0)}</TableCell>
