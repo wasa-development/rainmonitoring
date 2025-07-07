@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, use } from 'react';
@@ -71,15 +72,15 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
     <main className="p-4 sm:p-6 md:p-8">
       <header className="flex justify-between items-center mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary">
-          Daily Reports
+          Rain Reports
         </h1>
       </header>
-      <Card className="max-w-xl mx-auto">
-          <CardHeader>
-              <CardTitle>Generate Daily Report</CardTitle>
-              <CardDescription>Select a date to generate a PDF summary of all rain spells for that day.</CardDescription>
+      <Card className="max-w-xl mx-auto overflow-hidden shadow-lg">
+          <CardHeader style={{ backgroundColor: '#0073C4' }} className="text-white">
+              <CardTitle className="text-white">Generate Rain Report</CardTitle>
+              <CardDescription className="text-white/80">Select a date to generate a PDF summary of all rain spells for that day.</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row items-center gap-4">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-center gap-4 p-6">
               <Popover>
                   <PopoverTrigger asChild>
                       <Button

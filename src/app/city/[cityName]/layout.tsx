@@ -56,7 +56,7 @@ export default function CityLayout({
     },
     {
       href: `/city/${encodedCityName}/reports`,
-      label: 'Daily Reports',
+      label: 'Rain Reports',
       icon: BarChart3,
       active: pathname === `/city/${encodedCityName}/reports`,
       roles: ['super-admin', 'city-user'],
