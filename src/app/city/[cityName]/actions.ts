@@ -2,9 +2,10 @@
 'use server';
 
 import { db, admin } from '@/lib/firebase-admin';
-import type { PondingPoint, Spell } from '@/lib/types';
+import type { DailyReportData, PondingPoint, Spell, DailyReportSpellInfo, DailyReportPointData } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { startOfDay, endOfDay } from 'date-fns';
 
 const PondingPointSchema = z.object({
   id: z.string().optional(),
@@ -334,4 +335,79 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown server error occurred.' };
     }
+}
+
+
+export async function getDailyReportData(cityName: string, date: Date): Promise<DailyReportData | null> {
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+
+    let spellsSnapshot;
+    try {
+        spellsSnapshot = await db.collection('spells')
+            .where('cityName', '==', cityName)
+            .where('status', '==', 'completed')
+            .where('startTime', '>=', dayStart)
+            .where('startTime', '<=', dayEnd)
+            .orderBy('startTime')
+            .get();
+    } catch (error) {
+        console.error("Error fetching daily report data from Firestore:", error);
+        throw new Error("A database error occurred while fetching the daily report data.");
+    }
+
+    if (spellsSnapshot.empty) {
+        return null;
+    }
+
+    const spells: Spell[] = spellsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            startTime: data.startTime.toDate(),
+            endTime: data.endTime.toDate(),
+        } as Spell;
+    });
+
+    const reportSpells: DailyReportSpellInfo[] = spells.map(spell => ({
+        startTime: spell.startTime,
+        endTime: spell.endTime,
+    }));
+
+    const pointDataMap = new Map<string, DailyReportPointData>();
+
+    spells.forEach((spell, spellIndex) => {
+        spell.spellData.forEach(pointSpellData => {
+            const pointId = pointSpellData.pointId;
+            const pointName = pointSpellData.pointName;
+
+            if (!pointDataMap.has(pointId)) {
+                pointDataMap.set(pointId, {
+                    pointName: pointName,
+                    spellRainfall: Array(spells.length).fill(0),
+                    totalRainfall: 0,
+                    finalStatus: 'Clear', // Default status
+                });
+            }
+
+            const currentPoint = pointDataMap.get(pointId)!;
+            currentPoint.spellRainfall[spellIndex] = pointSpellData.totalRainfall;
+            currentPoint.totalRainfall += pointSpellData.totalRainfall;
+            
+            // The final status is the ponding level after the last spell of the day for that point
+            if (spellIndex === spells.length - 1) {
+                 currentPoint.finalStatus = pointSpellData.pondingLevel > 0 
+                    ? `${pointSpellData.pondingLevel.toFixed(1)} in` 
+                    : 'Clear';
+            }
+        });
+    });
+
+    return {
+        spells: reportSpells,
+        points: Array.from(pointDataMap.values()),
+        reportDate: date,
+        earliestStartTime: spells[0].startTime,
+    };
 }

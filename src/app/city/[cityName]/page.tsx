@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, use, useEffect, useRef, useTransition } from 'react';
+import { useState, use, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,15 +24,20 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine, Users } from 'lucide-react';
-import type { AdminUser, PondingPoint, Spell } from '@/lib/types';
-import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine, Users, Download, Calendar as CalendarIcon } from 'lucide-react';
+import type { AdminUser, PondingPoint } from '@/lib/types';
+import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell, getDailyReportData } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import PondingPointCard from '@/components/ponding-point-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { generateDailyReportPdf } from '@/lib/report-generator';
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -58,6 +63,9 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   
   const [isPending, startTransition] = useTransition();
+
+  const [reportDate, setReportDate] = useState<Date | undefined>(new Date());
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const clearanceFormRef = useRef<HTMLFormElement>(null);
@@ -95,18 +103,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       }
     }
   }, [authLoading, user, router]);
-
-  useEffect(() => {
-     if (!authLoading && user) {
-        if (
-            claims?.role === 'city-user' &&
-            claims.assignedCity &&
-            claims.assignedCity !== cityName
-        ) {
-            router.push(`/city/${encodeURIComponent(claims.assignedCity)}`);
-        }
-     }
-  }, [authLoading, user, claims, cityName, router]);
 
 
   useEffect(() => {
@@ -222,6 +218,43 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       setCurrentPondingValue(e.target.value);
   };
 
+  const handleGenerateReport = async () => {
+    if (!reportDate) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please select a date for the report.",
+        });
+        return;
+    }
+
+    setIsGeneratingReport(true);
+    try {
+        const data = await getDailyReportData(cityName, reportDate);
+        if (data) {
+            generateDailyReportPdf(data, cityName);
+            toast({
+                title: "Report Generated",
+                description: "Your PDF report is downloading.",
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "No Data",
+                description: `No completed rain spells found for ${format(reportDate, 'PPP')}.`,
+            });
+        }
+    } catch (e: any) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: e.message || "Failed to generate report.",
+        });
+    } finally {
+        setIsGeneratingReport(false);
+    }
+  };
+
   const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
 
   if (authLoading || !user) {
@@ -312,6 +345,50 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </CardHeader>
                 <CardContent>
                     <p className="text-4xl font-bold">{maxSpellToday.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                </CardContent>
+            </Card>
+            <Card className="md:col-span-2">
+                <CardHeader>
+                    <CardTitle>Generate Daily Report</CardTitle>
+                    <CardDescription>Select a date to generate a PDF summary of all rain spells.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col sm:flex-row items-center gap-4">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full sm:w-[280px] justify-start text-left font-normal",
+                                    !reportDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {reportDate ? format(reportDate, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={reportDate}
+                                onSelect={setReportDate}
+                                initialFocus
+                                disabled={(date) => date > new Date() || date < new Date("2024-01-01")}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button onClick={handleGenerateReport} disabled={isGeneratingReport}>
+                        {isGeneratingReport ? (
+                            <>
+                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                            </>
+                        ) : (
+                            <>
+                                <Download className="mr-2 h-4 w-4" />
+                                Generate Rain Report
+                            </>
+                        )}
+                    </Button>
                 </CardContent>
             </Card>
         </div>

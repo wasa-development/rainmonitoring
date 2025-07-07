@@ -69,3 +69,22 @@ export interface Spell {
         clearedInTime: string;
     }[];
 }
+
+export interface DailyReportSpellInfo {
+    startTime: Date;
+    endTime: Date;
+}
+
+export interface DailyReportPointData {
+    pointName: string;
+    spellRainfall: number[];
+    totalRainfall: number;
+    finalStatus: string;
+}
+
+export interface DailyReportData {
+    spells: DailyReportSpellInfo[];
+    points: DailyReportPointData[];
+    reportDate: Date;
+    earliestStartTime: Date;
+}
