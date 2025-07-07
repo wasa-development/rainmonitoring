@@ -5,7 +5,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { getLatestReportData } from './actions';
+import { getActiveOrLatestReportData } from './actions';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Printer, RefreshCw, AlertTriangle } from 'lucide-react';
@@ -26,7 +26,7 @@ export default function ReportPage({ params }: { params: { cityName: string } })
             if (!user) {
                 router.push('/login');
             } else {
-                getLatestReportData(cityName)
+                getActiveOrLatestReportData(cityName)
                     .then(data => {
                         setReportData(data);
                     })
@@ -61,13 +61,14 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                 <div className="flex flex-col items-center justify-center text-center py-20 bg-card rounded-lg border">
                     <AlertTriangle className="w-16 h-16 text-muted-foreground mb-4" />
                     <h2 className="text-2xl font-semibold mb-2">No Report Available</h2>
-                    <p className="text-muted-foreground max-w-md">There are no completed spell reports for {cityName} yet.</p>
+                    <p className="text-muted-foreground max-w-md">There are no active or completed spell reports for {cityName} yet.</p>
                 </div>
             </main>
         );
     }
 
-    const { startTime, endTime, spellData } = reportData;
+    const { startTime, endTime, spellData, status } = reportData;
+    const isLive = status === 'active';
 
     return (
         <main className="bg-stone-100 dark:bg-background p-4 sm:p-8 font-sans">
@@ -76,7 +77,7 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                     <Link href={`/city/${encodeURIComponent(cityName)}`}>
                          <Button variant="outline"><ArrowLeft className="mr-2" /> Back to Dashboard</Button>
                     </Link>
-                    <h1 className="text-xl font-bold text-foreground">Ponding Report</h1>
+                    <h1 className="text-xl font-bold text-foreground">{isLive ? 'Live Spell Report' : 'Ponding Report'}</h1>
                     <Button onClick={handlePrint}><Printer className="mr-2" /> Print Report</Button>
                 </header>
                 
@@ -92,12 +93,20 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                             </div>
                         </div>
                         <div className="text-center">
-                            <h2 className="text-3xl font-bold">Ponding Report</h2>
-                            <p className="text-lg">Dated {format(new Date(endTime!), 'dd-MM-yyyy')}</p>
+                            <h2 className="text-3xl font-bold">{isLive ? 'Live Spell Report' : 'Ponding Report'}</h2>
+                             {isLive ? (
+                                <p className="text-lg">Report as of {format(new Date(), 'dd-MM-yyyy')}</p>
+                            ) : (
+                                <p className="text-lg">Dated {format(new Date(endTime!), 'dd-MM-yyyy')}</p>
+                            )}
                         </div>
                         <div className="text-right text-base pl-2">
                             <p><strong>Rain Start:</strong> {format(new Date(startTime), 'hh:mm a')}</p>
-                            <p><strong>Stop Time:</strong> {format(new Date(endTime!), 'hh:mm a')}</p>
+                            {isLive ? (
+                                <p><strong>Status:</strong> <span className="font-bold text-white">Active</span></p>
+                            ) : (
+                                <p><strong>Stop Time:</strong> {format(new Date(endTime!), 'hh:mm a')}</p>
+                            )}
                             <p><strong>Reporting Time:</strong> {format(new Date(endTime!), 'hh:mm a')}</p>
                         </div>
                     </div>
@@ -108,9 +117,9 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                                 <tr>
                                     <th scope="col" className="px-2 py-2 border-2 border-black w-16 text-center font-bold">Sr No</th>
                                     <th scope="col" className="px-2 py-2 border-2 border-black text-left font-bold">Name of Ponding Point</th>
-                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Total Rainfall (mm)</th>
-                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Ponding at Stop Time (Inches)</th>
-                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Total Clearance Time</th>
+                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">{isLive ? 'Current Rain (mm)' : 'Total Rainfall (mm)'}</th>
+                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Ponding (Inches)</th>
+                                    <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Clearance Time</th>
                                 </tr>
                             </thead>
                             <tbody>

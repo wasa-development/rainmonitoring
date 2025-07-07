@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useMemo } from 'react';
@@ -16,7 +17,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Home, LayoutDashboard, Users, FilePenLine, LogOut, RefreshCw, BarChart3 } from 'lucide-react';
+import { Home, LayoutDashboard, Users, FilePenLine, LogOut, RefreshCw, BarChart3, FileClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -46,6 +47,12 @@ export default function CityLayout({
       icon: FilePenLine,
       active: pathname === `/city/${encodedCityName}/data-entry`,
       roles: ['super-admin', 'city-user'],
+    },
+    {
+      href: `/city/${encodedCityName}/report`,
+      label: 'Status Report',
+      icon: FileClock,
+      active: pathname === `/city/${encodedCityName}/report`,
     },
     {
       href: `/city/${encodedCityName}/reports`,
