@@ -10,7 +10,7 @@ import { startOfDay, endOfDay } from 'date-fns';
 const PondingPointSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, { message: 'Name is required.' }),
-  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }).int({ message: 'Rainfall must be a whole number.' }).optional(),
+  currentSpell: z.coerce.number().int({ message: 'Rainfall must be a whole number.' }).optional(),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }).optional(),
 });
@@ -37,6 +37,12 @@ export async function getPondingPoints(cityName: string): Promise<PondingPoint[]
 
 export async function addOrUpdatePondingPoint(formData: FormData, cityName: string) {
     const rawData = Object.fromEntries(formData.entries());
+    
+    // Handle "Trace" rainfall
+    if (rawData.currentSpell && typeof rawData.currentSpell === 'string' && rawData.currentSpell.toLowerCase() === 'trace') {
+        rawData.currentSpell = -1;
+    }
+
     const validation = PondingPointSchema.safeParse(rawData);
 
     if (!validation.success) {
@@ -53,7 +59,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
         currentSpell: currentSpellValue,
         clearedInTime: data.clearedInTime ?? '',
         ponding: data.ponding ?? 0,
-        isRaining: currentSpellValue > 0,
+        isRaining: currentSpellValue > 0 || currentSpellValue === -1,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
@@ -88,10 +94,10 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                                       lastUpdated.getDate() === now.getDate();
                     
                     const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
-                    dailyMaxSpell = Math.max(oldDailyMax, pointDataForDb.currentSpell);
+                    dailyMaxSpell = Math.max(oldDailyMax, Math.max(0, pointDataForDb.currentSpell));
                 }
                 const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
-                maxSpellRainfall = Math.max(oldMaxSpellRainfall, pointDataForDb.currentSpell);
+                maxSpellRainfall = Math.max(oldMaxSpellRainfall, Math.max(0, pointDataForDb.currentSpell));
 
                 const oldMaxPondingLevel = existingData.maxPondingLevel ?? 0;
                 const maxPondingLevel = Math.max(oldMaxPondingLevel, newPonding);
@@ -106,8 +112,8 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             }
         } else {
             // Create
-            pointDataForDb.dailyMaxSpell = pointDataForDb.currentSpell;
-            pointDataForDb.maxSpellRainfall = pointDataForDb.currentSpell;
+            pointDataForDb.dailyMaxSpell = Math.max(0, pointDataForDb.currentSpell);
+            pointDataForDb.maxSpellRainfall = Math.max(0, pointDataForDb.currentSpell);
             pointDataForDb.maxPondingLevel = data.ponding ?? 0;
             await db.collection('ponding_points').add(pointDataForDb);
         }
@@ -178,6 +184,12 @@ export async function stopSpell(cityName: string) {
         }
 
         const pondingPoints = await getPondingPoints(cityName);
+        
+        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0 || p.currentSpell === -1);
+        if (hasActiveRain) {
+            return { success: false, error: 'Cannot stop spell while rainfall is still being recorded. Set all rain values to 0.' };
+        }
+
 
         const spellData = pondingPoints.map(point => ({
             pointId: point.id,
@@ -251,13 +263,20 @@ function parsePointsFromFormData(formData: FormData) {
 const BatchPondingPointSchema = z.object({
   id: z.string().min(1, { message: 'ID is missing.' }),
   name: z.string(), // for error messages
-  currentSpell: z.coerce.number().min(0, { message: 'Spell value must not be negative.' }).int({ message: 'Rainfall must be a whole number.' }),
+  currentSpell: z.coerce.number().int({ message: 'Rainfall must be a whole number.' }),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }),
 });
 
 export async function batchUpdatePondingPoints(formData: FormData, cityName: string) {
     const parsedPoints = parsePointsFromFormData(formData);
+
+    // Handle "Trace" rainfall
+    parsedPoints.forEach(p => {
+      if (p.currentSpell && typeof p.currentSpell === 'string' && p.currentSpell.toLowerCase() === 'trace') {
+        p.currentSpell = -1;
+      }
+    });
     
     const validationResults = parsedPoints.map(p => BatchPondingPointSchema.safeParse(p));
 
@@ -315,10 +334,10 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
                                   lastUpdated.getDate() === now.getDate();
                 
                 const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
-                dailyMaxSpell = Math.max(oldDailyMax, currentSpellValue);
+                dailyMaxSpell = Math.max(oldDailyMax, Math.max(0, currentSpellValue));
             }
             const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
-            maxSpellRainfall = Math.max(oldMaxSpellRainfall, currentSpellValue);
+            maxSpellRainfall = Math.max(oldMaxSpellRainfall, Math.max(0, currentSpellValue));
 
             const oldMaxPondingLevel = existingData.maxPondingLevel ?? 0;
             const maxPondingLevel = Math.max(oldMaxPondingLevel, newPonding);
@@ -327,7 +346,7 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
                 currentSpell: currentSpellValue,
                 clearedInTime: pointData.clearedInTime ?? '',
                 ponding: newPonding,
-                isRaining: currentSpellValue > 0,
+                isRaining: currentSpellValue > 0 || currentSpellValue === -1,
                 dailyMaxSpell,
                 maxSpellRainfall,
                 maxPondingLevel,
@@ -432,7 +451,9 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
 
                     const currentPoint = pointDataMap.get(pointId)!;
                     currentPoint.spellRainfall[spellIndex] = pointSpellData.totalRainfall;
-                    currentPoint.totalRainfall += pointSpellData.totalRainfall;
+                    if (pointSpellData.totalRainfall > 0) {
+                        currentPoint.totalRainfall += pointSpellData.totalRainfall;
+                    }
                     
                     if (spellIndex === spells.length - 1) {
                          currentPoint.finalStatus = pointSpellData.pondingLevel > 0 

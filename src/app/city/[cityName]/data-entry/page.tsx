@@ -40,6 +40,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Home, PlayCircle, PauseCircle, RefreshCw, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Helper function to parse form data with array-like keys into an array of objects
 function parsePointsFromFormData(formData: FormData) {
@@ -195,13 +196,17 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     const handleToggleSpell = () => {
         startTransition(async () => {
           if (isSpellActive) {
-            const hasActiveRain = points.some(p => p.currentSpell > 0);
+            const hasActiveRain = points.some(p => p.currentSpell > 0 || p.currentSpell === -1);
             if (hasActiveRain) {
                 setStopSpellBlocked(true);
                 return;
             }
             const result = await stopSpell(cityName);
-            toast({ title: 'Spell Ended', description: result.message });
+            if(result.success) {
+                toast({ title: 'Spell Ended', description: result.message });
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
+            }
           } else {
             const result = await startSpell(cityName);
             toast({ title: 'Spell Started', description: 'You can now enter rainfall data.' });
@@ -233,7 +238,11 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
         if (!pointToDelete) return;
         startTransition(async () => {
             const result = await deletePondingPoint(pointToDelete.id, cityName);
-            toast({ title: 'Success', description: result.message });
+            if(result.success){
+                toast({ title: 'Success', description: result.message });
+            } else {
+                 toast({ variant: 'destructive', title: 'Error', description: result.error });
+            }
             setDeleteAlertOpen(false);
             setPointToDelete(null);
             await fetchData();
@@ -283,52 +292,15 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                             </TableHeader>
                             <TableBody>
                                 {points.map((point, index) => (
-                                    <TableRow key={point.id}>
-                                        <TableCell className="font-medium">
-                                            <input type="hidden" name={`points[${index}].id`} defaultValue={point.id} />
-                                            <input type="hidden" name={`points[${index}].name`} defaultValue={point.name} />
-                                            {point.name}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                name={`points[${index}].currentSpell`}
-                                                type="number"
-                                                defaultValue={point.currentSpell ?? 0}
-                                                step="1"
-                                                min="0"
-                                                disabled={!isSpellActive || isPending}
-                                                className="max-w-xs"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                name={`points[${index}].ponding`}
-                                                type="number"
-                                                defaultValue={point.ponding ?? 0}
-                                                step="0.1"
-                                                min="0"
-                                                disabled={isPending}
-                                                className="max-w-xs"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                name={`points[${index}].clearedInTime`}
-                                                type="text"
-                                                defaultValue={point.clearedInTime || ''}
-                                                placeholder="e.g., 02:30"
-                                                disabled={isPending}
-                                                className="max-w-xs"
-                                            />
-                                        </TableCell>
-                                        {claims?.role !== 'city-user' && (
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(point)} disabled={isPending}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
+                                    <RainfallTableRow 
+                                        key={point.id}
+                                        point={point}
+                                        index={index}
+                                        isSpellActive={isSpellActive}
+                                        isPending={isPending}
+                                        userRole={claims?.role}
+                                        onDelete={handleDeleteClick}
+                                    />
                                 ))}
                             </TableBody>
                         </Table>
@@ -446,6 +418,91 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             </Dialog>
 
         </main>
+    );
+}
+
+function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, onDelete }) {
+    const [isTrace, setIsTrace] = useState(point.currentSpell === -1);
+    const [rainValue, setRainValue] = useState(
+        point.currentSpell === -1 ? 'Trace' : (point.currentSpell ?? 0).toString()
+    );
+
+    useEffect(() => {
+        setIsTrace(point.currentSpell === -1);
+        setRainValue(point.currentSpell === -1 ? 'Trace' : (point.currentSpell ?? 0).toString());
+    }, [point.currentSpell]);
+
+    const handleTraceChange = (checked: boolean) => {
+        setIsTrace(checked);
+        if (checked) {
+            setRainValue('Trace');
+        } else {
+            setRainValue('0');
+        }
+    };
+
+    const handleRainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isTrace) setIsTrace(false);
+        setRainValue(e.target.value);
+    };
+
+    return (
+        <TableRow>
+            <TableCell className="font-medium">
+                <input type="hidden" name={`points[${index}].id`} defaultValue={point.id} />
+                <input type="hidden" name={`points[${index}].name`} defaultValue={point.name} />
+                {point.name}
+            </TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    <Input
+                        name={`points[${index}].currentSpell`}
+                        type="text"
+                        value={rainValue}
+                        onChange={handleRainChange}
+                        disabled={isTrace || !isSpellActive || isPending}
+                        className="w-24"
+                    />
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <Checkbox
+                            id={`trace-${point.id}`}
+                            checked={isTrace}
+                            onCheckedChange={handleTraceChange}
+                            disabled={!isSpellActive || isPending}
+                        />
+                        <Label htmlFor={`trace-${point.id}`} className="text-sm font-normal">Trace</Label>
+                    </div>
+                </div>
+            </TableCell>
+            <TableCell>
+                <Input
+                    name={`points[${index}].ponding`}
+                    type="number"
+                    defaultValue={point.ponding ?? 0}
+                    step="0.1"
+                    min="0"
+                    disabled={isPending}
+                    className="max-w-xs"
+                />
+            </TableCell>
+            <TableCell>
+                <Input
+                    name={`points[${index}].clearedInTime`}
+                    type="text"
+                    defaultValue={point.clearedInTime || ''}
+                    placeholder="e.g., 02:30"
+                    disabled={isPending}
+                    className="max-w-xs"
+                />
+            </TableCell>
+            {userRole !== 'city-user' && (
+                <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(point)} disabled={isPending}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </TableCell>
+            )}
+        </TableRow>
     );
 }
 

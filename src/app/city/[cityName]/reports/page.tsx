@@ -174,8 +174,8 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
                             <TableRow key={point.pointName} style={{ backgroundColor: '#F2F2F2' }} className="hover:bg-stone-300/50">
                             <TableCell className="font-medium text-center">{index + 1}</TableCell>
                             <TableCell className="font-medium">{point.pointName}</TableCell>
-                            {point.spellRainfall.map((rainfall, index) => (
-                                <TableCell key={index} className="text-center">{rainfall.toFixed(0)}</TableCell>
+                            {point.spellRainfall.map((rainfall, spellIndex) => (
+                                <TableCell key={spellIndex} className="text-center">{rainfall === -1 ? 'Trace' : rainfall.toFixed(0)}</TableCell>
                             ))}
                             <TableCell className="text-center font-bold">{point.totalRainfall.toFixed(0)}</TableCell>
                             <TableCell>{point.finalStatus}</TableCell>

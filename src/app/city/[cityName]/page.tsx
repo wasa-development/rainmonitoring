@@ -32,6 +32,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import PondingPointCard from '@/components/ponding-point-card';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -52,6 +53,8 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [isStopSpellBlocked, setStopSpellBlocked] = useState(false);
   
   const [currentPondingValue, setCurrentPondingValue] = useState('0');
+  const [currentRainValue, setCurrentRainValue] = useState('0');
+  const [isTrace, setIsTrace] = useState(false);
 
   const [isClearanceDialogOpen, setClearanceDialogOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
@@ -101,6 +104,24 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         fetchData();
     }
   }, [cityName, user]);
+  
+  useEffect(() => {
+    if (editingPoint) {
+      setCurrentPondingValue(String(editingPoint.ponding ?? 0));
+      const spell = editingPoint.currentSpell;
+      if (spell === -1) {
+          setIsTrace(true);
+          setCurrentRainValue('Trace');
+      } else {
+          setIsTrace(false);
+          setCurrentRainValue(String(spell ?? 0));
+      }
+    } else {
+        setCurrentPondingValue('0');
+        setCurrentRainValue('0');
+        setIsTrace(false);
+    }
+  }, [editingPoint]);
 
   const submitPondingPointForm = (formData: FormData) => {
     startTransition(async () => {
@@ -147,13 +168,11 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   const handleEditClick = (point: PondingPoint) => {
     setEditingPoint(point);
-    setCurrentPondingValue(String(point.ponding ?? 0));
     setFormOpen(true);
   };
 
   const handleAddNewClick = () => {
     setEditingPoint(null);
-    setCurrentPondingValue('0');
     setFormOpen(true);
   };
   
@@ -181,7 +200,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const handleToggleSpell = () => {
     startTransition(async () => {
       if (isSpellActive) {
-        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0);
+        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0 || p.currentSpell === -1);
         if (hasActiveRain) {
             setStopSpellBlocked(true);
             return;
@@ -209,7 +228,22 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       setCurrentPondingValue(e.target.value);
   };
 
-  const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => p.currentSpell));
+  const handleRainInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isTrace) setIsTrace(false);
+      setCurrentRainValue(e.target.value);
+  };
+
+  const handleTraceChange = (checked: boolean) => {
+      setIsTrace(checked);
+      if (checked) {
+          setCurrentRainValue('Trace');
+      } else {
+          setCurrentRainValue('0');
+      }
+  };
+
+
+  const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => Math.max(0, p.currentSpell)));
 
   if (authLoading || !user) {
     return (
@@ -313,15 +347,21 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 {isSpellActive && (
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
-                                        <Input
-                                            id="currentSpell"
-                                            name="currentSpell"
-                                            type="number"
-                                            defaultValue={editingPoint?.currentSpell ?? 0}
-                                            className="col-span-3"
-                                            step="1"
-                                            min="0"
-                                        />
+                                        <div className="col-span-3 flex items-center gap-2">
+                                            <Input
+                                                id="currentSpell"
+                                                name="currentSpell"
+                                                type="text"
+                                                value={currentRainValue}
+                                                onChange={handleRainInputChange}
+                                                className="w-24"
+                                                disabled={isTrace}
+                                            />
+                                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                                <Checkbox id="trace-checkbox" checked={isTrace} onCheckedChange={handleTraceChange} />
+                                                <Label htmlFor="trace-checkbox" className="font-normal">Trace</Label>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                                 <div className="grid grid-cols-4 items-center gap-4">
@@ -392,7 +432,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 <AlertDialogHeader>
                     <AlertDialogTitle>Cannot Stop Spell</AlertDialogTitle>
                     <AlertDialogDescription>
-                        You cannot stop the spell while rainfall is still being recorded for one or more ponding points. Please ensure all points have a "Current Spell" of 0.0 mm before stopping the spell.
+                        You cannot stop the spell while rainfall is still being recorded for one or more ponding points. Please ensure all points have a "Rain" value of 0 mm before stopping the spell.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

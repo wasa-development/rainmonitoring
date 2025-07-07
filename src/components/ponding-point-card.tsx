@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { AdminUser, PondingPoint } from '@/lib/types';
@@ -9,16 +10,16 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
-const WhiteRainAnimation = () => {
+const WhiteRainAnimation = ({ slow = false }: { slow?: boolean }) => {
     const raindrops = React.useMemo(() =>
-        Array.from({ length: 70 }).map((_, i) => {
+        Array.from({ length: slow ? 20 : 70 }).map((_, i) => {
             const style = {
                 left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-                animationDuration: `${1.2 + Math.random() * 0.6}s`,
+                animationDelay: `${Math.random() * (slow ? 5 : 2)}s`,
+                animationDuration: slow ? `${2.5 + Math.random() * 1.5}s` : `${1.2 + Math.random() * 0.6}s`,
             };
             return <div key={i} className="raindrop" style={style} />;
-        }), []);
+        }), [slow]);
 
     return <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg">{raindrops}</div>;
 };
@@ -39,7 +40,7 @@ interface PondingPointCardProps {
 }
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
-    const isRaining = point.isRaining && point.currentSpell > 0;
+    const isRaining = point.isRaining && (point.currentSpell > 0 || point.currentSpell === -1);
     const isPonding = point.ponding > 0;
     const isClear = !isRaining && !isPonding;
     const isJustPonding = isPonding && !isRaining;
@@ -75,7 +76,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                     </>
                 )}
                 {isPonding && <PondingAnimation height={waveHeightPercentage} />}
-                {isRaining && <WhiteRainAnimation />}
+                {isRaining && <WhiteRainAnimation slow={point.currentSpell === -1} />}
             </div>
             
             <div className={cn(
@@ -109,7 +110,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <Droplets className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-primary")} />
                             <div>
                                 <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
-                                <p className="font-semibold text-xs">{point.currentSpell.toFixed(0)} mm</p>
+                                <p className="font-semibold text-xs">{point.currentSpell === -1 ? 'Trace' : `${point.currentSpell.toFixed(0)} mm`}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
