@@ -154,23 +154,23 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
                 <div className="overflow-x-auto border rounded-lg">
                     <Table>
                         <TableHeader>
-                        <TableRow>
-                            <TableHead className="font-bold">Ponding Point</TableHead>
+                        <TableRow style={{ backgroundColor: '#DDEBF7' }} className="hover:bg-blue-100/70">
+                            <TableHead className="font-bold text-black">Ponding Point</TableHead>
                             {reportData.spells.map((spell, index) => (
-                            <TableHead key={index} className="text-center font-bold">
+                            <TableHead key={index} className="text-center font-bold text-black">
                                 Spell {index + 1} <br />
-                                <span className="font-normal text-xs text-muted-foreground">
+                                <span className="font-normal text-xs text-black/60">
                                 ({format(spell.startTime, 'HH:mm')}-{format(spell.endTime, 'HH:mm')})
                                 </span>
                             </TableHead>
                             ))}
-                            <TableHead className="text-center font-bold">Total Rain (mm)</TableHead>
-                            <TableHead className="font-bold">Final Status</TableHead>
+                            <TableHead className="text-center font-bold text-black">Total Rain (mm)</TableHead>
+                            <TableHead className="font-bold text-black">Final Status</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
                         {reportData.points.map((point) => (
-                            <TableRow key={point.pointName}>
+                            <TableRow key={point.pointName} style={{ backgroundColor: '#F2F2F2' }} className="hover:bg-stone-300/50">
                             <TableCell className="font-medium">{point.pointName}</TableCell>
                             {point.spellRainfall.map((rainfall, index) => (
                                 <TableCell key={index} className="text-center">{rainfall.toFixed(0)}</TableCell>
