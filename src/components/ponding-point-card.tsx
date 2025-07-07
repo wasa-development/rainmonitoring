@@ -40,8 +40,8 @@ interface PondingPointCardProps {
 }
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
-    const isRaining = point.currentSpell > 0 || point.currentSpell === -1;
-    const isPonding = point.ponding > 0;
+    const isRaining = point.isRaining;
+    const isPonding = (point.ponding ?? 0) > 0;
     const isClear = !isRaining && !isPonding;
     const isJustPonding = isPonding && !isRaining;
 
