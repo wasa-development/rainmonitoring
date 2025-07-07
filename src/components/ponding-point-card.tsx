@@ -40,7 +40,7 @@ interface PondingPointCardProps {
 }
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
-    const isRaining = point.isRaining && (point.currentSpell > 0 || point.currentSpell === -1);
+    const isRaining = point.currentSpell > 0 || point.currentSpell === -1;
     const isPonding = point.ponding > 0;
     const isClear = !isRaining && !isPonding;
     const isJustPonding = isPonding && !isRaining;
@@ -110,7 +110,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <Droplets className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-primary")} />
                             <div>
                                 <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
-                                <p className="font-semibold text-xs">{point.currentSpell === -1 ? 'Trace' : `${point.currentSpell.toFixed(0)} mm`}</p>
+                                <p className="font-semibold text-xs">{point.currentSpell === -1 ? 'Trace' : `${(point.currentSpell ?? 0).toFixed(0)} mm`}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -124,7 +124,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <AlertTriangle className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-accent")} />
                             <div>
                                 <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Ponding</p>
-                                <p className="font-semibold text-xs">{point.ponding.toFixed(1)} in</p>
+                                <p className="font-semibold text-xs">{(point.ponding ?? 0).toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
