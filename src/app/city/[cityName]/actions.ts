@@ -10,7 +10,7 @@ import { startOfDay, endOfDay } from 'date-fns';
 const PondingPointSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, { message: 'Name is required.' }),
-  currentSpell: z.coerce.number().int({ message: 'Rainfall must be a whole number.' }).optional(),
+  currentSpell: z.coerce.number().optional(),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }).optional(),
 });
@@ -40,7 +40,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
     
     // Handle "Trace" rainfall
     if (rawData.currentSpell && typeof rawData.currentSpell === 'string' && rawData.currentSpell.toLowerCase() === 'trace') {
-        rawData.currentSpell = -1;
+        rawData.currentSpell = 0.1;
     }
 
     const validation = PondingPointSchema.safeParse(rawData);
@@ -59,7 +59,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
         currentSpell: currentSpellValue,
         clearedInTime: data.clearedInTime ?? '',
         ponding: data.ponding ?? 0,
-        isRaining: currentSpellValue > 0 || currentSpellValue === -1,
+        isRaining: currentSpellValue > 0,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
@@ -185,7 +185,7 @@ export async function stopSpell(cityName: string) {
 
         const pondingPoints = await getPondingPoints(cityName);
         
-        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0 || p.currentSpell === -1);
+        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0);
         if (hasActiveRain) {
             return { success: false, error: 'Cannot stop spell while rainfall is still being recorded. Set all rain values to 0.' };
         }
@@ -263,7 +263,7 @@ function parsePointsFromFormData(formData: FormData) {
 const BatchPondingPointSchema = z.object({
   id: z.string().min(1, { message: 'ID is missing.' }),
   name: z.string(), // for error messages
-  currentSpell: z.coerce.number().int({ message: 'Rainfall must be a whole number.' }),
+  currentSpell: z.coerce.number(),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }),
 });
@@ -274,7 +274,7 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
     // Handle "Trace" rainfall
     parsedPoints.forEach(p => {
       if (p.currentSpell && typeof p.currentSpell === 'string' && p.currentSpell.toLowerCase() === 'trace') {
-        p.currentSpell = -1;
+        p.currentSpell = 0.1;
       }
     });
     
@@ -346,7 +346,7 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
                 currentSpell: currentSpellValue,
                 clearedInTime: pointData.clearedInTime ?? '',
                 ponding: newPonding,
-                isRaining: currentSpellValue > 0 || currentSpellValue === -1,
+                isRaining: currentSpellValue > 0,
                 dailyMaxSpell,
                 maxSpellRainfall,
                 maxPondingLevel,

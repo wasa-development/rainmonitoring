@@ -40,7 +40,7 @@ interface PondingPointCardProps {
 }
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
-    const isRaining = point.currentSpell > 0 || point.currentSpell === -1;
+    const isRaining = point.currentSpell > 0;
     const isPonding = (point.ponding ?? 0) > 0;
     const isClear = !isRaining && !isPonding;
     const isJustPonding = isPonding && !isRaining;
@@ -76,7 +76,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                     </>
                 )}
                 {isPonding && <PondingAnimation height={waveHeightPercentage} />}
-                {isRaining && <WhiteRainAnimation slow={point.currentSpell === -1} />}
+                {isRaining && <WhiteRainAnimation slow={point.currentSpell === 0.1} />}
             </div>
             
             <div className={cn(
@@ -110,14 +110,14 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <Droplets className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-primary")} />
                             <div>
                                 <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Current Rain</p>
-                                <p className="font-semibold text-xs">{point.currentSpell === -1 ? 'Trace' : `${(point.currentSpell ?? 0).toFixed(0)} mm`}</p>
+                                <p className="font-semibold text-xs">{point.currentSpell === 0.1 ? 'Trace' : `${(point.currentSpell ?? 0).toFixed(1)} mm`}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <TrendingUp className={cn("h-3.5 w-3.5", useImageBg ? "text-white/90" : "text-primary")} />
                             <div>
                                 <p className={cn("text-xs", useImageBg ? "text-white/80" : "text-muted-foreground")}>Max Today</p>
-                                <p className="font-semibold text-xs">{(point.dailyMaxSpell ?? 0).toFixed(0)} mm</p>
+                                <p className="font-semibold text-xs">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">

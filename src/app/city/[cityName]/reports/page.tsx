@@ -175,9 +175,9 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
                             <TableCell className="font-medium text-center">{index + 1}</TableCell>
                             <TableCell className="font-medium">{point.pointName}</TableCell>
                             {point.spellRainfall.map((rainfall, spellIndex) => (
-                                <TableCell key={spellIndex} className="text-center">{rainfall === -1 ? 'Trace' : rainfall.toFixed(0)}</TableCell>
+                                <TableCell key={spellIndex} className="text-center">{rainfall === 0.1 ? 'Trace' : rainfall.toFixed(1)}</TableCell>
                             ))}
-                            <TableCell className="text-center font-bold">{point.totalRainfall.toFixed(0)}</TableCell>
+                            <TableCell className="text-center font-bold">{point.totalRainfall.toFixed(1)}</TableCell>
                             <TableCell>{point.finalStatus}</TableCell>
                             </TableRow>
                         ))}

@@ -109,7 +109,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     if (editingPoint) {
       setCurrentPondingValue(String(editingPoint.ponding ?? 0));
       const spell = editingPoint.currentSpell;
-      if (spell === -1) {
+      if (spell === 0.1) {
           setIsTrace(true);
           setCurrentRainValue('Trace');
       } else {
@@ -200,7 +200,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const handleToggleSpell = () => {
     startTransition(async () => {
       if (isSpellActive) {
-        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0 || p.currentSpell === -1);
+        const hasActiveRain = pondingPoints.some(p => p.currentSpell > 0);
         if (hasActiveRain) {
             setStopSpellBlocked(true);
             return;
@@ -282,7 +282,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                     <p className="text-xs text-muted-foreground">Highest recorded rainfall in the current spell across all points.</p>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                    <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
                 </CardContent>
             </Card>
             <Card>
@@ -291,7 +291,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                      <p className="text-xs text-muted-foreground">Highest recorded rainfall today across all spells.</p>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
                 </CardContent>
             </Card>
         </div>

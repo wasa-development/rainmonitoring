@@ -58,8 +58,8 @@ export function generateDailyReportPdf(reportData: DailyReportData, cityName: st
     const tableRows = sortedPoints.map((point, index) => [
         index + 1,
         point.pointName,
-        ...point.spellRainfall.map(rainfall => rainfall === -1 ? 'Trace' : rainfall.toFixed(0)),
-        point.totalRainfall.toFixed(0),
+        ...point.spellRainfall.map(rainfall => rainfall === 0.1 ? 'Trace' : rainfall.toFixed(1)),
+        point.totalRainfall.toFixed(1),
         point.finalStatus,
     ]);
 

@@ -196,7 +196,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     const handleToggleSpell = () => {
         startTransition(async () => {
           if (isSpellActive) {
-            const hasActiveRain = points.some(p => p.currentSpell > 0 || p.currentSpell === -1);
+            const hasActiveRain = points.some(p => p.currentSpell > 0);
             if (hasActiveRain) {
                 setStopSpellBlocked(true);
                 return;
@@ -421,15 +421,15 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     );
 }
 
-function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, onDelete }) {
-    const [isTrace, setIsTrace] = useState(point.currentSpell === -1);
+function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, onDelete }: { point: PondingPoint, index: number, isSpellActive: boolean, isPending: boolean, userRole?: string, onDelete: (point: PondingPoint) => void }) {
+    const [isTrace, setIsTrace] = useState(point.currentSpell === 0.1);
     const [rainValue, setRainValue] = useState(
-        point.currentSpell === -1 ? 'Trace' : (point.currentSpell ?? 0).toString()
+        point.currentSpell === 0.1 ? 'Trace' : (point.currentSpell ?? 0).toString()
     );
 
     useEffect(() => {
-        setIsTrace(point.currentSpell === -1);
-        setRainValue(point.currentSpell === -1 ? 'Trace' : (point.currentSpell ?? 0).toString());
+        setIsTrace(point.currentSpell === 0.1);
+        setRainValue(point.currentSpell === 0.1 ? 'Trace' : (point.currentSpell ?? 0).toString());
     }, [point.currentSpell]);
 
     const handleTraceChange = (checked: boolean) => {
@@ -505,5 +505,3 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
         </TableRow>
     );
 }
-
-    
