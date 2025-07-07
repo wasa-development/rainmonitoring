@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine, FileText } from 'lucide-react';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, FilePenLine, Users } from 'lucide-react';
 import type { AdminUser, PondingPoint, Spell } from '@/lib/types';
 import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -247,6 +247,12 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             <div className="flex items-center gap-2">
                 {claims?.role !== 'viewer' && (
                     <>
+                        <Link href="/admin" passHref>
+                          <Button variant="outline">
+                            <Users className="mr-2 h-4 w-4" />
+                            Manage Users
+                          </Button>
+                        </Link>
                         <Button asChild variant="outline">
                             <Link href={`/city/${encodeURIComponent(cityName)}/data-entry`}>
                                 <FilePenLine className="mr-2" />

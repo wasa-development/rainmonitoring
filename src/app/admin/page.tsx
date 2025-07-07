@@ -12,7 +12,6 @@ import { createNewUser, createNewCity, getCities, getPendingUserRequests, approv
 import type { City, UserRequest } from '@/lib/types';
 import Link from 'next/link';
 import { Home, UserPlus, Building, RefreshCw, MailCheck, UserCheck, UserX } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
@@ -28,7 +27,6 @@ export default function AdminPage() {
     const [selectedRole, setSelectedRole] = useState<'super-admin' | 'city-user' | 'viewer' | ''>('');
     const [isSubmitting, startSubmitting] = useTransition();
     
-    // State for approval/rejection dialogs
     const [requestToApprove, setRequestToApprove] = useState<UserRequest | null>(null);
     const [requestToReject, setRequestToReject] = useState<UserRequest | null>(null);
 
@@ -38,9 +36,7 @@ export default function AdminPage() {
 
     useEffect(() => {
         if (!authLoading) {
-          if (!user) {
-            router.push('/login');
-          } else if (claims?.role !== 'super-admin') {
+          if (!user || claims?.role === 'viewer' || (claims?.role === 'city-user' && !claims.assignedCity)) {
             toast({
               variant: 'destructive',
               title: 'Access Denied',
@@ -52,18 +48,30 @@ export default function AdminPage() {
     }, [authLoading, user, claims, router, toast]);
 
     const fetchData = async () => {
-        const [cityData, requestData] = await Promise.all([getCities(), getPendingUserRequests()]);
+        if (!claims) return;
+        const isSuperAdmin = claims.role === 'super-admin';
+        const [cityData, requestData] = await Promise.all([
+            isSuperAdmin ? getCities() : Promise.resolve([]),
+            getPendingUserRequests(isSuperAdmin ? undefined : claims.assignedCity)
+        ]);
         setCities(cityData);
         setPendingRequests(requestData);
     };
 
     useEffect(() => {
-        if (claims?.role === 'super-admin') {
+        if (claims?.role === 'super-admin' || claims?.role === 'city-user') {
             fetchData();
         }
     }, [claims]);
 
-    const handleCreateUser = async (formData: FormData) => {
+    const handleCreateUser = (formData: FormData) => {
+        if (claims?.role) formData.set('callerRole', claims.role);
+        if (claims?.assignedCity) formData.set('callerCity', claims.assignedCity);
+        // For city-user, if they don't select a city, it's their own
+        if (claims?.role === 'city-user' && !formData.has('assignedCity')) {
+            formData.set('assignedCity', claims.assignedCity!);
+        }
+
         startSubmitting(async () => {
             const result = await createNewUser(formData);
             if (result.success) {
@@ -76,7 +84,7 @@ export default function AdminPage() {
         });
     };
 
-    const handleCreateCity = async (formData: FormData) => {
+    const handleCreateCity = (formData: FormData) => {
         startSubmitting(async () => {
             const result = await createNewCity(formData);
             if (result.success) {
@@ -89,9 +97,11 @@ export default function AdminPage() {
         });
     };
 
-    const handleApproveSubmit = async (formData: FormData) => {
+    const handleApproveSubmit = (formData: FormData) => {
         if (!requestToApprove) return;
         formData.append('requestId', requestToApprove.id);
+        if (claims?.role) formData.set('callerRole', claims.role);
+        if (claims?.assignedCity) formData.set('callerCity', claims.assignedCity);
         
         startSubmitting(async () => {
             const result = await approveUserRequest(formData);
@@ -120,7 +130,7 @@ export default function AdminPage() {
         });
     };
     
-    if (authLoading || !user || claims?.role !== 'super-admin') {
+    if (authLoading || !user || !claims || claims.role === 'viewer') {
         return (
           <main className="flex min-h-screen items-center justify-center">
             <RefreshCw className="h-8 w-8 animate-spin text-primary" />
@@ -128,6 +138,7 @@ export default function AdminPage() {
         );
     }
 
+    const isSuperAdmin = claims.role === 'super-admin';
 
   return (
     <main className="container mx-auto p-4 sm:p-6 md:p-8">
@@ -137,7 +148,7 @@ export default function AdminPage() {
                     <Home className="w-7 h-7" />
                 </Link>
                 <h1 className="text-3xl sm:text-4xl font-bold text-primary">
-                    Super Admin Dashboard
+                    {isSuperAdmin ? 'Super Admin Dashboard' : `${claims.assignedCity} Dashboard`}
                 </h1>
             </div>
             <ThemeToggle />
@@ -167,7 +178,7 @@ export default function AdminPage() {
                                         <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="super-admin">Super Admin</SelectItem>
+                                        {isSuperAdmin && <SelectItem value="super-admin">Super Admin</SelectItem>}
                                         <SelectItem value="city-user">City User</SelectItem>
                                         <SelectItem value="viewer">Viewer</SelectItem>
                                     </SelectContent>
@@ -176,16 +187,25 @@ export default function AdminPage() {
                             {selectedRole === 'city-user' && (
                                 <div>
                                     <Label htmlFor="assignedCity">Assign to City</Label>
-                                    <Select name="assignedCity" required>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a city" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {cities.length > 0
-                                                ? cities.map(city => (<SelectItem key={city.id} value={city.name}>{city.name}</SelectItem>))
-                                                : <p className="p-2 text-sm text-muted-foreground">No cities available. Create one first.</p>}
-                                        </SelectContent>
-                                    </Select>
+                                    {isSuperAdmin ? (
+                                        <Select name="assignedCity" required>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a city" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {cities.length > 0
+                                                    ? cities.map(city => (<SelectItem key={city.id} value={city.name}>{city.name}</SelectItem>))
+                                                    : <p className="p-2 text-sm text-muted-foreground">No cities available. Create one first.</p>}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <>
+                                            <Input name="assignedCity" type="hidden" value={claims.assignedCity} />
+                                            <div className="p-2 h-10 flex items-center text-sm font-medium rounded-md border border-input bg-background">
+                                                {claims.assignedCity}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
                             <Button type="submit" disabled={isSubmitting}>
@@ -196,34 +216,36 @@ export default function AdminPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Building /> Create New City</CardTitle>
-                        <CardDescription>Add a new city to be tracked.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form ref={createCityFormRef} action={handleCreateCity} className="space-y-4">
-                            <div>
-                                <Label htmlFor="name">City Name</Label>
-                                <Input id="name" name="name" required />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                 <div>
-                                    <Label htmlFor="latitude">Latitude</Label>
-                                    <Input id="latitude" name="latitude" type="number" step="any" required />
+                {isSuperAdmin && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Building /> Create New City</CardTitle>
+                            <CardDescription>Add a new city to be tracked.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form ref={createCityFormRef} action={handleCreateCity} className="space-y-4">
+                                <div>
+                                    <Label htmlFor="name">City Name</Label>
+                                    <Input id="name" name="name" required />
                                 </div>
-                                 <div>
-                                    <Label htmlFor="longitude">Longitude</Label>
-                                    <Input id="longitude" name="longitude" type="number" step="any" required />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="latitude">Latitude</Label>
+                                        <Input id="latitude" name="latitude" type="number" step="any" required />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="longitude">Longitude</Label>
+                                        <Input id="longitude" name="longitude" type="number" step="any" required />
+                                    </div>
                                 </div>
-                            </div>
-                            <Button type="submit" disabled={isSubmitting}>
-                                 {isSubmitting && <RefreshCw className="animate-spin" />}
-                                Create City
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting && <RefreshCw className="animate-spin" />}
+                                    Create City
+                                </Button>
+                            </form>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
             
             <Card className="lg:col-span-1">

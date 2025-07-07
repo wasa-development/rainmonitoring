@@ -10,6 +10,8 @@ const CreateUserSchema = z.object({
     password: z.string().min(6, { message: "Password must be at least 6 characters." }),
     role: z.enum(['super-admin', 'city-user', 'viewer'], { required_error: "Role is required." }),
     assignedCity: z.string().optional(),
+    callerRole: z.string().optional(),
+    callerCity: z.string().optional(),
 }).refine(data => {
     if (data.role === 'city-user') {
         return !!data.assignedCity;
@@ -22,6 +24,9 @@ const CreateUserSchema = z.object({
 
 export async function createNewUser(formData: FormData) {
     const rawData = Object.fromEntries(formData.entries());
+    const callerRole = rawData.callerRole as AdminUser['role'] | undefined;
+    const callerCity = rawData.callerCity as string | undefined;
+
     const validation = CreateUserSchema.safeParse(rawData);
 
     if (!validation.success) {
@@ -30,6 +35,17 @@ export async function createNewUser(formData: FormData) {
     }
 
     const { email, password, role, assignedCity } = validation.data;
+    
+    // --- Permission Checks ---
+    if (callerRole === 'city-user') {
+        if (role === 'super-admin') {
+            return { success: false, error: 'You do not have permission to create Super Admins.' };
+        }
+        if (assignedCity !== callerCity) {
+             return { success: false, error: 'You can only create users for your own city.' };
+        }
+    }
+
 
     try {
         const userRecord = await auth.createUser({
@@ -52,6 +68,7 @@ export async function createNewUser(formData: FormData) {
         await db.collection('users').doc(userRecord.uid).set(userDoc);
         await auth.setCustomUserClaims(userRecord.uid, claims);
 
+        revalidatePath('/admin');
         return { success: true, message: `User ${email} created successfully.` };
     } catch (error: any) {
         if (error.code === 'auth/email-already-exists') {
@@ -80,6 +97,7 @@ export async function createNewCity(formData: FormData) {
 
     try {
         const cityRef = await db.collection('cities').add({ name, latitude, longitude });
+        revalidatePath('/admin');
         return { success: true, message: `City "${name}" created with ID: ${cityRef.id}.` };
     } catch (error: any) {
         return { success: false, error: error.message || "An unknown error occurred." };
@@ -106,9 +124,15 @@ export async function getCities(): Promise<City[]> {
 }
 
 
-export async function getPendingUserRequests(): Promise<UserRequest[]> {
+export async function getPendingUserRequests(cityName?: string): Promise<UserRequest[]> {
     try {
-        const snapshot = await db.collection('user_requests').where('status', '==', 'pending').get();
+        let query: admin.firestore.Query = db.collection('user_requests').where('status', '==', 'pending');
+        
+        if (cityName) {
+            query = query.where('assignedCity', '==', cityName);
+        }
+
+        const snapshot = await query.get();
         if (snapshot.empty) {
             return [];
         }
@@ -129,11 +153,17 @@ export async function getPendingUserRequests(): Promise<UserRequest[]> {
 const ApproveUserRequestSchema = z.object({
     requestId: z.string().min(1, { message: "Request ID is missing." }),
     password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+    callerRole: z.string().optional(),
+    callerCity: z.string().optional(),
 });
 
 
 export async function approveUserRequest(formData: FormData) {
-    const validation = ApproveUserRequestSchema.safeParse(Object.fromEntries(formData.entries()));
+    const rawData = Object.fromEntries(formData.entries());
+    const callerRole = rawData.callerRole as AdminUser['role'] | undefined;
+    const callerCity = rawData.callerCity as string | undefined;
+    
+    const validation = ApproveUserRequestSchema.safeParse(rawData);
 
     if (!validation.success) {
         const firstError = Object.values(validation.error.flatten().fieldErrors)[0]?.[0];
@@ -150,6 +180,14 @@ export async function approveUserRequest(formData: FormData) {
             return { success: false, error: "User request not found or already processed." };
         }
         const requestData = requestDoc.data() as UserRequest;
+
+        // --- Permission Checks ---
+        if (callerRole === 'city-user') {
+            if (requestData.assignedCity !== callerCity) {
+                return { success: false, error: "You can only approve requests for your own city." };
+            }
+        }
+
 
         const userRecord = await auth.createUser({
             email: requestData.email,
