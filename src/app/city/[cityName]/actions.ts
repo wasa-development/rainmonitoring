@@ -109,6 +109,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             pointDataForDb.dailyMaxSpell = Math.max(0, pointDataForDb.currentSpell);
             pointDataForDb.maxSpellRainfall = Math.max(0, pointDataForDb.currentSpell);
             pointDataForDb.maxPondingLevel = data.ponding ?? 0;
+            pointDataForDb.totalRainfall = 0; // Initialize total rainfall
             await db.collection('ponding_points').add(pointDataForDb);
         }
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
