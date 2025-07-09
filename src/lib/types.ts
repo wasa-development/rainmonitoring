@@ -31,6 +31,7 @@ export interface PondingPoint {
     isRaining: boolean;
     dailyMaxSpell?: number;
     updatedAt?: Date;
+    totalRainfall?: number;
 }
 
 export interface AdminUser {

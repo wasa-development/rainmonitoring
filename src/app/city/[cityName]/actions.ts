@@ -205,7 +205,17 @@ export async function stopSpell(cityName: string) {
 
         pondingPoints.forEach(point => {
             const pointRef = db.collection('ponding_points').doc(point.id);
-            batch.update(pointRef, { currentSpell: 0, isRaining: false, maxSpellRainfall: 0, maxPondingLevel: 0 });
+            const spellRainfall = point.maxSpellRainfall ?? 0;
+            const existingTotalRainfall = point.totalRainfall ?? 0;
+            const newTotalRainfall = existingTotalRainfall + spellRainfall;
+
+            batch.update(pointRef, { 
+                currentSpell: 0, 
+                isRaining: false, 
+                maxSpellRainfall: 0, 
+                maxPondingLevel: 0,
+                totalRainfall: newTotalRainfall
+            });
         });
 
         await batch.commit();
@@ -355,117 +365,109 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 
 
 export async function getDailyReportData(cityName: string, date: Date): Promise<DailyReportData | null> {
-    // The 'date' object from the client represents the selected day at midnight in the user's local timezone.
-    // When it arrives here, it's a specific point in time (UTC). We should use this as the start of the 24-hour period
-    // to correctly query for spells within that user-defined day, regardless of server timezone.
-    const dayStart = date;
-    const dayEnd = new Date(date.getTime() + (24 * 60 * 60 * 1000) - 1);
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
 
     try {
-        // --- 1. Fetch Completed Spells for the day ---
         const allCompletedSpellsQuery = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
+            .where('startTime', '>=', dayStart)
+            .where('startTime', '<=', dayEnd)
             .get();
 
-        const completedSpells: Spell[] = allCompletedSpellsQuery.docs
-            .map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    startTime: data.startTime.toDate(),
-                    endTime: data.endTime ? data.endTime.toDate() : undefined,
-                } as Spell;
-            })
-            // Filter spells where the start time is within the 24-hour window of the selected day.
-            .filter(spell => spell.endTime && spell.startTime >= dayStart && spell.startTime <= dayEnd);
+        const completedSpells: Spell[] = allCompletedSpellsQuery.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                startTime: data.startTime.toDate(),
+                endTime: data.endTime.toDate(),
+            } as Spell;
+        });
+        
+        const now = new Date();
+        const isToday = dayStart.toDateString() === now.toDateString();
 
-        // --- 2. Fetch Active Spell for the day ---
-        const activeSpell = await getActiveSpell(cityName);
         let activeSpellForDay: Spell | null = null;
-        
-        // Check if the active spell started within the selected day's 24-hour window.
-        if (activeSpell && activeSpell.startTime >= dayStart && activeSpell.startTime <= dayEnd) {
-            const pondingPoints = await getPondingPoints(cityName);
-            const liveSpellData = pondingPoints.map(point => ({
-                pointId: point.id,
-                pointName: point.name,
-                totalRainfall: point.currentSpell === 0.1 ? 0.1 : (point.currentSpell ?? 0),
-                pondingLevel: point.ponding ?? 0,
-                maxPondingLevel: point.maxPondingLevel ?? 0,
-                clearedInTime: point.clearedInTime ?? '',
-            }));
-
-            activeSpellForDay = {
-                ...activeSpell,
-                endTime: new Date(), // Use current time for display
-                status: 'active',
-                spellData: liveSpellData,
-            };
+        if (isToday) {
+            const activeSpell = await getActiveSpell(cityName);
+            if (activeSpell) {
+                const pondingPoints = await getPondingPoints(cityName);
+                const spellData = pondingPoints.map(point => {
+                    const latestPonding = point.ponding ?? 0;
+                    return {
+                        pointId: point.id,
+                        pointName: point.name,
+                        totalRainfall: point.maxSpellRainfall ?? 0,
+                        maxPondingLevel: Math.max(point.maxPondingLevel ?? 0, latestPonding),
+                        pondingLevel: latestPonding,
+                        clearedInTime: latestPonding === 0 ? point.clearedInTime ?? '' : '',
+                    };
+                });
+                
+                activeSpellForDay = {
+                    ...activeSpell,
+                    endTime: new Date(),
+                    status: 'active',
+                    spellData,
+                };
+            }
         }
 
-        // --- 3. Combine and sort all spells for the day ---
-        const allSpells = [...completedSpells];
+        const allSpellsForDay = [...completedSpells];
         if (activeSpellForDay) {
-            allSpells.push(activeSpellForDay);
+            allSpellsForDay.push(activeSpellForDay);
         }
-        
-        const spells = allSpells.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-        
-        if (spells.length === 0) {
+
+        if (allSpellsForDay.length === 0) {
             return null;
         }
         
-        // --- 4. Process spells into report format ---
-        const reportSpells: DailyReportSpellInfo[] = spells.map(spell => ({
+        const sortedSpells = allSpellsForDay.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+        const reportSpells: DailyReportSpellInfo[] = sortedSpells.map(spell => ({
             startTime: spell.startTime,
             endTime: spell.endTime!,
             status: spell.status,
         }));
 
+        const allPondingPoints = await getPondingPoints(cityName);
         const pointDataMap = new Map<string, DailyReportPointData>();
 
-        spells.forEach((spell, spellIndex) => {
-            if (spell.spellData) {
-                spell.spellData.forEach(pointSpellData => {
-                    const pointId = pointSpellData.pointId;
-                    const pointName = pointSpellData.pointName;
-
-                    if (!pointDataMap.has(pointId)) {
-                        pointDataMap.set(pointId, {
-                            pointName: pointName,
-                            spellRainfall: Array(spells.length).fill(0),
-                            totalRainfall: 0,
-                            finalStatus: 'Clear',
-                        });
-                    }
-
-                    const currentPoint = pointDataMap.get(pointId)!;
-                    const rainfall = pointSpellData.totalRainfall;
-                    currentPoint.spellRainfall[spellIndex] = rainfall;
-                    if (rainfall > 0) {
-                        currentPoint.totalRainfall += rainfall;
-                    }
-                    
-                    if (spellIndex === spells.length - 1) {
-                         currentPoint.finalStatus = pointSpellData.pondingLevel > 0 
-                            ? `${pointSpellData.pondingLevel.toFixed(1)} in` 
-                            : (pointSpellData.clearedInTime || 'Clear');
-                    }
-                });
-            }
+        allPondingPoints.forEach(point => {
+            pointDataMap.set(point.id, {
+                pointName: point.name,
+                spellRainfall: Array(sortedSpells.length).fill(0),
+                totalRainfall: 0,
+                finalStatus: (point.ponding ?? 0) > 0 ? `${(point.ponding ?? 0).toFixed(1)} in` : 'No Ponding',
+            });
         });
-
+        
+        sortedSpells.forEach((spell, spellIndex) => {
+            spell.spellData.forEach(pointSpellData => {
+                const pointId = pointSpellData.pointId;
+                if (pointDataMap.has(pointId)) {
+                    const currentPoint = pointDataMap.get(pointId)!;
+                    const rainfall = pointSpellData.totalRainfall ?? 0;
+                    currentPoint.spellRainfall[spellIndex] = rainfall;
+                    currentPoint.totalRainfall += rainfall;
+                }
+            });
+        });
+        
         return {
             spells: reportSpells,
             points: Array.from(pointDataMap.values()),
             reportDate: date,
-            earliestStartTime: spells[0].startTime,
+            earliestStartTime: sortedSpells[0].startTime,
         };
 
-    } catch (error) {
-        console.error("Error fetching daily report data from Firestore:", error);
+    } catch (error: any) {
+        console.error("Error fetching daily report data from Firestore:", error.message, error.stack);
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }

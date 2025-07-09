@@ -5,7 +5,7 @@ import type { AdminUser, PondingPoint } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Droplets, Edit, Trash2, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
+import { Droplets, Edit, Trash2, TrendingUp, Clock, AlertTriangle, Layers } from 'lucide-react';
 import React from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -40,7 +40,6 @@ interface PondingPointCardProps {
 }
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
-    // --- Simplified and Corrected Logic ---
     const isRaining = point.currentSpell > 0;
     const isPonding = (point.ponding ?? 0) > 0;
 
@@ -122,13 +121,20 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
+                            <Layers className="h-3.5 w-3.5 text-white/90" />
+                            <div>
+                                <p className="text-xs text-white/80">Total Rain</p>
+                                <p className="font-semibold text-xs">{(point.totalRainfall ?? 0).toFixed(1)} mm</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
                             <AlertTriangle className="h-3.5 w-3.5 text-white/90" />
                             <div>
                                 <p className="text-xs text-white/80">Ponding</p>
                                 <p className="font-semibold text-xs">{(point.ponding ?? 0).toFixed(1)} in</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                         <div className="flex items-center gap-1.5 col-span-2">
                             <Clock className="h-3.5 w-3.5 text-white/90" />
                             <div>
                                 <p className="text-xs text-white/80">Cleared In</p>
