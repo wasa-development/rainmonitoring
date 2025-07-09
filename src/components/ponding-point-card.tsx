@@ -124,7 +124,9 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <Layers className="h-3.5 w-3.5 text-white/90" />
                             <div>
                                 <p className="text-xs text-white/80">Total Rain</p>
-                                <p className="font-semibold text-xs">{(point.totalRainfall ?? 0).toFixed(1)} mm</p>
+                                <p className="font-semibold text-xs">
+                                    {((point.totalRainfall ?? 0) + (point.maxSpellRainfall ?? 0)).toFixed(1)} mm
+                                </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
