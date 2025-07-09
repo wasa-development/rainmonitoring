@@ -5,7 +5,6 @@ import { db, admin } from '@/lib/firebase-admin';
 import type { DailyReportData, PondingPoint, Spell, DailyReportSpellInfo, DailyReportPointData } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { startOfDay, endOfDay } from 'date-fns';
 
 const PondingPointSchema = z.object({
   id: z.string().optional(),
@@ -356,8 +355,11 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 
 
 export async function getDailyReportData(cityName: string, date: Date): Promise<DailyReportData | null> {
-    const dayStart = startOfDay(date);
-    const dayEnd = endOfDay(date);
+    // The 'date' object from the client represents the selected day at midnight in the user's local timezone.
+    // When it arrives here, it's a specific point in time (UTC). We should use this as the start of the 24-hour period
+    // to correctly query for spells within that user-defined day, regardless of server timezone.
+    const dayStart = date;
+    const dayEnd = new Date(date.getTime() + (24 * 60 * 60 * 1000) - 1);
 
     try {
         // --- 1. Fetch Completed Spells for the day ---
@@ -376,18 +378,20 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
                     endTime: data.endTime ? data.endTime.toDate() : undefined,
                 } as Spell;
             })
+            // Filter spells where the start time is within the 24-hour window of the selected day.
             .filter(spell => spell.endTime && spell.startTime >= dayStart && spell.startTime <= dayEnd);
 
         // --- 2. Fetch Active Spell for the day ---
         const activeSpell = await getActiveSpell(cityName);
         let activeSpellForDay: Spell | null = null;
         
+        // Check if the active spell started within the selected day's 24-hour window.
         if (activeSpell && activeSpell.startTime >= dayStart && activeSpell.startTime <= dayEnd) {
             const pondingPoints = await getPondingPoints(cityName);
             const liveSpellData = pondingPoints.map(point => ({
                 pointId: point.id,
                 pointName: point.name,
-                totalRainfall: point.currentSpell ?? 0,
+                totalRainfall: point.currentSpell === 0.1 ? 0.1 : (point.currentSpell ?? 0),
                 pondingLevel: point.ponding ?? 0,
                 maxPondingLevel: point.maxPondingLevel ?? 0,
                 clearedInTime: point.clearedInTime ?? '',
@@ -438,9 +442,10 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
                     }
 
                     const currentPoint = pointDataMap.get(pointId)!;
-                    currentPoint.spellRainfall[spellIndex] = pointSpellData.totalRainfall;
-                    if (pointSpellData.totalRainfall > 0) {
-                        currentPoint.totalRainfall += pointSpellData.totalRainfall;
+                    const rainfall = pointSpellData.totalRainfall;
+                    currentPoint.spellRainfall[spellIndex] = rainfall;
+                    if (rainfall > 0) {
+                        currentPoint.totalRainfall += rainfall;
                     }
                     
                     if (spellIndex === spells.length - 1) {
