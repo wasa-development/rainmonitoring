@@ -133,8 +133,6 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                 const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
                 pointDataForDb.maxPondingLevelForSpell = maxPondingLevelForSpell;
 
-                await pointRef.set(pointDataForDb, { merge: true });
-
             } else {
                 return { success: false, error: 'Ponding point not found for update.' };
             }
@@ -498,7 +496,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                         pointId: point.id,
                         pointName: point.name,
                         order: point.order ?? 9999,
-                        totalRainfall: point.maxRainfallForSpell ?? 0,
+                        totalRainfall: point.currentSpell ?? 0,
                         maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, latestPonding),
                         pondingLevel: latestPonding,
                         clearedInTime: latestPonding === 0 ? point.clearedInTime ?? '' : '',
@@ -560,8 +558,9 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         
         // Calculate finalStatus after all spells are processed
         pointsArray.forEach(point => {
-            if (point.totalRainfall > 0) {
-                point.finalStatus = `${point.totalRainfall.toFixed(1)} mm`;
+            const lastRainfall = point.spellRainfall.length > 0 ? point.spellRainfall[point.spellRainfall.length - 1] : 0;
+            if (lastRainfall > 0) {
+                 point.finalStatus = lastRainfall === 0.1 ? 'Trace' : `${lastRainfall.toFixed(1)} mm`;
             } else {
                 point.finalStatus = 'Stopped';
             }
@@ -585,4 +584,5 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }
+
 
