@@ -74,7 +74,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     
     setIsSpellActive(!!activeSpell);
     
-    const maxCurrent = Math.max(0, ...points.map(p => Math.max(0, p.currentSpell)));
+    const maxCurrent = Math.max(0, ...points.map(p => Math.max(0, p.maxRainfallForSpell ?? 0)));
     
     setMaxCurrentSpell(maxCurrent);
   };
@@ -283,7 +283,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                     <DialogTitle>{editingPoint ? 'Edit' : 'Add'} Ponding Point</DialogTitle>
                      <DialogDescription>
                         {editingPoint
-                        ? `Update the details for ${editingPoint.name}. Rain value will be updated.`
+                        ? `Update the details for ${editingPoint.name}. Rain value will be updated, not added.`
                         : 'Add a new location to track for ponding.'}
                     </DialogDescription>
                 </DialogHeader>
