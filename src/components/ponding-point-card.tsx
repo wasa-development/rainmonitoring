@@ -87,7 +87,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
             )}>
                 <CardHeader className="flex flex-row items-start justify-between p-2">
                     <div>
-                        <CardTitle className="text-sm leading-tight">{point.name}</CardTitle>
+                        <CardTitle className="text-sm leading-tight">{point.order && point.order < 9999 ? `${point.order}. ` : ""}{point.name}</CardTitle>
                     </div>
                     <div className="flex gap-1">
                     {userRole !== 'viewer' && (
@@ -116,17 +116,15 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                         <div className="flex items-center gap-1.5">
                             <TrendingUp className="h-3.5 w-3.5 text-white/90" />
                             <div>
-                                <p className="text-xs text-white/80">Max Today</p>
-                                <p className="font-semibold text-xs">{(point.dailyMaxSpell ?? 0).toFixed(1)} mm</p>
+                                <p className="text-xs text-white/80">Max Spell</p>
+                                <p className="font-semibold text-xs">{(point.maxRainfallForSpell ?? 0).toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <Layers className="h-3.5 w-3.5 text-white/90" />
-                            <div>
-                                <p className="text-xs text-white/80">Total Rain</p>
-                                <p className="font-semibold text-xs">
-                                    {((point.totalRainfall ?? 0) + (point.maxSpellRainfall ?? 0)).toFixed(1)} mm
-                                </p>
+                             <AlertTriangle className="h-3.5 w-3.5 text-white/90" />
+                             <div>
+                                <p className="text-xs text-white/80">Max Ponding</p>
+                                <p className="font-semibold text-xs">{(point.maxPondingLevelForSpell ?? 0).toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -136,7 +134,16 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                                 <p className="font-semibold text-xs">{(point.ponding ?? 0).toFixed(1)} in</p>
                             </div>
                         </div>
-                         <div className="flex items-center gap-1.5 col-span-2">
+                        <div className="flex items-center gap-1.5">
+                            <Layers className="h-3.5 w-3.5 text-white/90" />
+                            <div>
+                                <p className="text-xs text-white/80">Total Rain</p>
+                                <p className="font-semibold text-xs">
+                                    {((point.totalRainfall ?? 0) + (isSpellActive ? 0 : (point.maxRainfallForSpell ?? 0))).toFixed(1)} mm
+                                </p>
+                            </div>
+                        </div>
+                         <div className="flex items-center gap-1.5">
                             <Clock className="h-3.5 w-3.5 text-white/90" />
                             <div>
                                 <p className="text-xs text-white/80">Cleared In</p>

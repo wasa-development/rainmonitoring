@@ -24,9 +24,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, CloudOff } from 'lucide-react';
 import type { PondingPoint } from '@/lib/types';
-import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell } from './actions';
+import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell, endRainSeason } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
@@ -42,10 +42,11 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const router = useRouter();
   
   const [pondingPoints, setPondingPoints] = useState<PondingPoint[]>([]);
-  const [maxSpellToday, setMaxSpellToday] = useState(0);
+  const [maxCurrentSpell, setMaxCurrentSpell] = useState(0);
   
   const [isFormOpen, setFormOpen] = useState(false);
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [isEndSeasonAlertOpen, setIsEndSeasonAlertOpen] = useState(false);
   
   const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
@@ -55,6 +56,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [currentPondingValue, setCurrentPondingValue] = useState('0');
   const [currentRainValue, setCurrentRainValue] = useState('0');
   const [currentClearedInTime, setCurrentClearedInTime] = useState('');
+  const [currentOrder, setCurrentOrder] = useState<number | string>(9999);
   const isTrace = currentRainValue === '0.1';
   
   const [isPending, startTransition] = useTransition();
@@ -67,23 +69,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       getActiveSpell(cityName)
     ]);
 
-    const sortedPoints = points.sort((a, b) => a.name.localeCompare(b.name));
+    const sortedPoints = points.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.name.localeCompare(b.name));
     setPondingPoints(sortedPoints);
     
     setIsSpellActive(!!activeSpell);
     
-    const now = new Date();
-    const dailyMax = Math.max(0, ...points
-        .filter(p => {
-            if (!p.updatedAt) return false;
-            const lastUpdated = p.updatedAt;
-            return lastUpdated.getFullYear() === now.getFullYear() &&
-                    lastUpdated.getMonth() === now.getMonth() &&
-                    lastUpdated.getDate() === now.getDate();
-        })
-        .map(p => p.dailyMaxSpell ?? 0));
+    const maxCurrent = Math.max(0, ...points.map(p => Math.max(0, p.currentSpell)));
     
-    setMaxSpellToday(dailyMax);
+    setMaxCurrentSpell(maxCurrent);
   };
   
   useEffect(() => {
@@ -107,12 +100,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       setCurrentPondingValue(String(editingPoint.ponding ?? 0));
       setCurrentRainValue(String(editingPoint.currentSpell ?? 0));
       setCurrentClearedInTime(editingPoint.clearedInTime || '');
+      setCurrentOrder(editingPoint.order ?? pondingPoints.length + 1);
     } else {
       setCurrentPondingValue('0');
       setCurrentRainValue('0');
       setCurrentClearedInTime('');
+      setCurrentOrder(pondingPoints.length + 1);
     }
-  }, [editingPoint]);
+  }, [editingPoint, pondingPoints.length]);
 
   const handleFormSubmit = (formData: FormData) => {
     startTransition(async () => {
@@ -178,12 +173,25 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
       } else {
         const result = await startSpell(cityName);
         if (result.success) {
-          toast({ title: 'Spell Started', description: 'You can now enter rainfall data.' });
+          toast({ title: 'Spell Started', description: result.message });
         } else {
           toast({ variant: 'destructive', title: 'Error Starting Spell', description: result.error });
         }
       }
       await fetchData();
+    });
+  };
+
+  const handleEndRainSeasonConfirm = async () => {
+    startTransition(async () => {
+      const result = await endRainSeason(cityName);
+      if (result.success) {
+        toast({ title: 'Rain Season Ended', description: result.message });
+        await fetchData();
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.error });
+      }
+      setIsEndSeasonAlertOpen(false);
     });
   };
   
@@ -198,9 +206,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const handleTraceChange = (checked: boolean) => {
       setCurrentRainValue(checked ? '0.1' : '0');
   };
-
-
-  const maxCurrentSpell = Math.max(0, ...pondingPoints.map(p => Math.max(0, p.currentSpell)));
 
   if (authLoading || !user) {
     return (
@@ -227,6 +232,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                             <PlusCircle className="mr-2" />
                             Add Point
                         </Button>
+                         <Button variant="destructive" onClick={() => setIsEndSeasonAlertOpen(true)} disabled={isPending || isSpellActive}>
+                            <CloudOff className="mr-2" />
+                            End Rain
+                        </Button>
                     </>
                 )}
             </div>
@@ -240,15 +249,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </CardHeader>
                 <CardContent>
                     <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="pb-2">
-                    <h3 className="text-sm font-medium text-muted-foreground">Max Spell (Today)</h3>
-                     <p className="text-xs text-muted-foreground">Highest recorded rainfall today across all spells.</p>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-bold">{maxSpellToday.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
                 </CardContent>
             </Card>
         </div>
@@ -282,7 +282,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                      <DialogDescription>
                         {editingPoint
                         ? `Update the details for ${editingPoint.name}.`
-                        : 'Add a new location to track for ponding. You can add rainfall and ponding data after creating it.'}
+                        : 'Add a new location to track for ponding.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form ref={formRef} action={handleFormSubmit}>
@@ -297,6 +297,17 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 className="col-span-3"
                                 readOnly={!!editingPoint && claims?.role === 'city-user'}
                                 required
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="order" className="text-right">Order</Label>
+                            <Input
+                                id="order"
+                                name="order"
+                                type="number"
+                                value={currentOrder}
+                                onChange={(e) => setCurrentOrder(e.target.value)}
+                                className="col-span-3"
                             />
                         </div>
                        {editingPoint && (
@@ -405,6 +416,27 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogAction onClick={() => setStopSpellBlocked(false)}>OK</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        
+        <AlertDialog open={isEndSeasonAlertOpen} onOpenChange={setIsEndSeasonAlertOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>End Rain Season?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will reset all rainfall and ponding data for every point in {cityName} to zero. This action cannot be undone and should be used to mark the beginning of a new rain season.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleEndRainSeasonConfirm}
+                        className="bg-destructive hover:bg-destructive/90"
+                        disabled={isPending}
+                    >
+                         {isPending ? 'Resetting...' : 'Yes, End Season'}
+                    </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

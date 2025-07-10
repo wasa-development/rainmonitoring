@@ -23,9 +23,10 @@ export async function getActiveOrLatestReportData(cityName: string): Promise<Spe
             const liveSpellData = pondingPoints.map(point => ({
                 pointId: point.id,
                 pointName: point.name,
+                order: point.order,
                 totalRainfall: point.currentSpell ?? 0,
                 pondingLevel: point.ponding ?? 0,
-                maxPondingLevel: point.maxPondingLevel ?? 0,
+                maxPondingLevel: point.maxPondingLevelForSpell ?? 0,
                 clearedInTime: point.clearedInTime ?? '',
             }));
 

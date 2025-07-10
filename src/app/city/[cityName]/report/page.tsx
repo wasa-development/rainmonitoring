@@ -125,7 +125,7 @@ export default function ReportPage({ params }: { params: { cityName: string } })
                             </thead>
                             <tbody>
                                 {spellData
-                                .sort((a, b) => a.pointName.localeCompare(b.pointName))
+                                .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.pointName.localeCompare(b.pointName))
                                 .map((point, index) => (
                                     <tr key={point.pointId} style={{ backgroundColor: '#F2F2F2' }} className="h-8">
                                         <td className="px-2 py-1 border-2 border-black text-center">{index + 1}</td>

@@ -70,7 +70,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             getPondingPoints(cityName),
             getActiveSpell(cityName)
         ]);
-        const sortedPoints = pointsData.sort((a, b) => a.name.localeCompare(b.name));
+        const sortedPoints = pointsData.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.name.localeCompare(b.name));
         setPoints(sortedPoints);
         setIsSpellActive(!!activeSpell);
     };
@@ -122,7 +122,11 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             }
           } else {
             const result = await startSpell(cityName);
-            toast({ title: 'Spell Started', description: 'You can now enter rainfall data.' });
+            if (result.success) {
+                toast({ title: 'Spell Started', description: result.message });
+            } else {
+                 toast({ variant: 'destructive', title: 'Error Starting Spell', description: result.error });
+            }
           }
           await fetchData();
         });
@@ -246,6 +250,10 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="name" className="text-right">Name</Label>
                                 <Input id="name" name="name" className="col-span-3" required />
+                            </div>
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="order" className="text-right">Order</Label>
+                                <Input id="order" name="order" type="number" defaultValue={points.length + 1} className="col-span-3" />
                             </div>
                         </div>
                         <DialogFooter>

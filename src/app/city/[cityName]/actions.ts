@@ -12,6 +12,7 @@ const PondingPointSchema = z.object({
   currentSpell: z.coerce.number().optional(),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }).optional(),
+  order: z.coerce.number().optional(),
 });
 
 export async function getPondingPoints(cityName: string): Promise<PondingPoint[]> {
@@ -54,6 +55,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
         clearedInTime: data.clearedInTime ?? '',
         ponding: data.ponding ?? 0,
         isRaining: currentSpellValue > 0,
+        order: data.order ?? 9999, // Default to a high number if not provided
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
@@ -76,29 +78,15 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                     };
                 }
 
-                let dailyMaxSpell = pointDataForDb.currentSpell;
-                let maxSpellRainfall = pointDataForDb.currentSpell;
+                const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
+                const maxRainfallForSpell = Math.max(oldMaxRainfall, currentSpellValue);
 
-                if (existingData.updatedAt) {
-                    const lastUpdated = existingData.updatedAt.toDate();
-                    const now = new Date();
+                const oldMaxPonding = existingData.maxPondingLevelForSpell ?? 0;
+                const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
 
-                    const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
-                                      lastUpdated.getMonth() === now.getMonth() &&
-                                      lastUpdated.getDate() === now.getDate();
-                    
-                    const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
-                    dailyMaxSpell = Math.max(oldDailyMax, Math.max(0, pointDataForDb.currentSpell));
-                }
-                const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
-                maxSpellRainfall = Math.max(oldMaxSpellRainfall, Math.max(0, pointDataForDb.currentSpell));
+                pointDataForDb.maxRainfallForSpell = maxRainfallForSpell;
+                pointDataForDb.maxPondingLevelForSpell = maxPondingLevelForSpell;
 
-                const oldMaxPondingLevel = existingData.maxPondingLevel ?? 0;
-                const maxPondingLevel = Math.max(oldMaxPondingLevel, newPonding);
-
-                pointDataForDb.dailyMaxSpell = dailyMaxSpell;
-                pointDataForDb.maxSpellRainfall = maxSpellRainfall;
-                pointDataForDb.maxPondingLevel = maxPondingLevel;
                 await pointRef.set(pointDataForDb, { merge: true });
 
             } else {
@@ -106,9 +94,8 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             }
         } else {
             // Create
-            pointDataForDb.dailyMaxSpell = Math.max(0, pointDataForDb.currentSpell);
-            pointDataForDb.maxSpellRainfall = Math.max(0, pointDataForDb.currentSpell);
-            pointDataForDb.maxPondingLevel = data.ponding ?? 0;
+            pointDataForDb.maxRainfallForSpell = currentSpellValue;
+            pointDataForDb.maxPondingLevelForSpell = data.ponding ?? 0;
             pointDataForDb.totalRainfall = 0; // Initialize total rainfall
             await db.collection('ponding_points').add(pointDataForDb);
         }
@@ -153,7 +140,11 @@ export async function startSpell(cityName: string) {
             return { success: false, error: 'A spell is already active for this city.' };
         }
 
-        await db.collection('spells').add({
+        const batch = db.batch();
+
+        // Add the new spell document
+        const newSpellRef = db.collection('spells').doc(); // Create a new doc reference
+        batch.set(newSpellRef, {
             cityName,
             startTime: admin.firestore.FieldValue.serverTimestamp(),
             endTime: null,
@@ -161,10 +152,24 @@ export async function startSpell(cityName: string) {
             spellData: [],
         });
 
+        // Reset spell-specific data for all ponding points in the city
+        const pointsSnapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
+        pointsSnapshot.forEach(doc => {
+            const pointRef = db.collection('ponding_points').doc(doc.id);
+            batch.update(pointRef, {
+                currentSpell: 0,
+                maxRainfallForSpell: 0,
+                maxPondingLevelForSpell: 0,
+                isRaining: false
+            });
+        });
+
+        await batch.commit();
+
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/report`);
-        return { success: true, message: 'Spell started successfully.' };
+        return { success: true, message: 'Spell started successfully. All spell values reset.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
     }
@@ -189,9 +194,9 @@ export async function stopSpell(cityName: string) {
         const spellData = pondingPoints.map(point => ({
             pointId: point.id,
             pointName: point.name,
-            totalRainfall: point.maxSpellRainfall ?? 0,
+            totalRainfall: point.maxRainfallForSpell ?? 0,
             pondingLevel: point.ponding ?? 0,
-            maxPondingLevel: point.maxPondingLevel ?? 0,
+            maxPondingLevel: point.maxPondingLevelForSpell ?? 0,
             clearedInTime: point.clearedInTime ?? '',
         }));
 
@@ -206,16 +211,15 @@ export async function stopSpell(cityName: string) {
 
         pondingPoints.forEach(point => {
             const pointRef = db.collection('ponding_points').doc(point.id);
-            const spellRainfall = point.maxSpellRainfall ?? 0;
+            const spellRainfall = point.maxRainfallForSpell ?? 0;
             const existingTotalRainfall = point.totalRainfall ?? 0;
             const newTotalRainfall = existingTotalRainfall + spellRainfall;
 
             batch.update(pointRef, { 
-                currentSpell: 0, 
-                isRaining: false, 
-                maxSpellRainfall: 0, 
-                maxPondingLevel: 0,
-                totalRainfall: newTotalRainfall
+                currentSpell: 0,
+                isRaining: false,
+                totalRainfall: newTotalRainfall,
+                // Do NOT reset maxRainfallForSpell or maxPondingLevelForSpell here
             });
         });
 
@@ -227,6 +231,39 @@ export async function stopSpell(cityName: string) {
         return { success: true, message: 'Spell ended and data saved.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
+    }
+}
+
+export async function endRainSeason(cityName: string) {
+    try {
+        const activeSpell = await getActiveSpell(cityName);
+        if (activeSpell) {
+            return { success: false, error: 'Cannot end rain season while a spell is active. Please stop the current spell first.' };
+        }
+        
+        const batch = db.batch();
+        const pointsSnapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
+
+        pointsSnapshot.forEach(doc => {
+            const pointRef = db.collection('ponding_points').doc(doc.id);
+            batch.update(pointRef, {
+                totalRainfall: 0,
+                maxRainfallForSpell: 0,
+                maxPondingLevelForSpell: 0,
+                currentSpell: 0,
+                isRaining: false,
+                ponding: 0,
+                clearedInTime: ''
+            });
+        });
+
+        await batch.commit();
+
+        revalidatePath(`/city/${encodeURIComponent(cityName)}`);
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
+        return { success: true, message: `Rain season ended for ${cityName}. All totals have been reset.` };
+    } catch (error: any) {
+        return { success: false, error: error.message || "An unknown server error occurred during season end." };
     }
 }
 
@@ -321,33 +358,19 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
             
             const currentSpellValue = pointData.currentSpell ?? 0;
             
-            let dailyMaxSpell = currentSpellValue;
-            let maxSpellRainfall = currentSpellValue;
+            const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
+            const maxRainfallForSpell = Math.max(oldMaxRainfall, currentSpellValue);
 
-            if (existingData.updatedAt) {
-                const lastUpdated = existingData.updatedAt.toDate();
-                const now = new Date();
-                const isSameDay = lastUpdated.getFullYear() === now.getFullYear() &&
-                                  lastUpdated.getMonth() === now.getMonth() &&
-                                  lastUpdated.getDate() === now.getDate();
-                
-                const oldDailyMax = isSameDay ? (existingData.dailyMaxSpell ?? 0) : 0;
-                dailyMaxSpell = Math.max(oldDailyMax, Math.max(0, currentSpellValue));
-            }
-            const oldMaxSpellRainfall = existingData.maxSpellRainfall ?? 0;
-            maxSpellRainfall = Math.max(oldMaxSpellRainfall, Math.max(0, currentSpellValue));
-
-            const oldMaxPondingLevel = existingData.maxPondingLevel ?? 0;
-            const maxPondingLevel = Math.max(oldMaxPondingLevel, newPonding);
+            const oldMaxPonding = existingData.maxPondingLevelForSpell ?? 0;
+            const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
 
             const pointDataForDb = { 
                 currentSpell: currentSpellValue,
                 clearedInTime: pointData.clearedInTime ?? '',
                 ponding: newPonding,
                 isRaining: currentSpellValue > 0,
-                dailyMaxSpell,
-                maxSpellRainfall,
-                maxPondingLevel,
+                maxRainfallForSpell,
+                maxPondingLevelForSpell,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             };
 
@@ -403,8 +426,8 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
                     return {
                         pointId: point.id,
                         pointName: point.name,
-                        totalRainfall: point.maxSpellRainfall ?? 0,
-                        maxPondingLevel: Math.max(point.maxPondingLevel ?? 0, latestPonding),
+                        totalRainfall: point.maxRainfallForSpell ?? 0,
+                        maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, latestPonding),
                         pondingLevel: latestPonding,
                         clearedInTime: latestPonding === 0 ? point.clearedInTime ?? '' : '',
                     };
@@ -439,7 +462,7 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
         const allPondingPoints = await getPondingPoints(cityName);
         const pointDataMap = new Map<string, DailyReportPointData>();
 
-        allPondingPoints.forEach(point => {
+        allPondingPoints.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.name.localeCompare(b.name)).forEach(point => {
             pointDataMap.set(point.id, {
                 pointName: point.name,
                 spellRainfall: Array(sortedSpells.length).fill(0),

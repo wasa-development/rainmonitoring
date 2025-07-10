@@ -1,4 +1,5 @@
 
+
 export type WeatherCondition =
   | 'ClearDay'
   | 'ClearNight'
@@ -24,12 +25,12 @@ export interface PondingPoint {
     name: string;
     cityName: string;
     currentSpell: number;
-    maxSpellRainfall?: number;
+    maxRainfallForSpell?: number;
     clearedInTime: string;
     ponding: number;
-    maxPondingLevel?: number;
+    maxPondingLevelForSpell?: number;
     isRaining: boolean;
-    dailyMaxSpell?: number;
+    order?: number;
     updatedAt?: Date;
     totalRainfall?: number;
 }
@@ -66,6 +67,7 @@ export interface Spell {
     spellData: {
         pointId: string;
         pointName: string;
+        order?: number;
         totalRainfall: number;
         pondingLevel: number;
         maxPondingLevel: number;
