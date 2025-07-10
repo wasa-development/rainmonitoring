@@ -440,11 +440,12 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 
 export async function getDailyReportData(cityName: string, dateString: string): Promise<DailyReportData | null> {
     try {
-        const reportDate = new Date(dateString);
-        
-        // This is a robust way to get the start of the day in the server's local timezone.
-        const dayStart = new Date(reportDate.getFullYear(), reportDate.getMonth(), reportDate.getDate(), 0, 0, 0, 0);
-        const dayEnd = new Date(reportDate.getFullYear(), reportDate.getMonth(), reportDate.getDate(), 23, 59, 59, 999);
+        // The dateString comes from the client as 'yyyy-MM-dd'.
+        // To avoid timezone issues, we'll construct the start and end dates in UTC
+        // and then compare the spell's start time against this range.
+        const reportDate = new Date(dateString + 'T00:00:00Z');
+        const dayStart = new Date(reportDate.getUTCFullYear(), reportDate.getUTCMonth(), reportDate.getUTCDate(), 0, 0, 0, 0);
+        const dayEnd = new Date(reportDate.getUTCFullYear(), reportDate.getUTCMonth(), reportDate.getUTCDate(), 23, 59, 59, 999);
 
         // Fetch ALL completed spells for the city. Filtering will happen in code.
         const allCompletedSpellsQuery = await db.collection('spells')
@@ -567,9 +568,12 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         };
 
     } catch (error: any) {
-        console.error("Critical error in getDailyReportData:", error.message, error.stack);
-        throw new Error("A database error occurred while fetching the daily report data.");
+        console.error("Critical error in getDailyReportData for city", cityName, " and date", dateString, ":", error.message, error.stack);
+        throw new Error("A database error occurred while fetching the daily report data. Please check server logs for details.");
     }
 }
 
 
+
+
+    
