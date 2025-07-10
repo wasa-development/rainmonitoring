@@ -95,6 +95,7 @@ export interface DailyReportData {
     points: DailyReportPointData[];
     reportDate: Date;
     earliestStartTime: Date;
+    averageRainfall: number;
+    maxTotalRainfall: number;
 }
     
-

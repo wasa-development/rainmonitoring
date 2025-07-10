@@ -459,14 +459,18 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 }
 
 
-export async function getDailyReportData(cityName: string, date: Date): Promise<DailyReportData | null> {
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
-
+export async function getDailyReportData(cityName: string, dateString: string): Promise<DailyReportData | null> {
     try {
+        const reportDate = new Date(dateString);
+        // Set timezone to avoid off-by-one day errors
+        reportDate.setMinutes(reportDate.getMinutes() + reportDate.getTimezoneOffset());
+        
+        const dayStart = new Date(reportDate);
+        dayStart.setHours(0, 0, 0, 0);
+
+        const dayEnd = new Date(reportDate);
+        dayEnd.setHours(23, 59, 59, 999);
+
         const allCompletedSpellsQuery = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
@@ -485,12 +489,12 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
         });
         
         const now = new Date();
-        const isToday = dayStart.toDateString() === now.toDateString();
+        const isToday = reportDate.toDateString() === now.toDateString();
 
         let activeSpellForDay: Spell | null = null;
         if (isToday) {
             const activeSpell = await getActiveSpell(cityName);
-            if (activeSpell) {
+            if (activeSpell && activeSpell.startTime >= dayStart && activeSpell.startTime <= dayEnd) {
                 const pondingPoints = await getPondingPoints(cityName);
                 const spellData = pondingPoints.map(point => {
                     const latestPonding = point.ponding ?? 0;
@@ -532,7 +536,7 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
 
         const allPondingPoints = await getPondingPoints(cityName);
         const pointDataMap = new Map<string, DailyReportPointData>();
-
+        
         allPondingPoints.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.name.localeCompare(b.name)).forEach(point => {
             pointDataMap.set(point.id, {
                 pointName: point.name,
@@ -554,11 +558,18 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
             });
         });
         
+        const pointsArray = Array.from(pointDataMap.values());
+        const totalRainfallSum = pointsArray.reduce((sum, point) => sum + point.totalRainfall, 0);
+        const averageRainfall = pointsArray.length > 0 ? totalRainfallSum / pointsArray.length : 0;
+        const maxTotalRainfall = Math.max(...pointsArray.map(p => p.totalRainfall));
+
         return {
             spells: reportSpells,
-            points: Array.from(pointDataMap.values()),
-            reportDate: date,
+            points: pointsArray,
+            reportDate: reportDate,
             earliestStartTime: sortedSpells[0].startTime,
+            averageRainfall,
+            maxTotalRainfall,
         };
 
     } catch (error: any) {
@@ -566,10 +577,3 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }
-
-
-
-    
-
-    
-

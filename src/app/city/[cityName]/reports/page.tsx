@@ -8,13 +8,107 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Download, RefreshCw, Search } from 'lucide-react';
 import { getDailyReportData } from '../actions';
 import { generateDailyReportPdf } from '@/lib/report-generator';
 import type { DailyReportData } from '@/lib/types';
+import { Logo } from '@/components/logo';
+
+function getOrdinalSuffix(i: number) {
+    const j = i % 10,
+        k = i % 100;
+    if (j === 1 && k !== 11) return "st";
+    if (j === 2 && k !== 12) return "nd";
+    if (j === 3 && k !== 13) return "rd";
+    return "th";
+}
+
+function GeneratedReport({ reportData, cityName }: { reportData: DailyReportData, cityName: string }) {
+  const { maxTotalRainfall } = reportData;
+  const sortedPoints = [...reportData.points].sort((a,b) => a.pointName.localeCompare(b.pointName));
+  const lastSpellEndTime = reportData.spells.length > 0 ? reportData.spells[reportData.spells.length - 1].endTime : new Date();
+
+  return (
+      <div className="max-w-5xl mx-auto bg-white dark:bg-card shadow-lg mt-4 text-black" id="report-content">
+          <div style={{ backgroundColor: '#0073C4' }} className="text-white grid grid-cols-[auto_1fr] items-center p-4 gap-x-4">
+              <div className="bg-white p-1 rounded-md self-center row-span-2">
+                  <Logo width={64} height={64} />
+              </div>
+              <div className="text-center">
+                  <h2 className="text-2xl font-bold">{cityName} Region Local Rainfall</h2>
+                  <p>Dated {format(reportData.reportDate, 'dd-MM-yyyy')}</p>
+              </div>
+              <div className="text-center col-start-2">
+                  <div className="mt-2">
+                      <p className="font-bold">Rain Duration</p>
+                      {reportData.spells.map((spell, index) => {
+                          const spellNumber = index + 1;
+                          return (
+                              <p key={index}>
+                                  {spellNumber}{getOrdinalSuffix(spellNumber)} Spell {format(spell.startTime, 'hh:mm a')} to {format(spell.endTime, 'hh:mm a')}
+                              </p>
+                          );
+                      })}
+                  </div>
+                  <p className="mt-1">Reporting Time: {format(lastSpellEndTime, 'hh:mm a')}</p>
+              </div>
+          </div>
+          
+          <div className="overflow-x-auto p-1">
+              <table className="w-full text-sm border-collapse">
+                  <thead style={{ backgroundColor: '#DDEBF7' }}>
+                      <tr>
+                          <th scope="col" className="px-2 py-2 border-2 border-black w-16 text-center font-bold">Sr. #</th>
+                          <th scope="col" className="px-2 py-2 border-2 border-black text-left font-bold">Main Points in {cityName}</th>
+                          {reportData.spells.map((_, index) => {
+                              const spellNumber = index + 1;
+                              return (
+                                <th key={index} scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">{spellNumber}{getOrdinalSuffix(spellNumber)} Spell</th>
+                              )
+                          })}
+                          <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">Total Rain</th>
+                          <th scope="col" className="px-2 py-2 border-2 border-black text-center font-bold">RAIN STATUS</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {sortedPoints.map((point, index) => (
+                          <tr key={point.pointName} style={index % 2 === 0 ? {} : { backgroundColor: '#F2F2F2' }} className="h-8">
+                              <td className="px-2 py-1 border-2 border-black text-center">{index + 1}</td>
+                              <td className="px-2 py-1 border-2 border-black">{point.pointName}</td>
+                              {point.spellRainfall.map((rainfall, spellIndex) => (
+                                  <td key={spellIndex} className="px-2 py-1 border-2 border-black text-center">
+                                      {rainfall === 0.1 ? 'Trace' : rainfall.toFixed(1)}
+                                  </td>
+                              ))}
+                              <td className="px-2 py-1 border-2 border-black text-center font-bold" style={point.totalRainfall === maxTotalRainfall && maxTotalRainfall > 0 ? { color: 'red' } : {}}>
+                                  {point.totalRainfall.toFixed(1)}
+                              </td>
+                              <td className="px-2 py-1 border-2 border-black text-center">{point.finalStatus}</td>
+                          </tr>
+                      ))}
+                  </tbody>
+                   <tfoot style={{ backgroundColor: '#DDEBF7' }}>
+                        <tr>
+                             <td colSpan={2 + reportData.spells.length} className="px-2 py-2 border-2 border-black font-bold text-left">
+                                Average Rain record ({cityName} Region)
+                             </td>
+                             <td className="px-2 py-2 border-2 border-black font-bold text-center">
+                                {reportData.averageRainfall.toFixed(2)}
+                             </td>
+                             <td className="px-2 py-2 border-2 border-black"></td>
+                        </tr>
+                   </tfoot>
+              </table>
+          </div>
+
+          <div style={{ backgroundColor: '#0073C4' }} className="text-white text-center p-2 mt-0 font-semibold">
+              Monsoon Control Room, WASA Head Office {cityName}
+          </div>
+      </div>
+  );
+}
 
 export default function ReportsPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -39,7 +133,8 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
     setIsLoading(true);
     setReportData(null); // Clear previous report before fetching new one
     try {
-        const data = await getDailyReportData(cityName, reportDate);
+        const dateString = format(reportDate, 'yyyy-MM-dd');
+        const data = await getDailyReportData(cityName, dateString);
         if (data) {
             setReportData(data);
         } else {
@@ -137,55 +232,15 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
       )}
 
       {reportData && !isLoading && (
-        <Card className="mt-8">
-            <CardHeader className="flex flex-row justify-between items-center">
-                <div>
-                    <CardTitle>Daily Rain Report</CardTitle>
-                    <CardDescription>
-                        Showing data for {format(reportData.reportDate, 'PPP')}
-                    </CardDescription>
-                </div>
+         <>
+            <div className="mt-8 flex justify-end max-w-5xl mx-auto">
                 <Button onClick={handleDownloadPdf}>
                     <Download className="mr-2 h-4 w-4" />
                     Download PDF
                 </Button>
-            </CardHeader>
-            <CardContent>
-                <div className="overflow-x-auto border rounded-lg">
-                    <Table>
-                        <TableHeader>
-                        <TableRow style={{ backgroundColor: '#DDEBF7' }} className="hover:bg-blue-100/70">
-                            <TableHead className="font-bold text-black text-center w-16">Sr No</TableHead>
-                            <TableHead className="font-bold text-black">Ponding Point</TableHead>
-                            {reportData.spells.map((spell, index) => (
-                            <TableHead key={index} className="text-center font-bold text-black">
-                                Spell {index + 1} {spell.status === 'active' && <span className="text-red-500 font-bold">(Live)</span>} <br />
-                                <span className="font-normal text-xs text-black/60">
-                                ({format(spell.startTime, 'HH:mm')}-{format(spell.endTime, 'HH:mm')})
-                                </span>
-                            </TableHead>
-                            ))}
-                            <TableHead className="text-center font-bold text-black">Total Rain (mm)</TableHead>
-                            <TableHead className="font-bold text-black">Final Status</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {reportData.points.sort((a,b) => a.pointName.localeCompare(b.pointName)).map((point, index) => (
-                            <TableRow key={point.pointName} style={{ backgroundColor: '#F2F2F2' }} className="hover:bg-stone-300/50">
-                            <TableCell className="font-medium text-center">{index + 1}</TableCell>
-                            <TableCell className="font-medium">{point.pointName}</TableCell>
-                            {point.spellRainfall.map((rainfall, spellIndex) => (
-                                <TableCell key={spellIndex} className="text-center">{rainfall === 0.1 ? 'Trace' : rainfall.toFixed(1)}</TableCell>
-                            ))}
-                            <TableCell className="text-center font-bold">{point.totalRainfall.toFixed(1)}</TableCell>
-                            <TableCell>{point.finalStatus}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
+            </div>
+            <GeneratedReport reportData={reportData} cityName={cityName} />
+        </>
       )}
 
     </main>
