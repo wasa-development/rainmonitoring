@@ -191,8 +191,7 @@ export async function startSpell(cityName: string) {
 
         const batch = db.batch();
 
-        // Add the new spell document
-        const newSpellRef = db.collection('spells').doc(); // Create a new doc reference
+        const newSpellRef = db.collection('spells').doc();
         batch.set(newSpellRef, {
             cityName,
             startTime: admin.firestore.FieldValue.serverTimestamp(),
@@ -201,17 +200,19 @@ export async function startSpell(cityName: string) {
             spellData: [],
         });
 
-        // Reset ONLY spell-specific data for all ponding points in the city
         const pointsSnapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
         pointsSnapshot.forEach(doc => {
             const pointRef = db.collection('ponding_points').doc(doc.id);
             batch.update(pointRef, {
+                totalRainfall: 0,
+                maxRainfall: 0,
+                maxPonding: 0,
+                maxRainfallForSpell: 0,
+                maxPondingLevelForSpell: 0,
                 currentSpell: 0,
                 isRaining: false,
                 ponding: 0,
-                clearedInTime: '',
-                maxRainfallForSpell: 0,
-                maxPondingLevelForSpell: 0
+                clearedInTime: ''
             });
         });
 
@@ -220,7 +221,7 @@ export async function startSpell(cityName: string) {
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/report`);
-        return { success: true, message: 'Spell started successfully. All current spell values reset.' };
+        return { success: true, message: 'New rain season started. All values have been reset.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
     }
@@ -551,5 +552,7 @@ export async function getDailyReportData(cityName: string, date: Date): Promise<
 }
 
 
+
+    
 
     
