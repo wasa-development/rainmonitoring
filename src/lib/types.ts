@@ -92,17 +92,9 @@ export interface DailyReportPointData {
 
 export interface DailyReportData {
     spells: DailyReportSpellInfo[];
-    points: Array.from(pointDataMap.values()),
-            reportDate: date,
-            earliestStartTime: sortedSpells[0].startTime,
-        };
-
-    } catch (error: any) {
-        console.error("Error fetching daily report data from Firestore:", error.message, error.stack);
-        throw new Error("A database error occurred while fetching the daily report data.");
-    }
+    points: DailyReportPointData[];
+    reportDate: Date;
+    earliestStartTime: Date;
 }
-
-
-
     
+
