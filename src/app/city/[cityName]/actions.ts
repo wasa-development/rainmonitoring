@@ -94,15 +94,6 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
     const { id, ...data } = validation.data;
     const newRainfallInput = data.currentSpell ?? 0;
     
-    const pointDataForDb: any = { 
-        cityName,
-        name: data.name,
-        clearedInTime: data.clearedInTime ?? '',
-        ponding: data.ponding ?? 0,
-        order: data.order ?? 9999, // Default to a high number if not provided
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
     try {
         if (id) {
             // Update
@@ -121,29 +112,46 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                         error: "'Cleared In' time is required when ponding is resolved (set to 0)." 
                     };
                 }
-
-                pointDataForDb.currentSpell = newRainfallInput;
-                pointDataForDb.isRaining = newRainfallInput > 0;
-
+                
                 const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
                 const maxRainfallForSpell = Math.max(oldMaxRainfall, newRainfallInput);
-                pointDataForDb.maxRainfallForSpell = maxRainfallForSpell;
                 
                 const oldMaxPonding = existingData.maxPondingLevelForSpell ?? 0;
                 const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
-                pointDataForDb.maxPondingLevelForSpell = maxPondingLevelForSpell;
+
+                const pointDataForUpdate = { 
+                    name: data.name,
+                    order: data.order ?? 9999,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    currentSpell: newRainfallInput,
+                    isRaining: newRainfallInput > 0,
+                    maxRainfallForSpell,
+                    ponding: newPonding,
+                    maxPondingLevelForSpell,
+                    clearedInTime,
+                };
+
+                await pointRef.update(pointDataForUpdate);
 
             } else {
                 return { success: false, error: 'Ponding point not found for update.' };
             }
         } else {
             // Create
-            pointDataForDb.currentSpell = newRainfallInput;
-            pointDataForDb.isRaining = newRainfallInput > 0;
-            pointDataForDb.maxRainfallForSpell = newRainfallInput;
-            pointDataForDb.maxPondingLevelForSpell = data.ponding ?? 0;
-            pointDataForDb.totalRainfall = 0;
-            pointDataForDb.maxRainfall = 0;
+            const pointDataForDb = { 
+                cityName,
+                name: data.name,
+                clearedInTime: data.clearedInTime ?? '',
+                ponding: data.ponding ?? 0,
+                order: data.order ?? 9999,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                currentSpell: newRainfallInput,
+                isRaining: newRainfallInput > 0,
+                maxRainfallForSpell: newRainfallInput,
+                maxPondingLevelForSpell: data.ponding ?? 0,
+                totalRainfall: 0,
+                maxRainfall: 0,
+            };
             await db.collection('ponding_points').add(pointDataForDb);
         }
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
@@ -209,9 +217,6 @@ export async function startSpell(cityName: string) {
                 isRaining: false,
                 ponding: 0,
                 clearedInTime: '',
-                // Also reset season-total data
-                totalRainfall: 0,
-                maxPonding: 0
             });
         });
 
@@ -220,7 +225,7 @@ export async function startSpell(cityName: string) {
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/report`);
-        return { success: true, message: 'New rain season started. All values have been reset.' };
+        return { success: true, message: 'New rain spell started. Existing seasonal totals are preserved.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
     }
@@ -584,5 +589,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }
+
 
 
