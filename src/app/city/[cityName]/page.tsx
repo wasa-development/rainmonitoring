@@ -47,6 +47,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [isFormOpen, setFormOpen] = useState(false);
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [isEndSeasonAlertOpen, setIsEndSeasonAlertOpen] = useState(false);
+  const [isClearanceDialogOpen, setClearanceDialogOpen] = useState(false);
   
   const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
@@ -62,6 +63,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   const [isPending, startTransition] = useTransition();
 
   const formRef = useRef<HTMLFormElement>(null);
+  const clearanceFormRef = useRef<HTMLFormElement>(null);
 
   const fetchData = async () => {
     const [points, activeSpell] = await Promise.all([
@@ -98,12 +100,10 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   useEffect(() => {
     if (editingPoint) {
       setCurrentPondingValue(String(editingPoint.ponding ?? 0));
-      // Rain value should reflect the current total for the spell, not start from 0
       setCurrentRainValue(String(editingPoint.currentSpell ?? 0));
       setCurrentClearedInTime(editingPoint.clearedInTime || '');
       setCurrentOrder(editingPoint.order ?? pondingPoints.length + 1);
     } else {
-      // For a new point, all values start fresh.
       setCurrentPondingValue('0');
       setCurrentRainValue('0');
       setCurrentClearedInTime('');
@@ -125,6 +125,41 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         }
     });
   }
+
+  const checkAndSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const originalPonding = editingPoint?.ponding ?? 0;
+    const newPonding = parseFloat(currentPondingValue);
+    const clearedTime = currentClearedInTime;
+
+    if (originalPonding > 0 && newPonding === 0 && !clearedTime) {
+      setClearanceDialogOpen(true);
+      return;
+    }
+    
+    if (formRef.current) {
+        const formData = new FormData(formRef.current);
+        handleFormSubmit(formData);
+    }
+  };
+
+  const handleClearanceTimeSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const timeData = new FormData(e.currentTarget);
+      const newClearanceTime = timeData.get('clearanceTime') as string;
+      setCurrentClearedInTime(newClearanceTime);
+
+      setClearanceDialogOpen(false);
+
+      setTimeout(() => {
+          if (formRef.current) {
+              const formData = new FormData(formRef.current);
+              formData.set('clearedInTime', newClearanceTime);
+              handleFormSubmit(formData);
+          }
+      }, 50);
+  };
+
 
   const handleEditClick = (point: PondingPoint) => {
     setEditingPoint(point);
@@ -287,7 +322,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         : 'Add a new location to track for ponding.'}
                     </DialogDescription>
                 </DialogHeader>
-                <form ref={formRef} action={handleFormSubmit}>
+                <form ref={formRef} onSubmit={checkAndSubmit}>
                     {editingPoint && <input type="hidden" name="id" value={editingPoint.id} />}
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -439,6 +474,37 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        
+        <Dialog open={isClearanceDialogOpen} onOpenChange={setClearanceDialogOpen}>
+            <DialogContent>
+                <form ref={clearanceFormRef} onSubmit={handleClearanceTimeSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>Clearance Time Required</DialogTitle>
+                        <DialogDescription>
+                            Ponding was cleared for <span className="font-bold">{editingPoint?.name}</span>. Please provide the clearance time.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor="clearanceTime-popup">Clearance Time (hh:mm)</Label>
+                        <Input
+                            id="clearanceTime-popup"
+                            name="clearanceTime"
+                            autoFocus
+                            required
+                            placeholder="e.g., 02:30"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setClearanceDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">
+                            Save and Continue
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
 
     </div>
   );
