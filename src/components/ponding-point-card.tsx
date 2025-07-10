@@ -40,7 +40,7 @@ interface PondingPointCardProps {
 }
 
 export default function PondingPointCard({ point, onEdit, onDelete, userRole, isSpellActive }: PondingPointCardProps) {
-    const isRaining = point.currentSpell > 0;
+    const isRaining = isSpellActive && (point.currentSpell > 0 || point.isRaining);
     const isPonding = (point.ponding ?? 0) > 0;
 
     let cardState: 'raining' | 'ponding_only' | 'clear';
@@ -139,7 +139,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <div>
                                 <p className="text-xs text-white/80">Total Rain</p>
                                 <p className="font-semibold text-xs">
-                                    {((point.totalRainfall ?? 0) + (isSpellActive ? 0 : (point.maxRainfallForSpell ?? 0))).toFixed(1)} mm
+                                    {((point.totalRainfall ?? 0)).toFixed(1)} mm
                                 </p>
                             </div>
                         </div>
@@ -171,3 +171,5 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
         </Card>
     );
 }
+
+    

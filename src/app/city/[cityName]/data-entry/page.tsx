@@ -315,7 +315,7 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
     useEffect(() => {
         setRainValue((point.currentSpell ?? 0).toString());
         setClearedInTimeValue(point.clearedInTime || '');
-    }, [point.currentSpell, point.clearedInTime]);
+    }, [point.currentSpell, point.clearedInTime, isSpellActive]);
 
     const handleTraceChange = (checked: boolean) => {
         setRainValue(checked ? '0.1' : '0');
@@ -398,3 +398,5 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
         </TableRow>
     );
 }
+
+    
