@@ -61,9 +61,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     const [isFormOpen, setFormOpen] = useState(false);
     const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
     const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
-    const [isClearanceAlertOpen, setClearanceAlertOpen] = useState(false);
-    const [clearanceAlertMessage, setClearanceAlertMessage] = useState('');
-
+    const [pointForClearance, setPointForClearance] = useState<PondingPoint | null>(null);
 
     const formRef = useRef<HTMLFormElement>(null);
     const addPointFormRef = useRef<HTMLFormElement>(null);
@@ -113,33 +111,53 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         
-        const pointsData = points.map((p, index) => ({
-            id: formData.get(`points[${index}].id`),
-            name: formData.get(`points[${index}].name`),
-            ponding: parseFloat(formData.get(`points[${index}].ponding`) as string || '0'),
-            clearedInTime: formData.get(`points[${index}].clearedInTime`),
-            originalPonding: p.ponding,
-        }));
+        // Find the first point that was cleared but has no clearance time
+        for (let i = 0; i < points.length; i++) {
+            const point = points[i];
+            const originalPonding = point.ponding ?? 0;
+            const newPonding = parseFloat(formData.get(`points[${i}].ponding`) as string || '0');
+            const clearanceTime = formData.get(`points[${i}].clearedInTime`) as string;
 
-        const missingClearancePoints = pointsData.filter(p =>
-            (p.originalPonding ?? 0) > 0 && p.ponding === 0 && !p.clearedInTime
-        );
-
-        if (missingClearancePoints.length > 0) {
-            const pointNames = missingClearancePoints.map(p => p.name).join(', ');
-            setClearanceAlertMessage(`Ponding for "${pointNames}" was resolved, but no clearance time was provided. Are you sure you want to proceed?`);
-            setClearanceAlertOpen(true);
-        } else {
-            submitBatchUpdate(formData);
+            if (originalPonding > 0 && newPonding === 0 && !clearanceTime) {
+                setPointForClearance(point);
+                return; // Stop submission and show dialog
+            }
         }
+
+        // If all checks pass, submit the form
+        submitBatchUpdate(formData);
     };
     
-    const handleClearanceConfirm = () => {
-        setClearanceAlertOpen(false);
-        if (formRef.current) {
-            const formData = new FormData(formRef.current);
-            submitBatchUpdate(formData);
+    const handleClearanceTimeSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!pointForClearance || !formRef.current) return;
+
+        const timeData = new FormData(e.currentTarget);
+        const newClearanceTime = timeData.get('clearanceTime') as string;
+
+        // Find the corresponding input in the main form and update its value
+        const pointIndex = points.findIndex(p => p.id === pointForClearance.id);
+        if (pointIndex !== -1) {
+            const timeInput = formRef.current.querySelector(`input[name="points[${pointIndex}].clearedInTime"]`) as HTMLInputElement;
+            if (timeInput) {
+                timeInput.value = newClearanceTime;
+            }
         }
+        
+        // Close the dialog and re-submit the main form
+        setPointForClearance(null);
+        
+        // Use a short timeout to allow state to update before re-submitting
+        setTimeout(() => {
+            if (formRef.current) {
+                const mainFormData = new FormData(formRef.current);
+                handleBatchUpdateSubmit({
+                    ...new Event('submit'),
+                    currentTarget: formRef.current,
+                    preventDefault: () => {},
+                } as unknown as React.FormEvent<HTMLFormElement>);
+            }
+        }, 50);
     };
 
 
@@ -341,20 +359,36 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                 </AlertDialogContent>
             </AlertDialog>
             
-            <AlertDialog open={isClearanceAlertOpen} onOpenChange={setClearanceAlertOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Missing Clearance Time</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {clearanceAlertMessage}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleClearanceConfirm}>Proceed Anyway</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <Dialog open={!!pointForClearance} onOpenChange={(open) => !open && setPointForClearance(null)}>
+                <DialogContent>
+                     <form onSubmit={handleClearanceTimeSubmit}>
+                        <DialogHeader>
+                            <DialogTitle>Clearance Time Required</DialogTitle>
+                            <DialogDescription>
+                                Ponding was cleared for <span className="font-bold">{pointForClearance?.name}</span>. Please provide the clearance time.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="clearanceTime">Clearance Time (hh:mm)</Label>
+                            <Input
+                                id="clearanceTime"
+                                name="clearanceTime"
+                                autoFocus
+                                required
+                                placeholder="e.g., 02:30"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setPointForClearance(null)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit">
+                                Save and Continue
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </main>
     );
 }
@@ -423,8 +457,7 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                     <Input
                         name={`points[${index}].clearedInTime`}
                         type="text"
-                        value={clearedInTimeValue}
-                        onChange={(e) => setClearedInTimeValue(e.target.value)}
+                        defaultValue={point.clearedInTime || ''}
                         placeholder="e.g., 02:30"
                         disabled={isPending}
                         className="w-28"
@@ -434,7 +467,10 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                         variant="ghost"
                         size="sm"
                         className="text-xs h-8"
-                        onClick={() => setClearedInTimeValue('Cleared During Rain')}
+                        onClick={(e) => {
+                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                            if (input) input.value = 'Cleared During Rain';
+                        }}
                         disabled={isPending}>
                         During Rain
                     </Button>
@@ -450,5 +486,7 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
         </TableRow>
     );
 }
+
+    
 
     
