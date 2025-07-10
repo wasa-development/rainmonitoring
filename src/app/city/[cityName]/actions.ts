@@ -462,14 +462,15 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const dayEnd = new Date(reportDate);
         dayEnd.setHours(23, 59, 59, 999);
 
-        const allCompletedSpellsQuery = await db.collection('spells')
+        // Fetch completed spells that STARTED on the given day
+        const completedSpellsQuery = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
             .where('startTime', '>=', dayStart)
             .where('startTime', '<=', dayEnd)
             .get();
 
-        const completedSpells: Spell[] = allCompletedSpellsQuery.docs.map(doc => {
+        const completedSpells: Spell[] = completedSpellsQuery.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -483,9 +484,10 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const isToday = reportDate.toDateString() === now.toDateString();
 
         let activeSpellForDay: Spell | null = null;
+        // If the report is for today, check for any active spell for that city.
         if (isToday) {
             const activeSpell = await getActiveSpell(cityName);
-            if (activeSpell && activeSpell.startTime >= dayStart && activeSpell.startTime <= dayEnd) {
+            if (activeSpell) { // We don't care when it started, if it's active today, we show it.
                 const pondingPoints = await getPondingPoints(cityName);
                 const spellData = pondingPoints.map(point => {
                     const latestPonding = point.ponding ?? 0;
@@ -528,9 +530,10 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const allPondingPoints = await getPondingPoints(cityName);
         const pointDataMap = new Map<string, DailyReportPointData>();
         
-        allPondingPoints.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.name.localeCompare(b.name)).forEach(point => {
+        allPondingPoints.forEach(point => {
             pointDataMap.set(point.id, {
                 pointName: point.name,
+                order: point.order,
                 spellRainfall: Array(sortedSpells.length).fill(0),
                 totalRainfall: 0,
                 finalStatus: (point.ponding ?? 0) > 0 ? `${(point.ponding ?? 0).toFixed(1)} in` : 'No Ponding',

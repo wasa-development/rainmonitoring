@@ -85,6 +85,7 @@ export interface DailyReportSpellInfo {
 
 export interface DailyReportPointData {
     pointName: string;
+    order?: number;
     spellRainfall: number[];
     totalRainfall: number;
     finalStatus: string;
