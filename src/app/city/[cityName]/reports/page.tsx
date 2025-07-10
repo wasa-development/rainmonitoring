@@ -27,7 +27,7 @@ function getOrdinalSuffix(i: number) {
 
 function GeneratedReport({ reportData, cityName }: { reportData: DailyReportData, cityName: string }) {
   const { maxTotalRainfall } = reportData;
-  const sortedPoints = [...reportData.points].sort((a,b) => a.pointName.localeCompare(b.pointName));
+  const sortedPoints = [...reportData.points].sort((a,b) => (a.order ?? 9999) - (b.order ?? 9999) || a.pointName.localeCompare(b.pointName));
   const lastSpellEndTime = reportData.spells.length > 0 ? reportData.spells[reportData.spells.length - 1].endTime : new Date();
 
   return (
@@ -181,9 +181,9 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
         </h1>
       </header>
       <Card className="max-w-xl mx-auto overflow-hidden shadow-lg">
-          <CardHeader style={{ backgroundColor: '#0073C4' }} className="text-white">
-              <CardTitle className="text-white">Generate Rain Report</CardTitle>
-              <CardDescription className="text-white/80">Select a date to generate a PDF summary of all rain spells for that day.</CardDescription>
+          <CardHeader>
+              <CardTitle>Generate Rain Report</CardTitle>
+              <CardDescription>Select a date to generate a PDF summary of all rain spells for that day.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row items-center justify-center gap-4 p-6">
               <Popover>

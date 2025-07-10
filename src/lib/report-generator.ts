@@ -13,65 +13,95 @@ declare module 'jspdf' {
     }
 }
 
+function getOrdinalSuffix(i: number) {
+    const j = i % 10,
+        k = i % 100;
+    if (j === 1 && k !== 11) return "st";
+    if (j === 2 && k !== 12) return "nd";
+    if (j === 3 && k !== 13) return "rd";
+    return "th";
+}
+
 export function generateDailyReportPdf(reportData: DailyReportData, cityName: string) {
     const doc = new jsPDF({ orientation: 'landscape' });
 
     // --- PDF Header ---
     doc.setFillColor(0, 115, 196); // #0073C4
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 30, 'F');
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
     doc.setTextColor(255, 255, 255);
     
-    // Left side
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`WASA ${cityName.toUpperCase()}`, 14, 18);
-
     // Center
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Daily Rain Report`, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+    doc.text(`${cityName} Region Local Rainfall`, doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    const reportDateStr = format(reportData.reportDate, 'MMMM do, yyyy');
-    doc.text(`Dated: ${reportDateStr}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+    const reportDateStr = format(reportData.reportDate, 'dd-MM-yyyy');
+    doc.text(`Dated: ${reportDateStr}`, doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
 
-    // Right side
+    // Rain Duration
     doc.setFontSize(10);
-    const earliestStartTimeStr = format(reportData.earliestStartTime, 'hh:mm a');
-    const generationTimeStr = format(new Date(), 'hh:mm a');
-    doc.text(`Rain Started: ${earliestStartTimeStr}`, doc.internal.pageSize.getWidth() - 14, 15, { align: 'right' });
-    doc.text(`Generated: ${generationTimeStr}`, doc.internal.pageSize.getWidth() - 14, 22, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Rain Duration`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+
+    let yPos = 27;
+    reportData.spells.forEach((spell, index) => {
+        const spellNumber = index + 1;
+        const spellText = `${spellNumber}${getOrdinalSuffix(spellNumber)} Spell ${format(spell.startTime, 'hh:mm a')} to ${format(spell.endTime, 'hh:mm a')}`;
+        doc.text(spellText, doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
+        yPos += 5;
+    });
+
+    const lastSpellEndTime = reportData.spells.length > 0 ? reportData.spells[reportData.spells.length - 1].endTime : new Date();
+    const reportingTimeText = `Reporting Time: ${format(lastSpellEndTime, 'hh:mm a')}`;
+    doc.text(reportingTimeText, doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
 
 
     const tableColumnTitles: string[] = [
-        "Sr No",
-        "Ponding Point",
-        ...reportData.spells.map((spell, index) => 
-            `Spell ${index + 1} (${format(spell.startTime, 'HH:mm')}-${format(spell.endTime, 'HH:mm')})`
-        ),
-        "Total Rain (mm)",
-        "Final Status"
+        "Sr. #",
+        `Main Points in ${cityName}`,
+        ...reportData.spells.map((_, index) => {
+            const spellNumber = index + 1;
+            return `${spellNumber}${getOrdinalSuffix(spellNumber)} Spell`;
+        }),
+        "Total Rain",
+        "RAIN STATUS"
     ];
     
-    const sortedPoints = reportData.points.sort((a,b) => a.pointName.localeCompare(b.pointName));
+    const sortedPoints = reportData.points.sort((a,b) => (a.order ?? 9999) - (b.order ?? 9999) || a.pointName.localeCompare(b.pointName));
+    const maxTotalRainfall = reportData.maxTotalRainfall;
 
     const tableRows = sortedPoints.map((point, index) => [
         index + 1,
         point.pointName,
         ...point.spellRainfall.map(rainfall => rainfall === 0.1 ? 'Trace' : rainfall.toFixed(1)),
-        point.totalRainfall.toFixed(1),
+        { content: point.totalRainfall.toFixed(1), styles: { fontStyle: 'bold', textColor: point.totalRainfall === maxTotalRainfall && maxTotalRainfall > 0 ? [255, 0, 0] : [0, 0, 0] } },
         point.finalStatus,
     ]);
+
+    const averageRow = [
+        { content: `Average Rain record (${cityName} Region)`, colSpan: 2 + reportData.spells.length, styles: { halign: 'left', fontStyle: 'bold' } },
+        { content: reportData.averageRainfall.toFixed(2), styles: { halign: 'center', fontStyle: 'bold' } },
+        { content: '', styles: {} }
+    ];
+    tableRows.push(averageRow);
 
     doc.autoTable({
         head: [tableColumnTitles],
         body: tableRows,
-        startY: 35,
+        startY: yPos + 5,
         theme: 'grid',
         headStyles: { 
             fillColor: [221, 235, 247], // light blue #DDEBF7
             textColor: [0, 0, 0], // black text
             fontStyle: 'bold',
+            halign: 'center',
+        },
+        footStyles: {
+             fillColor: [221, 235, 247],
+             textColor: [0, 0, 0],
+             fontStyle: 'bold',
         },
         styles: {
             cellPadding: 2,
