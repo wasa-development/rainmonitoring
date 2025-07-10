@@ -98,8 +98,8 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   useEffect(() => {
     if (editingPoint) {
       setCurrentPondingValue(String(editingPoint.ponding ?? 0));
-      // In edit mode for an active spell, we add new rain, not replace. So we start from 0.
-      setCurrentRainValue('0'); 
+      // Rain value should reflect the current total for the spell, not start from 0
+      setCurrentRainValue(String(editingPoint.currentSpell ?? 0));
       setCurrentClearedInTime(editingPoint.clearedInTime || '');
       setCurrentOrder(editingPoint.order ?? pondingPoints.length + 1);
     } else {
@@ -283,7 +283,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                     <DialogTitle>{editingPoint ? 'Edit' : 'Add'} Ponding Point</DialogTitle>
                      <DialogDescription>
                         {editingPoint
-                        ? `Update the details for ${editingPoint.name}. Current spell rain is additive.`
+                        ? `Update the details for ${editingPoint.name}. Rain value will be updated.`
                         : 'Add a new location to track for ponding.'}
                     </DialogDescription>
                 </DialogHeader>
@@ -315,7 +315,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                        
                         {isSpellActive && (
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="currentSpell" className="text-right">Add Rain (mm)</Label>
+                                <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
                                 <div className="col-span-3 flex items-center gap-2">
                                     <Input
                                         id="currentSpell"

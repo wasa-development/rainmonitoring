@@ -105,8 +105,8 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                     };
                 }
 
-                // Correctly calculate current spell total and max spell rainfall
-                const currentSpellTotal = (existingData.currentSpell || 0) + newRainfallInput;
+                // Update the current spell total directly, not additively
+                const currentSpellTotal = newRainfallInput;
                 pointDataForDb.currentSpell = currentSpellTotal;
                 pointDataForDb.isRaining = newRainfallInput > 0; // It's raining if any new input is given
 
