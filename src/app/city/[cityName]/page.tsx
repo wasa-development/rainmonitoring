@@ -74,7 +74,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     
     setIsSpellActive(!!activeSpell);
     
-    const maxCurrent = Math.max(0, ...points.map(p => Math.max(0, p.maxRainfallForSpell ?? 0)));
+    const maxCurrent = Math.max(0, ...points.map(p => Math.max(p.maxRainfall ?? 0, p.maxRainfallForSpell ?? 0)));
     
     setMaxCurrentSpell(maxCurrent);
   };

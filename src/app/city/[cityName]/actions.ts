@@ -589,3 +589,4 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }
+
