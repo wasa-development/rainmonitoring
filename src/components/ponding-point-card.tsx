@@ -53,6 +53,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
     }
     
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
+    const displayedMaxSpell = Math.max(point.maxRainfall ?? 0, point.maxRainfallForSpell ?? 0);
 
     return (
         <Card className={cn(
@@ -117,7 +118,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <TrendingUp className="h-3.5 w-3.5 text-white/90" />
                             <div>
                                 <p className="text-xs text-white/80">Max Spell</p>
-                                <p className="font-semibold text-xs">{(point.maxRainfall ?? 0).toFixed(1)} mm</p>
+                                <p className="font-semibold text-xs">{displayedMaxSpell.toFixed(1)} mm</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -171,5 +172,3 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
         </Card>
     );
 }
-
-    
