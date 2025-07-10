@@ -151,6 +151,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                 maxPondingLevelForSpell: data.ponding ?? 0,
                 totalRainfall: 0,
                 maxRainfall: 0,
+                maxPonding: 0,
             };
             await db.collection('ponding_points').add(pointDataForDb);
         }
@@ -210,7 +211,6 @@ export async function startSpell(cityName: string) {
         pointsSnapshot.forEach(doc => {
             const pointRef = db.collection('ponding_points').doc(doc.id);
             batch.update(pointRef, {
-                // Reset spell-specific data
                 maxRainfallForSpell: 0,
                 maxPondingLevelForSpell: 0,
                 currentSpell: 0,
@@ -225,7 +225,7 @@ export async function startSpell(cityName: string) {
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/report`);
-        return { success: true, message: 'New rain spell started. Existing seasonal totals are preserved.' };
+        return { success: true, message: 'New rain spell started.' };
     } catch (error: any) {
         return { success: false, error: error.message || 'An unknown error occurred.' };
     }
@@ -589,6 +589,3 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }
-
-
-
