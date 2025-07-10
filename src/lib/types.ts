@@ -65,7 +65,7 @@ export interface Spell {
     cityName: string;
     startTime: Date;
     endTime?: Date;
-    status: 'active' | 'completed';
+    status: 'active' | 'completed' | 'ended';
     spellData: {
         pointId: string;
         pointName: string;

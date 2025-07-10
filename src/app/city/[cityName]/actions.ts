@@ -295,7 +295,7 @@ export async function endRainSeason(cityName: string) {
         
         const batch = db.batch();
 
-        // Find and delete all completed spells for the city
+        // Find all completed spells for the city and update their status to "ended"
         const completedSpellsSnapshot = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
@@ -303,7 +303,7 @@ export async function endRainSeason(cityName: string) {
 
         if (!completedSpellsSnapshot.empty) {
             completedSpellsSnapshot.forEach(doc => {
-                batch.delete(doc.ref);
+                batch.update(doc.ref, { status: 'ended' });
             });
         }
         
