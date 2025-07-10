@@ -102,16 +102,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             
             if (docSnap.exists) {
                 const existingData = docSnap.data() as PondingPoint;
-                const oldPonding = existingData.ponding ?? 0;
                 const newPonding = data.ponding ?? 0;
-                const clearedInTime = data.clearedInTime ?? '';
-
-                if (oldPonding > 0 && newPonding === 0 && !clearedInTime) {
-                    return { 
-                        success: false, 
-                        error: "'Cleared In' time is required when ponding is resolved (set to 0)." 
-                    };
-                }
                 
                 const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
                 const maxRainfallForSpell = Math.max(oldMaxRainfall, newRainfallInput);
@@ -128,7 +119,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                     maxRainfallForSpell,
                     ponding: newPonding,
                     maxPondingLevelForSpell,
-                    clearedInTime,
+                    clearedInTime: data.clearedInTime ?? '',
                 };
 
                 await pointRef.update(pointDataForUpdate);
@@ -414,16 +405,7 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
                 continue;
             }
 
-            const oldPonding = existingData.ponding ?? 0;
             const newPonding = pointData.ponding;
-
-            if (oldPonding > 0 && newPonding === 0 && !pointData.clearedInTime) {
-                return { 
-                    success: false, 
-                    error: `'Cleared In' time is required for ${pointData.name} since ponding was resolved.` 
-                };
-            }
-            
             const newRainfallInput = pointData.currentSpell ?? 0;
             
             const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
@@ -589,4 +571,5 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }
+
 

@@ -61,6 +61,9 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     const [isFormOpen, setFormOpen] = useState(false);
     const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
     const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
+    const [isClearanceAlertOpen, setClearanceAlertOpen] = useState(false);
+    const [clearanceAlertMessage, setClearanceAlertMessage] = useState('');
+
 
     const formRef = useRef<HTMLFormElement>(null);
     const addPointFormRef = useRef<HTMLFormElement>(null);
@@ -94,7 +97,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
         }
     }, [cityName, user]);
 
-    const handleBatchUpdateSubmit = (formData: FormData) => {
+    const submitBatchUpdate = (formData: FormData) => {
         startTransition(async () => {
             const result = await batchUpdatePondingPoints(formData, cityName);
             if (result.success) {
@@ -105,6 +108,40 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             }
         });
     };
+    
+    const handleBatchUpdateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        
+        const pointsData = points.map((p, index) => ({
+            id: formData.get(`points[${index}].id`),
+            name: formData.get(`points[${index}].name`),
+            ponding: parseFloat(formData.get(`points[${index}].ponding`) as string || '0'),
+            clearedInTime: formData.get(`points[${index}].clearedInTime`),
+            originalPonding: p.ponding,
+        }));
+
+        const missingClearancePoints = pointsData.filter(p =>
+            (p.originalPonding ?? 0) > 0 && p.ponding === 0 && !p.clearedInTime
+        );
+
+        if (missingClearancePoints.length > 0) {
+            const pointNames = missingClearancePoints.map(p => p.name).join(', ');
+            setClearanceAlertMessage(`Ponding for "${pointNames}" was resolved, but no clearance time was provided. Are you sure you want to proceed?`);
+            setClearanceAlertOpen(true);
+        } else {
+            submitBatchUpdate(formData);
+        }
+    };
+    
+    const handleClearanceConfirm = () => {
+        setClearanceAlertOpen(false);
+        if (formRef.current) {
+            const formData = new FormData(formRef.current);
+            submitBatchUpdate(formData);
+        }
+    };
+
 
     const handleToggleSpell = () => {
         startTransition(async () => {
@@ -193,7 +230,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
             </header>
 
             {points.length > 0 ? (
-                <form action={handleBatchUpdateSubmit} ref={formRef}>
+                <form onSubmit={handleBatchUpdateSubmit} ref={formRef}>
                     <Card>
                         <Table>
                             <TableHeader>
@@ -300,6 +337,21 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogAction onClick={() => setStopSpellBlocked(false)}>OK</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            
+            <AlertDialog open={isClearanceAlertOpen} onOpenChange={setClearanceAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Missing Clearance Time</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {clearanceAlertMessage}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearanceConfirm}>Proceed Anyway</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
