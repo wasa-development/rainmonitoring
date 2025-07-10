@@ -294,6 +294,20 @@ export async function endRainSeason(cityName: string) {
         }
         
         const batch = db.batch();
+
+        // Find and delete all completed spells for the city
+        const completedSpellsSnapshot = await db.collection('spells')
+            .where('cityName', '==', cityName)
+            .where('status', '==', 'completed')
+            .get();
+
+        if (!completedSpellsSnapshot.empty) {
+            completedSpellsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+        }
+        
+        // Reset all ponding point data
         const pointsSnapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
 
         pointsSnapshot.forEach(doc => {
@@ -315,8 +329,10 @@ export async function endRainSeason(cityName: string) {
 
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
         revalidatePath(`/city/${encodeURIComponent(cityName)}/data-entry`);
-        return { success: true, message: `Rain season ended for ${cityName}. All totals have been reset.` };
+        revalidatePath(`/city/${encodeURIComponent(cityName)}/report`);
+        return { success: true, message: `Rain season ended for ${cityName}. All historical and current data has been reset.` };
     } catch (error: any) {
+        console.error("Error during endRainSeason:", error);
         return { success: false, error: error.message || "An unknown server error occurred during season end." };
     }
 }
