@@ -37,18 +37,27 @@ export async function getPondingPoints(cityName: string): Promise<PondingPoint[]
             } as Spell;
         });
 
-        const pondingPoints: PondingPoint[] = pointsSnapshot.docs.map(doc => {
-            const pointData = doc.data() as Omit<PondingPoint, 'id'>;
+        const pointsWithHistory = pointsSnapshot.docs.map(doc => {
+            const pointData = doc.data() as PondingPoint;
             const pointId = doc.id;
             
-            let maxRainfall = 0;
-            // Calculate max rainfall from all completed spells for this specific point
+            const maxRainfall = completedSpells.reduce((max, spell) => {
+                if (spell.spellData) {
+                    const matchedPoint = spell.spellData.find(p => p.pointId === pointId);
+                    if (matchedPoint && typeof matchedPoint.totalRainfall === 'number') {
+                        return Math.max(max, matchedPoint.totalRainfall);
+                    }
+                }
+                return max;
+            }, 0);
+
+            let maxPonding = 0;
             for (const spell of completedSpells) {
                 if (spell.spellData) {
                     for (const spellPointData of spell.spellData) {
                         if (spellPointData.pointId === pointId) {
-                            if (spellPointData.totalRainfall > maxRainfall) {
-                                maxRainfall = spellPointData.totalRainfall;
+                            if ((spellPointData.maxPondingLevel ?? 0) > maxPonding) {
+                                maxPonding = spellPointData.maxPondingLevel;
                             }
                         }
                     }
@@ -58,12 +67,13 @@ export async function getPondingPoints(cityName: string): Promise<PondingPoint[]
             return {
                 id: pointId,
                 ...pointData,
-                maxRainfall: maxRainfall, // Add the calculated max rainfall
-                updatedAt: (pointData.updatedAt as any) ? (pointData.updatedAt as any).toDate() : undefined,
+                maxRainfall,
+                maxPonding,
+                updatedAt: pointData.updatedAt ? (pointData.updatedAt as any).toDate() : undefined,
             } as PondingPoint;
         });
 
-        return pondingPoints;
+        return pointsWithHistory;
 
     } catch (error) {
         console.error("Error fetching ponding points:", error);
