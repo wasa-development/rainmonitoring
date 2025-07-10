@@ -122,9 +122,8 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                     };
                 }
 
-                // Update the current spell total directly, not additively
                 pointDataForDb.currentSpell = newRainfallInput;
-                pointDataForDb.isRaining = newRainfallInput > 0; // It's raining if any new input is given
+                pointDataForDb.isRaining = newRainfallInput > 0;
 
                 const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
                 const maxRainfallForSpell = Math.max(oldMaxRainfall, newRainfallInput);
@@ -145,7 +144,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
             pointDataForDb.isRaining = newRainfallInput > 0;
             pointDataForDb.maxRainfallForSpell = newRainfallInput;
             pointDataForDb.maxPondingLevelForSpell = data.ponding ?? 0;
-            pointDataForDb.totalRainfall = 0; // Initialize total rainfall
+            pointDataForDb.totalRainfall = 0;
             await db.collection('ponding_points').add(pointDataForDb);
         }
         revalidatePath(`/city/${encodeURIComponent(cityName)}`);
@@ -246,7 +245,7 @@ export async function stopSpell(cityName: string) {
         const spellData = pondingPoints.map(point => ({
             pointId: point.id,
             pointName: point.name,
-            totalRainfall: point.maxRainfallForSpell ?? 0, // total for this specific spell is the max value it reached
+            totalRainfall: point.maxRainfallForSpell ?? 0,
             pondingLevel: point.ponding ?? 0,
             maxPondingLevel: point.maxPondingLevelForSpell ?? 0,
             clearedInTime: point.clearedInTime ?? '',
@@ -271,7 +270,6 @@ export async function stopSpell(cityName: string) {
                 currentSpell: 0,
                 isRaining: false,
                 totalRainfall: newTotalRainfall,
-                // Do not reset ponding level
             });
         });
 
@@ -295,7 +293,6 @@ export async function endRainSeason(cityName: string) {
         
         const batch = db.batch();
 
-        // Find all completed spells for the city and update their status to "ended"
         const completedSpellsSnapshot = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
@@ -307,7 +304,6 @@ export async function endRainSeason(cityName: string) {
             });
         }
         
-        // Reset all ponding point data
         const pointsSnapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
 
         pointsSnapshot.forEach(doc => {
@@ -353,7 +349,6 @@ export async function deletePondingPoint(id: string, cityName: string) {
 }
 
 
-// Helper function to parse form data with array-like keys into an array of objects
 function parsePointsFromFormData(formData: FormData) {
     const pointsMap = new Map<string, any>();
     
@@ -374,7 +369,7 @@ function parsePointsFromFormData(formData: FormData) {
 
 const BatchPondingPointSchema = z.object({
   id: z.string().min(1, { message: 'ID is missing.' }),
-  name: z.string(), // for error messages
+  name: z.string(),
   currentSpell: z.coerce.number(),
   clearedInTime: z.string().optional(),
   ponding: z.coerce.number().min(0, { message: 'Ponding value must not be negative.' }),
@@ -385,7 +380,6 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 
     const validationResults = parsedPoints.map(p => BatchPondingPointSchema.safeParse(p));
 
-    // Find the first validation error, if any
     for (let i = 0; i < validationResults.length; i++) {
         const result = validationResults[i];
         if (!result.success) {
@@ -401,7 +395,6 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
         const batch = db.batch();
         const allPointIds = pointsToUpdate.map(p => p.id);
         
-        // Fetch all existing points in one go
         const existingPointsSnapshots = allPointIds.length > 0
             ? await db.collection('ponding_points').where(admin.firestore.FieldPath.documentId(), 'in', allPointIds).get()
             : { docs: [] };
@@ -428,7 +421,6 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
             
             const newRainfallInput = pointData.currentSpell ?? 0;
             
-            // Correctly calculate current spell total and max spell rainfall
             const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
             const maxRainfallForSpell = Math.max(oldMaxRainfall, newRainfallInput);
 
@@ -462,7 +454,6 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 export async function getDailyReportData(cityName: string, dateString: string): Promise<DailyReportData | null> {
     try {
         const reportDate = new Date(dateString);
-        // Set timezone to avoid off-by-one day errors
         reportDate.setMinutes(reportDate.getMinutes() + reportDate.getTimezoneOffset());
         
         const dayStart = new Date(reportDate);
@@ -531,7 +522,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const reportSpells: DailyReportSpellInfo[] = sortedSpells.map(spell => ({
             startTime: spell.startTime,
             endTime: spell.endTime!,
-            status: spell.status,
+            status: spell.status as 'active' | 'completed',
         }));
 
         const allPondingPoints = await getPondingPoints(cityName);
@@ -561,7 +552,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const pointsArray = Array.from(pointDataMap.values());
         const totalRainfallSum = pointsArray.reduce((sum, point) => sum + point.totalRainfall, 0);
         const averageRainfall = pointsArray.length > 0 ? totalRainfallSum / pointsArray.length : 0;
-        const maxTotalRainfall = Math.max(...pointsArray.map(p => p.totalRainfall));
+        const maxTotalRainfall = Math.max(0, ...pointsArray.map(p => p.totalRainfall));
 
         return {
             spells: reportSpells,
