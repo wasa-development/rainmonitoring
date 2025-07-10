@@ -22,21 +22,28 @@ export async function getPondingPoints(cityName: string): Promise<PondingPoint[]
             return [];
         }
 
-        // Fetch all completed spells for the city once to avoid multiple queries
         const spellsSnapshot = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
             .get();
 
-        const spells: Spell[] = spellsSnapshot.docs.map(doc => doc.data() as Spell);
+        const completedSpells: Spell[] = spellsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                startTime: data.startTime.toDate(),
+                endTime: data.endTime ? data.endTime.toDate() : undefined,
+            } as Spell;
+        });
 
         const pondingPoints: PondingPoint[] = pointsSnapshot.docs.map(doc => {
-            const data = doc.data();
+            const pointData = doc.data() as Omit<PondingPoint, 'id'>;
             const pointId = doc.id;
             
             let maxRainfall = 0;
             // Calculate max rainfall from all completed spells for this specific point
-            for (const spell of spells) {
+            for (const spell of completedSpells) {
                 if (spell.spellData) {
                     for (const spellPointData of spell.spellData) {
                         if (spellPointData.pointId === pointId) {
@@ -50,9 +57,9 @@ export async function getPondingPoints(cityName: string): Promise<PondingPoint[]
             
             return {
                 id: pointId,
-                ...data,
+                ...pointData,
                 maxRainfall: maxRainfall, // Add the calculated max rainfall
-                updatedAt: data.updatedAt ? data.updatedAt.toDate() : undefined,
+                updatedAt: (pointData.updatedAt as any) ? (pointData.updatedAt as any).toDate() : undefined,
             } as PondingPoint;
         });
 
@@ -282,6 +289,8 @@ export async function endRainSeason(cityName: string) {
             const pointRef = db.collection('ponding_points').doc(doc.id);
             batch.update(pointRef, {
                 totalRainfall: 0,
+                maxRainfall: 0,
+                maxPonding: 0,
                 maxRainfallForSpell: 0,
                 maxPondingLevelForSpell: 0,
                 currentSpell: 0,

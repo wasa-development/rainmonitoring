@@ -27,6 +27,7 @@ export interface PondingPoint {
     currentSpell: number;
     maxRainfallForSpell?: number;
     maxRainfall?: number; // Highest rainfall recorded in any completed spell
+    maxPonding?: number;
     clearedInTime: string;
     ponding: number;
     maxPondingLevelForSpell?: number;
@@ -91,7 +92,17 @@ export interface DailyReportPointData {
 
 export interface DailyReportData {
     spells: DailyReportSpellInfo[];
-    points: DailyReportPointData[];
-    reportDate: Date;
-    earliestStartTime: Date;
+    points: Array.from(pointDataMap.values()),
+            reportDate: date,
+            earliestStartTime: sortedSpells[0].startTime,
+        };
+
+    } catch (error: any) {
+        console.error("Error fetching daily report data from Firestore:", error.message, error.stack);
+        throw new Error("A database error occurred while fetching the daily report data.");
+    }
 }
+
+
+
+    
