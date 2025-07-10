@@ -26,6 +26,7 @@ export interface PondingPoint {
     cityName: string;
     currentSpell: number;
     maxRainfallForSpell?: number;
+    maxRainfall?: number; // Highest rainfall recorded in any completed spell
     clearedInTime: string;
     ponding: number;
     maxPondingLevelForSpell?: number;

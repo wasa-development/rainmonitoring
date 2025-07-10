@@ -17,18 +17,47 @@ const PondingPointSchema = z.object({
 
 export async function getPondingPoints(cityName: string): Promise<PondingPoint[]> {
     try {
-        const snapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
-        if (snapshot.empty) {
+        const pointsSnapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
+        if (pointsSnapshot.empty) {
             return [];
         }
-        return snapshot.docs.map(doc => {
+
+        // Fetch all completed spells for the city once to avoid multiple queries
+        const spellsSnapshot = await db.collection('spells')
+            .where('cityName', '==', cityName)
+            .where('status', '==', 'completed')
+            .get();
+
+        const spells: Spell[] = spellsSnapshot.docs.map(doc => doc.data() as Spell);
+
+        const pondingPoints: PondingPoint[] = pointsSnapshot.docs.map(doc => {
             const data = doc.data();
+            const pointId = doc.id;
+            
+            let maxRainfall = 0;
+            // Calculate max rainfall from all completed spells for this specific point
+            for (const spell of spells) {
+                if (spell.spellData) {
+                    for (const spellPointData of spell.spellData) {
+                        if (spellPointData.pointId === pointId) {
+                            if (spellPointData.totalRainfall > maxRainfall) {
+                                maxRainfall = spellPointData.totalRainfall;
+                            }
+                        }
+                    }
+                }
+            }
+            
             return {
-                id: doc.id,
+                id: pointId,
                 ...data,
+                maxRainfall: maxRainfall, // Add the calculated max rainfall
                 updatedAt: data.updatedAt ? data.updatedAt.toDate() : undefined,
             } as PondingPoint;
         });
+
+        return pondingPoints;
+
     } catch (error) {
         console.error("Error fetching ponding points:", error);
         return [];
@@ -79,7 +108,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                 // Correctly calculate current spell total and max spell rainfall
                 const currentSpellTotal = (existingData.currentSpell || 0) + newRainfallInput;
                 pointDataForDb.currentSpell = currentSpellTotal;
-                pointDataForDb.isRaining = currentSpellTotal > 0;
+                pointDataForDb.isRaining = newRainfallInput > 0; // It's raining if any new input is given
 
                 const oldMaxRainfall = existingData.maxRainfallForSpell ?? 0;
                 const maxRainfallForSpell = Math.max(oldMaxRainfall, currentSpellTotal);
@@ -165,6 +194,8 @@ export async function startSpell(cityName: string) {
                 isRaining: false,
                 ponding: 0,
                 clearedInTime: '',
+                maxRainfallForSpell: 0,
+                maxPondingLevelForSpell: 0
             });
         });
 
@@ -222,8 +253,8 @@ export async function stopSpell(cityName: string) {
             batch.update(pointRef, { 
                 currentSpell: 0,
                 isRaining: false,
-                totalRainfall: newTotalRainfall
-                // Do NOT reset maxRainfallForSpell or maxPondingLevelForSpell or ponding here
+                totalRainfall: newTotalRainfall,
+                // Do not reset ponding level
             });
         });
 
