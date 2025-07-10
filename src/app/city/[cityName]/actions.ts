@@ -540,7 +540,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 order: point.order,
                 spellRainfall: Array(sortedSpells.length).fill(0),
                 totalRainfall: 0,
-                finalStatus: (point.ponding ?? 0) > 0 ? `${(point.ponding ?? 0).toFixed(1)} in` : 'No Ponding',
+                finalStatus: '', // This will be calculated below
             });
         });
         
@@ -557,6 +557,16 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         });
         
         const pointsArray = Array.from(pointDataMap.values());
+        
+        // Calculate finalStatus after all spells are processed
+        pointsArray.forEach(point => {
+            if (point.totalRainfall > 0) {
+                point.finalStatus = `${point.totalRainfall.toFixed(1)} mm`;
+            } else {
+                point.finalStatus = 'Stopped';
+            }
+        });
+
         const totalRainfallSum = pointsArray.reduce((sum, point) => sum + point.totalRainfall, 0);
         const averageRainfall = pointsArray.length > 0 ? totalRainfallSum / pointsArray.length : 0;
         const maxTotalRainfall = Math.max(0, ...pointsArray.map(p => p.totalRainfall));
@@ -575,3 +585,4 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error("A database error occurred while fetching the daily report data.");
     }
 }
+

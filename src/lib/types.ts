@@ -88,7 +88,7 @@ export interface DailyReportPointData {
     order?: number;
     spellRainfall: number[];
     totalRainfall: number;
-    finalStatus: string;
+    finalStatus: string; // e.g., "5.2 mm" or "Stopped"
 }
 
 export interface DailyReportData {
