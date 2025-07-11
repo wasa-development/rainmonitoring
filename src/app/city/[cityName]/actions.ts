@@ -31,8 +31,8 @@ export async function getActiveRainEvent(cityName: string): Promise<RainEvent | 
         const doc = snapshot.docs[0];
         const data = doc.data();
         return {
-            id: doc.id,
             ...data,
+            id: doc.id,
             startedAt: data.startedAt.toDate(),
             endedAt: data.endedAt ? data.endedAt.toDate() : undefined,
         } as RainEvent;
@@ -56,8 +56,8 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
         const events = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
-                id: doc.id,
                 ...data,
+                id: doc.id,
                 startedAt: data.startedAt?.toDate?.() ?? null,
                 endedAt: data.endedAt?.toDate?.() ?? undefined,
             } as RainEvent;
