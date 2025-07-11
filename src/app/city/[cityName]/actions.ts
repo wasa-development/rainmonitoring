@@ -2,7 +2,7 @@
 'use server';
 
 import { db, admin } from '@/lib/firebase-admin';
-import type { DailyReportData, PondingPoint, Spell, DailyReportSpellInfo, DailyReportPointData } from '@/lib/types';
+import type { DailyReportData, PondingPoint, Spell, DailyReportSpellInfo, DailyReportPointData, SpellPointData } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -260,22 +260,14 @@ export async function stopSpell(cityName: string) {
             
             // Correctly calculate the new totals.
             const spellRainfall = point.maxRainfallForSpell ?? 0;
-            const existingTotalRainfall = point.totalRainfall ?? 0;
-            const newTotalRainfall = existingTotalRainfall + spellRainfall;
+            const existingData = await pointRef.get().then(doc => doc.data() as PondingPoint);
 
-            const spellMaxPonding = point.maxPondingLevelForSpell ?? 0;
-            const existingMaxPonding = point.maxPonding ?? 0;
-            const newMaxPonding = Math.max(existingMaxPonding, spellMaxPonding);
-            
-            const existingMaxRainfall = point.maxRainfall ?? 0;
-            const newMaxRainfall = Math.max(existingMaxRainfall, spellRainfall);
-
+            const newTotalRainfall = (existingData.totalRainfall ?? 0) + spellRainfall;
+            const newMaxRainfall = Math.max(existingData.maxRainfall ?? 0, spellRainfall);
+            const newMaxPonding = Math.max(existingData.maxPonding ?? 0, point.maxPondingLevelForSpell ?? 0);
 
             batch.update(pointRef, { 
-                // Add this spell's rain to the persistent total.
                 totalRainfall: newTotalRainfall,
-
-                // Update seasonal max values.
                 maxRainfall: newMaxRainfall,
                 maxPonding: newMaxPonding,
 
@@ -459,141 +451,125 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 export async function getDailyReportData(cityName: string, dateString: string): Promise<DailyReportData | null> {
     try {
         const reportDate = new Date(dateString);
-        // Set to the beginning of the day in the local timezone of the server.
-        reportDate.setHours(0,0,0,0);
-        
-        const allCompletedSpellsQuery = await db.collection('spells')
-            .where('cityName', '==', cityName)
-            .where('status', '==', 'completed')
-            .orderBy('startTime', 'asc')
-            .get();
+        reportDate.setHours(0, 0, 0, 0);
+        const reportDateEnd = new Date(dateString);
+        reportDateEnd.setHours(23, 59, 59, 999);
 
-        const completedSpellsOnDate: Spell[] = allCompletedSpellsQuery.docs
-            .map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    startTime: data.startTime.toDate(),
-                    endTime: data.endTime?.toDate(),
-                } as Spell;
-            })
-            .filter(spell => {
-                if (!spell.startTime) return false;
-                const spellDate = spell.startTime;
-                // Compare year, month, and day. This is more robust than toDateString() which can have timezone issues.
-                return spellDate.getFullYear() === reportDate.getFullYear() &&
-                       spellDate.getMonth() === reportDate.getMonth() &&
-                       spellDate.getDate() === reportDate.getDate();
+        // Fetch all necessary data upfront
+        const [allPondingPoints, completedSpellsSnapshot, activeSpell] = await Promise.all([
+            getPondingPoints(cityName),
+            db.collection('spells')
+              .where('cityName', '==', cityName)
+              .where('status', '==', 'completed')
+              .where('startTime', '>=', reportDate)
+              .where('startTime', '<=', reportDateEnd)
+              .orderBy('startTime', 'asc')
+              .get(),
+            getActiveSpell(cityName),
+        ]);
+        
+        const allPondingPointsMap = new Map(allPondingPoints.map(p => [p.id, p]));
+
+        const completedSpellsOnDate: Spell[] = completedSpellsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                startTime: data.startTime.toDate(),
+                endTime: data.endTime?.toDate(),
+            } as Spell;
+        });
+
+        const allSpellsForDay: Spell[] = [...completedSpellsOnDate];
+        
+        const isToday = reportDate.toDateString() === new Date().toDateString();
+        if (isToday && activeSpell) {
+            const liveSpellData: SpellPointData[] = allPondingPoints.map(point => ({
+                pointId: point.id,
+                pointName: point.name,
+                order: point.order ?? 9999,
+                totalRainfall: point.maxRainfallForSpell ?? 0,
+                maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
+                pondingLevel: point.ponding ?? 0,
+                clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? '') : 'N/A',
+            }));
+            
+            allSpellsForDay.push({
+                ...activeSpell,
+                endTime: new Date(), // Use current time for "as of"
+                status: 'active',
+                spellData: liveSpellData,
             });
+        }
         
-        const now = new Date();
-        const isToday = reportDate.toDateString() === now.toDateString();
-
-        let activeSpellForDay: Spell | null = null;
-        if (isToday) {
-            const activeSpell = await getActiveSpell(cityName);
-            if (activeSpell) { 
-                const pondingPoints = await getPondingPoints(cityName);
-                const liveSpellData = pondingPoints.map(point => {
-                    const latestPonding = point.ponding ?? 0;
-                    return {
-                        pointId: point.id,
-                        pointName: point.name,
-                        order: point.order ?? 9999,
-                        totalRainfall: point.maxRainfallForSpell ?? 0, // Use max for active spells
-                        maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, latestPonding),
-                        pondingLevel: latestPonding,
-                        clearedInTime: latestPonding === 0 ? point.clearedInTime ?? '' : 'N/A',
-                    };
-                });
-                
-                activeSpellForDay = {
-                    ...activeSpell,
-                    endTime: new Date(), // Use current time for "as of"
-                    status: 'active',
-                    spellData: liveSpellData, // Use the live data we just constructed
-                };
-            }
-        }
-
-        const allSpellsForDay = [...completedSpellsOnDate];
-        if (activeSpellForDay) {
-            allSpellsForDay.push(activeSpellForDay);
-        }
-
         if (allSpellsForDay.length === 0) {
-            return null;
+            return null; // No spells on this day
         }
-        
+
         const sortedSpells = allSpellsForDay.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
         const reportSpells: DailyReportSpellInfo[] = sortedSpells.map(spell => ({
             startTime: spell.startTime,
-            endTime: spell.endTime!, // End time will exist for completed, and is set to now() for active
+            endTime: spell.endTime!,
             status: spell.status as 'active' | 'completed',
         }));
 
-        const allPondingPoints = await getPondingPoints(cityName);
+        // Use a map to aggregate data for each point ID
         const pointDataMap = new Map<string, DailyReportPointData>();
-        
-        // Use a map for ponding points for efficient lookup by ID
-        const allPondingPointsMap = new Map(allPondingPoints.map(p => [p.id, p]));
 
-        allPondingPoints.forEach(point => {
-            pointDataMap.set(point.id, {
+        // Initialize map with all known points to include them even if they had no rain
+        allPondingPointsMap.forEach((point, pointId) => {
+            pointDataMap.set(pointId, {
                 pointName: point.name,
-                order: point.order,
+                order: point.order ?? 9999,
                 spellRainfall: Array(sortedSpells.length).fill(0),
                 totalRainfall: 0,
-                finalStatus: '', // This will be calculated below
+                finalStatus: 'Clear', // Default status
+                lastSpellData: null,
             });
         });
-        
+
+        // Populate map with data from all spells on the selected day
         sortedSpells.forEach((spell, spellIndex) => {
             (spell.spellData || []).forEach(pointSpellData => {
                 const pointId = pointSpellData.pointId;
-                if (pointDataMap.has(pointId)) {
-                    const currentPoint = pointDataMap.get(pointId)!;
-                    const rainfall = pointSpellData.totalRainfall ?? 0;
-                    currentPoint.spellRainfall[spellIndex] = rainfall;
-                    currentPoint.totalRainfall += rainfall;
+
+                // Ensure point exists in the map (handles points from old spells that might be deleted now)
+                if (!pointDataMap.has(pointId)) {
+                     pointDataMap.set(pointId, {
+                        pointName: pointSpellData.pointName, // Use name from spell data as fallback
+                        order: pointSpellData.order ?? 9999,
+                        spellRainfall: Array(sortedSpells.length).fill(0),
+                        totalRainfall: 0,
+                        finalStatus: 'Clear',
+                        lastSpellData: null,
+                    });
                 }
+                
+                const currentPoint = pointDataMap.get(pointId)!;
+                const rainfall = pointSpellData.totalRainfall ?? 0;
+                
+                currentPoint.spellRainfall[spellIndex] = rainfall;
+                currentPoint.totalRainfall += rainfall;
+                currentPoint.lastSpellData = pointSpellData;
             });
+        });
+
+        // Determine final status after processing all spells
+        pointDataMap.forEach(point => {
+            const lastData = point.lastSpellData;
+            if (lastData) {
+                if (lastData.pondingLevel > 0) {
+                    point.finalStatus = `${lastData.pondingLevel.toFixed(1)} in`;
+                } else if (lastData.clearedInTime) {
+                    point.finalStatus = lastData.clearedInTime;
+                } else if (point.totalRainfall > 0) {
+                    point.finalStatus = 'Stopped';
+                }
+            }
         });
         
         const pointsArray = Array.from(pointDataMap.values());
-        
-        // Calculate finalStatus after all spells are processed
-        pointsArray.forEach(point => {
-            const pointDoc = allPondingPoints.find(p => p.name === point.pointName);
-            if (!pointDoc) return;
-
-            let lastRainfall = 0;
-            let lastPonding = 0;
-            let lastClearedTime = '';
-
-            sortedSpells.forEach((spell) => {
-                const spellPointData = spell.spellData.find(p => p.pointId === pointDoc.id);
-                if (spellPointData) {
-                    // Update with the latest data found for this point
-                    lastRainfall = spellPointData.totalRainfall;
-                    lastPonding = spellPointData.pondingLevel;
-                    lastClearedTime = spellPointData.clearedInTime;
-                }
-            });
-            
-            if (lastPonding > 0) {
-                point.finalStatus = `${lastPonding.toFixed(1)} in`;
-            } else if (lastClearedTime) {
-                point.finalStatus = lastClearedTime;
-            } else if (lastRainfall > 0) {
-                point.finalStatus = 'Stopped';
-            } else {
-                point.finalStatus = 'Clear';
-            }
-        });
-
         const totalRainfallSum = pointsArray.reduce((sum, point) => sum + point.totalRainfall, 0);
         const averageRainfall = pointsArray.length > 0 ? totalRainfallSum / pointsArray.length : 0;
         const maxTotalRainfall = Math.max(0, ...pointsArray.map(p => p.totalRainfall));

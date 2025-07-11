@@ -1,5 +1,6 @@
 
 
+
 export type WeatherCondition =
   | 'ClearDay'
   | 'ClearNight'
@@ -60,21 +61,23 @@ export interface UserRequest {
     requestedAt?: Date;
 }
 
+export interface SpellPointData {
+    pointId: string;
+    pointName: string;
+    order?: number;
+    totalRainfall: number;
+    pondingLevel: number;
+    maxPondingLevel: number;
+    clearedInTime: string;
+}
+
 export interface Spell {
     id: string;
     cityName: string;
     startTime: Date;
     endTime?: Date;
     status: 'active' | 'completed' | 'ended';
-    spellData: {
-        pointId: string;
-        pointName: string;
-        order?: number;
-        totalRainfall: number;
-        pondingLevel: number;
-        maxPondingLevel: number;
-        clearedInTime: string;
-    }[];
+    spellData: SpellPointData[];
 }
 
 export interface DailyReportSpellInfo {
@@ -88,7 +91,8 @@ export interface DailyReportPointData {
     order?: number;
     spellRainfall: number[];
     totalRainfall: number;
-    finalStatus: string; // e.g., "5.2 mm" or "Stopped"
+    finalStatus: string;
+    lastSpellData: SpellPointData | null;
 }
 
 export interface DailyReportData {
