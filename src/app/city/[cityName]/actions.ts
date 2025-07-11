@@ -56,8 +56,8 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
         const events = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
-                id: doc.id,
                 ...data,
+                id: doc.id,
                 startedAt: data.startedAt?.toDate?.() ?? null,
                 endedAt: data.endedAt?.toDate?.() ?? undefined,
             } as RainEvent;
@@ -636,6 +636,10 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 status: 'active',
                 spellData: liveSpellData,
             });
+        }
+
+        if (allSpellsForDay.length === 0) {
+            return null;
         }
 
         const earliestStartTime = allSpellsForDay[0].startTime;
