@@ -259,7 +259,6 @@ export async function stopSpell(cityName: string) {
         for (const point of pondingPoints) {
             const pointRef = db.collection('ponding_points').doc(point.id);
             const spellRainfall = point.maxRainfallForSpell ?? 0;
-            const existingTotalRainfall = point.totalRainfall ?? 0;
             
             batch.update(pointRef, { 
                 currentSpell: 0,
