@@ -56,8 +56,8 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
         const events = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
-                ...data,
                 id: doc.id,
+                ...data,
                 startedAt: data.startedAt?.toDate?.() ?? null,
                 endedAt: data.endedAt?.toDate?.() ?? undefined,
             } as RainEvent;
@@ -579,7 +579,8 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 .where('rainEventId', '==', event.id)
                 .where('status', '==', 'completed')
                 .where('startTime', '>=', reportDate)
-                .where('startTime', '<=', reportDateEnd)
+                .where('startTime', '<', reportDateEnd)
+                .orderBy('startTime')
                 .get();
 
             const spells = spellsSnapshot.docs.map(doc => {
@@ -700,7 +701,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
     } catch (error: any) {
         if (error.code === 'failed-precondition' && error.message.includes('index')) {
             const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID;
-            const databaseId = '(default)'; 
+            const databaseId = '(default)';
             const collectionId = 'spells';
 
             // This query URL is specific to the query in this function.
@@ -712,7 +713,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 "fields": JSON.stringify([
                     {"fieldPath": "rainEventId", "mode": "EQUAL"},
                     {"fieldPath": "status", "mode": "EQUAL"},
-                    {"fieldPath": "startTime", "mode": "GREATER_THAN_OR_EQUAL"},
+                    {"fieldPath": "startTime", "mode": "ASCENDING"},
                 ])
             });
 
