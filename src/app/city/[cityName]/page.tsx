@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import PondingPointCard from '@/components/ponding-point-card';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
@@ -43,6 +43,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   
   const [pondingPoints, setPondingPoints] = useState<PondingPoint[]>([]);
   const [maxCurrentSpell, setMaxCurrentSpell] = useState(0);
+  const [maxSpellPointName, setMaxSpellPointName] = useState<string | null>(null);
   
   const [isFormOpen, setFormOpen] = useState(false);
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
@@ -76,9 +77,27 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     
     setIsSpellActive(!!activeSpell);
     
-    const maxCurrent = Math.max(0, ...points.map(p => Math.max(p.maxRainfall ?? 0, p.maxRainfallForSpell ?? 0)));
+    let maxVal = 0;
+    let pointNameWithMaxVal: string | null = null;
+
+    if (points.length > 0) {
+        const pointsWithMax = points.map(p => ({
+            name: p.name,
+            max: Math.max(p.maxRainfall ?? 0, p.maxRainfallForSpell ?? 0)
+        }));
+
+        if (pointsWithMax.length > 0) {
+            const maxPoint = pointsWithMax.reduce((prev, current) => {
+                return (prev.max > current.max) ? prev : current
+            });
+            
+            maxVal = maxPoint.max;
+            pointNameWithMaxVal = maxPoint.max > 0 ? maxPoint.name : null;
+        }
+    }
     
-    setMaxCurrentSpell(maxCurrent);
+    setMaxCurrentSpell(maxVal);
+    setMaxSpellPointName(pointNameWithMaxVal);
   };
   
   useEffect(() => {
@@ -284,11 +303,12 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <Card>
                 <CardHeader className="pb-2">
-                    <h3 className="text-sm font-medium text-muted-foreground">Max Spell (Current)</h3>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Max Spell (Current)</CardTitle>
                     <p className="text-xs text-muted-foreground">Highest recorded rainfall in the current spell across all points.</p>
                 </CardHeader>
                 <CardContent>
                     <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
+                    {maxSpellPointName && <p className="text-sm font-medium text-muted-foreground mt-1">at {maxSpellPointName}</p>}
                 </CardContent>
             </Card>
         </div>
@@ -496,7 +516,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                     <DialogHeader>
                         <DialogTitle>Clearance Time Required</DialogTitle>
                         <DialogDescription>
-                            Ponding was cleared for <span className="font-bold">{editingPoint?.name}</span>. Please provide the clearance time.
+                            Current Ponding was cleared for <span className="font-bold">{editingPoint?.name}</span>. Please provide the clearance time.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
@@ -524,3 +544,5 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     </div>
   );
 }
+
+    
