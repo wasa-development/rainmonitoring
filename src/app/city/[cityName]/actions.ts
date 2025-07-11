@@ -259,16 +259,16 @@ export async function stopSpell(cityName: string) {
         for (const point of pondingPoints) {
             const pointRef = db.collection('ponding_points').doc(point.id);
             const spellRainfall = point.maxRainfallForSpell ?? 0;
+            const existingTotalRainfall = point.totalRainfall ?? 0;
             
+            const newTotalRainfall = existingTotalRainfall + spellRainfall;
+
             batch.update(pointRef, { 
                 currentSpell: 0,
                 isRaining: false,
-                // Add the completed spell's max rainfall to the running seasonal total
-                totalRainfall: admin.firestore.FieldValue.increment(spellRainfall),
+                totalRainfall: newTotalRainfall,
                 maxRainfall: Math.max(point.maxRainfall ?? 0, spellRainfall),
                 maxPonding: Math.max(point.maxPonding ?? 0, (point.maxPondingLevelForSpell ?? 0)),
-                // Do not reset maxRainfallForSpell or maxPondingLevelForSpell here,
-                // let startSpell handle resetting for the next spell.
             });
         }
 
@@ -443,38 +443,40 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 
 export async function getDailyReportData(cityName: string, dateString: string): Promise<DailyReportData | null> {
     try {
-        // The dateString comes from the client as 'yyyy-MM-dd'.
-        // To avoid timezone issues, we'll construct the start and end dates in UTC
-        // and then compare the spell's start time against this range.
-        const reportDate = new Date(dateString + 'T00:00:00Z');
-        const dayStart = new Date(reportDate.getUTCFullYear(), reportDate.getUTCMonth(), reportDate.getUTCDate(), 0, 0, 0, 0);
-        const dayEnd = new Date(reportDate.getUTCFullYear(), reportDate.getUTCMonth(), reportDate.getUTCDate(), 23, 59, 59, 999);
+        const reportDate = new Date(dateString);
+        reportDate.setUTCHours(0,0,0,0);
 
-        // Fetch ALL completed spells for the city. Filtering will happen in code.
+        const dayStart = new Date(reportDate);
+        const dayEnd = new Date(reportDate);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+        
         const allCompletedSpellsQuery = await db.collection('spells')
             .where('cityName', '==', cityName)
             .where('status', '==', 'completed')
+            .orderBy('startTime', 'asc')
             .get();
 
-        // Filter the spells in code to avoid complex timezone-sensitive queries.
         const completedSpellsOnDate: Spell[] = allCompletedSpellsQuery.docs
             .map(doc => {
                 const data = doc.data();
+                const startTimeInCityTimezone = data.startTime.toDate();
                 return {
                     id: doc.id,
                     ...data,
-                    startTime: data.startTime.toDate(),
+                    startTime: startTimeInCityTimezone,
                     endTime: data.endTime.toDate(),
                 } as Spell;
             })
             .filter(spell => {
-                const spellStartTime = spell.startTime;
-                // Check if the spell's start time is within the report day
-                return spellStartTime >= dayStart && spellStartTime <= dayEnd;
+                const spellDate = new Date(spell.startTime);
+                // Compare only year, month, and day, ignoring time
+                return spellDate.getFullYear() === reportDate.getFullYear() &&
+                       spellDate.getMonth() === reportDate.getMonth() &&
+                       spellDate.getDate() === reportDate.getDate();
             });
         
         const now = new Date();
-        const isToday = dayStart.toDateString() === now.toDateString();
+        const isToday = reportDate.toDateString() === now.toDateString();
 
         let activeSpellForDay: Spell | null = null;
         if (isToday) {
