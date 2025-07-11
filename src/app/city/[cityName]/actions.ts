@@ -256,26 +256,22 @@ export async function stopSpell(cityName: string) {
             spellData: spellData
         });
 
-        pondingPoints.forEach(point => {
+        for (const point of pondingPoints) {
             const pointRef = db.collection('ponding_points').doc(point.id);
             const spellRainfall = point.maxRainfallForSpell ?? 0;
             const existingTotalRainfall = point.totalRainfall ?? 0;
-            const newTotalRainfall = existingTotalRainfall + spellRainfall;
-
-            const existingMaxRainfall = point.maxRainfall ?? 0;
-            const newMaxRainfall = Math.max(existingMaxRainfall, spellRainfall);
             
-            const existingMaxPonding = point.maxPonding ?? 0;
-            const newMaxPonding = Math.max(existingMaxPonding, (point.maxPondingLevelForSpell ?? 0));
-
             batch.update(pointRef, { 
                 currentSpell: 0,
                 isRaining: false,
-                totalRainfall: newTotalRainfall,
-                maxRainfall: newMaxRainfall,
-                maxPonding: newMaxPonding,
+                // Add the completed spell's max rainfall to the running seasonal total
+                totalRainfall: admin.firestore.FieldValue.increment(spellRainfall),
+                maxRainfall: Math.max(point.maxRainfall ?? 0, spellRainfall),
+                maxPonding: Math.max(point.maxPonding ?? 0, (point.maxPondingLevelForSpell ?? 0)),
+                // Do not reset maxRainfallForSpell or maxPondingLevelForSpell here,
+                // let startSpell handle resetting for the next spell.
             });
-        });
+        }
 
         await batch.commit();
 
@@ -583,5 +579,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
 
 
 
+
+    
 
     
