@@ -1,6 +1,5 @@
 
 
-
 export type WeatherCondition =
   | 'ClearDay'
   | 'ClearNight'
@@ -25,10 +24,11 @@ export interface PondingPoint {
     id: string;
     name: string;
     cityName: string;
+    rainEventId?: string;
     currentSpell: number;
     maxRainfallForSpell?: number;
-    maxRainfall?: number; // Highest rainfall recorded in any completed spell
-    maxPonding?: number;
+    maxRainfall?: number; // Highest rainfall recorded in any completed spell within the active rain event
+    maxPonding?: number; // Highest ponding recorded in any completed spell within the active rain event
     clearedInTime: string;
     ponding: number;
     maxPondingLevelForSpell?: number;
@@ -74,10 +74,19 @@ export interface SpellPointData {
 export interface Spell {
     id: string;
     cityName: string;
+    rainEventId: string;
     startTime: Date;
     endTime?: Date;
     status: 'active' | 'completed' | 'ended';
     spellData: SpellPointData[];
+}
+
+export interface RainEvent {
+    id: string;
+    cityName: string;
+    status: 'active' | 'ended';
+    startedAt: Date;
+    endedAt?: Date;
 }
 
 export interface DailyReportSpellInfo {

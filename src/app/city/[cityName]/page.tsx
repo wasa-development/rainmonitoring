@@ -24,9 +24,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, CloudOff } from 'lucide-react';
-import type { PondingPoint } from '@/lib/types';
-import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell, endRainSeason } from './actions';
+import { Home, PlusCircle, RefreshCw, PlayCircle, PauseCircle, CloudOff, CloudSun } from 'lucide-react';
+import type { PondingPoint, RainEvent } from '@/lib/types';
+import { getPondingPoints, addOrUpdatePondingPoint, deletePondingPoint, getActiveSpell, startSpell, stopSpell, endRainEvent, getActiveRainEvent, startRainEvent } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
@@ -53,6 +53,8 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   
   const [editingPoint, setEditingPoint] = useState<PondingPoint | null>(null);
   const [pointToDelete, setPointToDelete] = useState<PondingPoint | null>(null);
+  
+  const [activeRainEvent, setActiveRainEvent] = useState<RainEvent | null>(null);
   const [isSpellActive, setIsSpellActive] = useState(false);
   const [isStopSpellBlocked, setStopSpellBlocked] = useState(false);
   
@@ -75,15 +77,18 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   }, []);
 
   const fetchData = async () => {
-    const [points, activeSpell] = await Promise.all([
-      getPondingPoints(cityName),
-      getActiveSpell(cityName)
-    ]);
+    const rainEvent = await getActiveRainEvent(cityName);
+    setActiveRainEvent(rainEvent);
+    
+    let activeSpell = null;
+    if (rainEvent) {
+        activeSpell = await getActiveSpell(rainEvent.id);
+    }
+    setIsSpellActive(!!activeSpell);
 
+    const points = await getPondingPoints(cityName, rainEvent?.id);
     const sortedPoints = points.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.name.localeCompare(b.name));
     setPondingPoints(sortedPoints);
-    
-    setIsSpellActive(!!activeSpell);
     
     let maxVal = 0;
     let pointNameWithMaxVal: string | null = null;
@@ -219,7 +224,20 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     });
   };
 
+  const handleStartRainEvent = () => {
+      startTransition(async () => {
+          const result = await startRainEvent(cityName);
+          if (result.success) {
+              toast({ title: 'Rain Event Started', description: result.message });
+              await fetchData();
+          } else {
+              toast({ variant: 'destructive', title: 'Error', description: result.error });
+          }
+      });
+  };
+
   const handleToggleSpell = () => {
+    if (!activeRainEvent) return;
     startTransition(async () => {
       if (isSpellActive) {
         const hasActiveRain = pondingPoints.some(p => p.isRaining);
@@ -228,14 +246,14 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             return;
         }
 
-        const result = await stopSpell(cityName);
+        const result = await stopSpell(cityName, activeRainEvent.id);
         if (result.success) {
           toast({ title: 'Spell Ended', description: 'Spell data saved and rainfall values reset.' });
         } else {
           toast({ variant: 'destructive', title: 'Error Stopping Spell', description: result.error });
         }
       } else {
-        const result = await startSpell(cityName);
+        const result = await startSpell(cityName, activeRainEvent.id);
         if (result.success) {
           toast({ title: 'Spell Started', description: result.message });
         } else {
@@ -246,11 +264,12 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     });
   };
 
-  const handleEndRainSeasonConfirm = async () => {
+  const handleEndRainEventConfirm = async () => {
+    if (!activeRainEvent) return;
     startTransition(async () => {
-      const result = await endRainSeason(cityName);
+      const result = await endRainEvent(cityName, activeRainEvent.id);
       if (result.success) {
-        toast({ title: 'Rain Season Ended', description: result.message });
+        toast({ title: 'Rain Event Ended', description: result.message });
         await fetchData();
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.error });
@@ -295,18 +314,28 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             <div className="flex items-center gap-2 justify-self-end md:col-span-1">
                 {claims?.role !== 'viewer' && (
                     <>
-                        <Button onClick={handleToggleSpell} disabled={isPending}>
-                            {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
-                            {isSpellActive ? 'Stop Spell' : 'Start Spell'}
-                        </Button>
-                        <Button onClick={handleAddNewClick}>
-                            <PlusCircle className="mr-2" />
-                            Add Point
-                        </Button>
-                         <Button variant="destructive" onClick={() => setIsEndSeasonAlertOpen(true)} disabled={isPending || isSpellActive}>
-                            <CloudOff className="mr-2" />
-                            End Rain
-                        </Button>
+                        {!activeRainEvent && (
+                            <Button onClick={handleStartRainEvent} disabled={isPending}>
+                                <CloudSun className="mr-2" />
+                                Start Rain
+                            </Button>
+                        )}
+                        {activeRainEvent && (
+                            <>
+                                <Button onClick={handleToggleSpell} disabled={isPending}>
+                                    {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
+                                    {isSpellActive ? 'Stop Spell' : 'Start Spell'}
+                                </Button>
+                                <Button onClick={handleAddNewClick} disabled={!isSpellActive}>
+                                    <PlusCircle className="mr-2" />
+                                    Add Point
+                                </Button>
+                                <Button variant="destructive" onClick={() => setIsEndSeasonAlertOpen(true)} disabled={isPending || isSpellActive}>
+                                    <CloudOff className="mr-2" />
+                                    End Rain
+                                </Button>
+                            </>
+                        )}
                     </>
                 )}
             </div>
@@ -315,8 +344,8 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <Card>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Max Spell (Current)</CardTitle>
-                    <p className="text-xs text-muted-foreground">Highest recorded rainfall in the current spell across all points.</p>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Max Spell (Current Event)</CardTitle>
+                    <p className="text-xs text-muted-foreground">Highest recorded rainfall in the current event across all points.</p>
                 </CardHeader>
                 <CardContent>
                     <p className="text-4xl font-bold">{maxCurrentSpell.toFixed(1)} <span className="text-lg font-normal text-muted-foreground">mm</span></p>
@@ -503,19 +532,19 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
         <AlertDialog open={isEndSeasonAlertOpen} onOpenChange={setIsEndSeasonAlertOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>End Rain Season?</AlertDialogTitle>
+                    <AlertDialogTitle>End Rain Event?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will reset all rainfall and ponding data for every point in {cityName} to zero. This action cannot be undone and should be used to mark the beginning of a new rain season.
+                        This will end the current rain event and reset all rainfall and ponding data for every point in {cityName} to zero. This action cannot be undone and should be used to mark the end of a rain event.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                        onClick={handleEndRainSeasonConfirm}
+                        onClick={handleEndRainEventConfirm}
                         className="bg-destructive hover:bg-destructive/90"
                         disabled={isPending}
                     >
-                         {isPending ? 'Resetting...' : 'Yes, End Season'}
+                         {isPending ? 'Resetting...' : 'Yes, End Event'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
