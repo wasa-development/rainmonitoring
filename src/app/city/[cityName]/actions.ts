@@ -56,8 +56,8 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
         const events = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
-                ...data,
                 id: doc.id,
+                ...data,
                 startedAt: data.startedAt?.toDate?.() ?? null,
                 endedAt: data.endedAt?.toDate?.() ?? undefined,
             } as RainEvent;
@@ -557,8 +557,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                         today.getUTCDate() === reportDate.getUTCDate();
 
         // Find rain events that were active during the selected day.
-        // An event is relevant if it started before the end of our report day
-        // AND ended after the start of our report day (or is still active).
         const rainEventsSnapshot = await db.collection('rain_events')
             .where('cityName', '==', cityName)
             .where('startedAt', '<', reportDateEnd)
@@ -579,59 +577,65 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             return event.status === 'active' || (event.endedAt && event.endedAt >= reportDate);
         });
 
-        if (relevantRainEvents.length === 0) {
+        if (relevantRainEvents.length === 0 && !isToday) {
              return null;
         }
         
-        const allCurrentPondingPoints = await getPondingPoints(cityName);
+        const allSpellsForDay: Spell[] = [];
         
-        let completedSpells: Spell[] = [];
-        
-        for (const event of relevantRainEvents) {
-            const spellsSnapshot = await db.collection('spells')
-                .where('rainEventId', '==', event.id)
-                .where('status', '==', 'completed')
-                .where('startTime', '>=', reportDate)
-                .where('startTime', '<', reportDateEnd)
-                .orderBy('startTime')
-                .get();
+        if (relevantRainEvents.length > 0) {
+            let completedSpells: Spell[] = [];
+            for (const event of relevantRainEvents) {
+                const spellsSnapshot = await db.collection('spells')
+                    .where('rainEventId', '==', event.id)
+                    .where('status', '==', 'completed')
+                    .where('startTime', '>=', reportDate)
+                    .where('startTime', '<', reportDateEnd)
+                    .orderBy('startTime')
+                    .get();
 
-            const spells = spellsSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return { id: doc.id, ...data, startTime: data.startTime.toDate(), endTime: data.endTime?.toDate() } as Spell;
-            });
-            completedSpells.push(...spells);
-        }
-        
-        completedSpells.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-        
-        const allSpellsForDay: Spell[] = [...completedSpells];
-        
-        const activeEventForToday = relevantRainEvents.find(e => e.status === 'active');
-        if (isToday && activeEventForToday) {
-            const activeSpell = await getActiveSpell(activeEventForToday.id);
-            if (activeSpell) {
-                const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
-                    pointId: point.id,
-                    pointName: point.name,
-                    order: point.order ?? 9999,
-                    totalRainfall: point.maxRainfallForSpell ?? 0,
-                    maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
-                    pondingLevel: point.ponding ?? 0,
-                    clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
-                }));
-                
-                allSpellsForDay.push({
-                    ...activeSpell,
-                    endTime: new Date(), 
-                    status: 'active',
-                    spellData: liveSpellData,
+                const spells = spellsSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { id: doc.id, ...data, startTime: data.startTime.toDate(), endTime: data.endTime?.toDate() } as Spell;
                 });
+                completedSpells.push(...spells);
+            }
+            completedSpells.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+            allSpellsForDay.push(...completedSpells);
+        }
+
+        let activeSpellForToday: Spell | null = null;
+        
+        if (isToday) {
+            const activeEventForToday = relevantRainEvents.find(e => e.status === 'active') ?? await getActiveRainEvent(cityName);
+            if (activeEventForToday) {
+                activeSpellForToday = await getActiveSpell(activeEventForToday.id);
             }
         }
         
-        if (allSpellsForDay.length === 0) {
+        if (allSpellsForDay.length === 0 && !activeSpellForToday) {
             return null;
+        }
+
+        const allCurrentPondingPoints = await getPondingPoints(cityName);
+
+        if (activeSpellForToday) {
+            const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
+                pointId: point.id,
+                pointName: point.name,
+                order: point.order ?? 9999,
+                totalRainfall: point.maxRainfallForSpell ?? 0,
+                maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
+                pondingLevel: point.ponding ?? 0,
+                clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
+            }));
+            
+            allSpellsForDay.push({
+                ...activeSpellForToday,
+                endTime: new Date(), 
+                status: 'active',
+                spellData: liveSpellData,
+            });
         }
 
         const earliestStartTime = allSpellsForDay[0].startTime;
