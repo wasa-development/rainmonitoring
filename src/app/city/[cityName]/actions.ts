@@ -569,23 +569,29 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             
         if (relevantRainEvents.length === 0) return null;
         
-        const relevantRainEventIds = relevantRainEvents.map(e => e.id);
-
         const allCurrentPondingPoints = await getPondingPoints(cityName);
-
-        const completedSpellsSnapshot = await db.collection('spells')
-            .where('rainEventId', 'in', relevantRainEventIds)
-            .where('status', '==', 'completed')
-            .where('startTime', '>=', reportDate)
-            .where('startTime', '<=', reportDateEnd)
-            .orderBy('startTime', 'asc')
-            .get();
         
-        const completedSpells: Spell[] = completedSpellsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return { id: doc.id, ...data, startTime: data.startTime.toDate(), endTime: data.endTime?.toDate() } as Spell;
-        });
+        let completedSpells: Spell[] = [];
+        
+        // Fetch completed spells for each relevant event individually to avoid complex 'IN' query issues.
+        for (const event of relevantRainEvents) {
+            const spellsSnapshot = await db.collection('spells')
+                .where('rainEventId', '==', event.id)
+                .where('status', '==', 'completed')
+                .where('startTime', '>=', reportDate)
+                .where('startTime', '<=', reportDateEnd)
+                .get();
 
+            const spells = spellsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return { id: doc.id, ...data, startTime: data.startTime.toDate(), endTime: data.endTime?.toDate() } as Spell;
+            });
+            completedSpells.push(...spells);
+        }
+        
+        // Sort all collected spells by start time
+        completedSpells.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        
         const allSpellsForDay: Spell[] = [...completedSpells];
 
         // Only look for an active spell if the report date is today
@@ -704,9 +710,9 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 "databaseId": databaseId,
                 "queryScope": "COLLECTION",
                 "fields": JSON.stringify([
-                    {"fieldPath": "rainEventId", "mode": "ARRAY_CONTAINS"},
+                    {"fieldPath": "rainEventId", "mode": "EQUAL"},
                     {"fieldPath": "status", "mode": "EQUAL"},
-                    {"fieldPath": "startTime", "mode": "ASCENDING"}
+                    {"fieldPath": "startTime", "mode": "GREATER_THAN_OR_EQUAL"},
                 ])
             });
 
