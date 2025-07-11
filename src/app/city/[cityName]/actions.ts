@@ -460,10 +460,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
     try {
         const reportDate = new Date(dateString);
         reportDate.setUTCHours(0,0,0,0);
-
-        const dayStart = new Date(reportDate);
-        const dayEnd = new Date(reportDate);
-        dayEnd.setDate(dayEnd.getDate() + 1);
         
         const allCompletedSpellsQuery = await db.collection('spells')
             .where('cityName', '==', cityName)
@@ -474,17 +470,16 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const completedSpellsOnDate: Spell[] = allCompletedSpellsQuery.docs
             .map(doc => {
                 const data = doc.data();
-                const startTimeInCityTimezone = data.startTime.toDate();
                 return {
                     id: doc.id,
                     ...data,
-                    startTime: startTimeInCityTimezone,
-                    endTime: data.endTime.toDate(),
+                    startTime: data.startTime.toDate(),
+                    endTime: data.endTime?.toDate(),
                 } as Spell;
             })
             .filter(spell => {
+                if (!spell.startTime) return false;
                 const spellDate = new Date(spell.startTime);
-                // Compare only year, month, and day, ignoring time
                 return spellDate.getFullYear() === reportDate.getFullYear() &&
                        spellDate.getMonth() === reportDate.getMonth() &&
                        spellDate.getDate() === reportDate.getDate();
@@ -504,16 +499,16 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                         pointId: point.id,
                         pointName: point.name,
                         order: point.order ?? 9999,
-                        totalRainfall: point.currentSpell ?? 0,
+                        totalRainfall: point.maxRainfallForSpell ?? 0, // Use maxRainfallForSpell for active spells
                         maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, latestPonding),
                         pondingLevel: latestPonding,
-                        clearedInTime: latestPonding === 0 ? point.clearedInTime ?? '' : '',
+                        clearedInTime: latestPonding === 0 ? point.clearedInTime ?? '' : 'N/A',
                     };
                 });
                 
                 activeSpellForDay = {
                     ...activeSpell,
-                    endTime: new Date(),
+                    endTime: new Date(), // Use current time for "as of"
                     status: 'active',
                     spellData,
                 };
@@ -533,7 +528,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
 
         const reportSpells: DailyReportSpellInfo[] = sortedSpells.map(spell => ({
             startTime: spell.startTime,
-            endTime: spell.endTime!,
+            endTime: spell.endTime!, // End time will exist for completed, and is set to now() for active
             status: spell.status as 'active' | 'completed',
         }));
 
@@ -566,9 +561,17 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         
         // Calculate finalStatus after all spells are processed
         pointsArray.forEach(point => {
-            const lastRainfall = point.spellRainfall.length > 0 ? point.spellRainfall[point.spellRainfall.length - 1] : 0;
+            // Check the last spell that affected this point
+            let lastRainfall = 0;
+            for(let i = point.spellRainfall.length - 1; i >= 0; i--) {
+                if(point.spellRainfall[i] > 0) {
+                    lastRainfall = point.spellRainfall[i];
+                    break;
+                }
+            }
+
             if (lastRainfall > 0) {
-                 point.finalStatus = lastRainfall === 0.1 ? 'Trace' : `${lastRainfall.toFixed(1)} mm`;
+                point.finalStatus = lastRainfall === 0.1 ? 'Trace' : `${lastRainfall.toFixed(1)} mm`;
             } else {
                 point.finalStatus = 'Stopped';
             }
@@ -592,16 +595,3 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error("A database error occurred while fetching the daily report data. Please check server logs for details.");
     }
 }
-
-
-
-
-    
-
-    
-
-
-
-    
-
-    
