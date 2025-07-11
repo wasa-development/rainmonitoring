@@ -237,7 +237,6 @@ export async function stopSpell(cityName: string) {
             return { success: false, error: 'Cannot stop spell while rainfall is still being recorded. Set all rain values to 0.' };
         }
 
-
         const spellData = pondingPoints.map(point => ({
             pointId: point.id,
             pointName: point.name,
@@ -260,15 +259,16 @@ export async function stopSpell(cityName: string) {
             const pointRef = db.collection('ponding_points').doc(point.id);
             const spellRainfall = point.maxRainfallForSpell ?? 0;
             const existingTotalRainfall = point.totalRainfall ?? 0;
-            
             const newTotalRainfall = existingTotalRainfall + spellRainfall;
 
             batch.update(pointRef, { 
-                currentSpell: 0,
-                isRaining: false,
                 totalRainfall: newTotalRainfall,
                 maxRainfall: Math.max(point.maxRainfall ?? 0, spellRainfall),
                 maxPonding: Math.max(point.maxPonding ?? 0, (point.maxPondingLevelForSpell ?? 0)),
+                currentSpell: 0,
+                isRaining: false,
+                maxRainfallForSpell: 0,
+                maxPondingLevelForSpell: 0,
             });
         }
 
@@ -584,3 +584,4 @@ export async function getDailyReportData(cityName: string, dateString: string): 
     
 
     
+
