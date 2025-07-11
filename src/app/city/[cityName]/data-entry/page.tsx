@@ -397,13 +397,15 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
 
 function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, onDelete }: { point: PondingPoint, index: number, isSpellActive: boolean, isPending: boolean, userRole?: string, onDelete: (point: PondingPoint) => void }) {
     const [rainValue, setRainValue] = useState((point.currentSpell ?? 0).toString());
+    const [pondingValue, setPondingValue] = useState((point.ponding ?? 0).toString());
     const [clearedInTimeValue, setClearedInTimeValue] = useState(point.clearedInTime || '');
     const isTrace = rainValue === '0.1';
 
     useEffect(() => {
         setRainValue((point.currentSpell ?? 0).toString());
+        setPondingValue((point.ponding ?? 0).toString());
         setClearedInTimeValue(point.clearedInTime || '');
-    }, [point.currentSpell, point.clearedInTime, isSpellActive]);
+    }, [point.currentSpell, point.ponding, point.clearedInTime, isSpellActive]);
 
     const handleTraceChange = (checked: boolean) => {
         setRainValue(checked ? '0.1' : '0');
@@ -411,6 +413,14 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
 
     const handleRainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setRainValue(e.target.value);
+    };
+
+    const handlePondingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        setPondingValue(newValue);
+        if (parseFloat(newValue) > 0) {
+            setClearedInTimeValue('');
+        }
     };
 
     return (
@@ -457,7 +467,8 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                 <Input
                     name={`points[${index}].ponding`}
                     type="number"
-                    defaultValue={point.ponding ?? 0}
+                    value={pondingValue}
+                    onChange={handlePondingChange}
                     step="0.1"
                     min="0"
                     disabled={isPending}
@@ -469,9 +480,10 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                     <Input
                         name={`points[${index}].clearedInTime`}
                         type="text"
-                        defaultValue={point.clearedInTime || ''}
+                        value={clearedInTimeValue}
+                        onChange={(e) => setClearedInTimeValue(e.target.value)}
                         placeholder="e.g., 02:30"
-                        disabled={isPending}
+                        disabled={isPending || parseFloat(pondingValue) > 0}
                         className="w-28"
                     />
                     <Button 
@@ -480,10 +492,13 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                         size="sm"
                         className="text-xs h-8"
                         onClick={(e) => {
-                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                            if (input) input.value = 'Cleared During Rain';
+                             const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                            if (input) {
+                                input.value = 'Cleared During Rain';
+                                setClearedInTimeValue('Cleared During Rain');
+                            }
                         }}
-                        disabled={isPending}>
+                        disabled={isPending || parseFloat(pondingValue) > 0}>
                         During Rain
                     </Button>
                 </div>
@@ -498,5 +513,3 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
         </TableRow>
     );
 }
-
-    

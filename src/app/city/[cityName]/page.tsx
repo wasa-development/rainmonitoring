@@ -234,6 +234,9 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   
   const handlePondingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setCurrentPondingValue(e.target.value);
+      if (parseFloat(e.target.value) > 0) {
+        setCurrentClearedInTime('');
+      }
   };
 
   const handleRainInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -401,13 +404,16 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                     onChange={(e) => setCurrentClearedInTime(e.target.value)}
                                     placeholder="e.g., 02:30"
                                     className="flex-grow"
+                                    disabled={parseFloat(currentPondingValue) > 0}
                                 />
                                 <Button
                                     type="button"
                                     variant="secondary"
                                     size="sm"
                                     className="h-8 text-xs"
-                                    onClick={() => setCurrentClearedInTime('Cleared During Rain')}>
+                                    onClick={() => setCurrentClearedInTime('Cleared During Rain')}
+                                    disabled={parseFloat(currentPondingValue) > 0}
+                                >
                                     During Rain
                                 </Button>
                             </div>
