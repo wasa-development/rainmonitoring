@@ -44,15 +44,11 @@ export async function getActiveRainEvent(cityName: string): Promise<RainEvent | 
 
 export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
     try {
-        const eventsSnapshot = await db.collection('rain_events')
+        const snapshot = await db.collection('rain_events')
             .where('cityName', '==', cityName)
-            .orderBy('startedAt', 'desc')
             .get();
 
-        if (eventsSnapshot.empty) {
-            return [];
-        }
-        return eventsSnapshot.docs.map(doc => {
+        const events = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -61,11 +57,14 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
                 endedAt: data.endedAt ? data.endedAt.toDate() : undefined,
             } as RainEvent;
         });
+
+        return events.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime()); // sort descending manually
     } catch (error) {
         console.error("Error fetching rain events:", error);
         return [];
     }
 }
+
 
 export async function getPondingPoints(cityName: string, activeRainEventId?: string): Promise<PondingPoint[]> {
     try {

@@ -108,9 +108,11 @@ function GeneratedReport({ reportData, cityName }: { reportData: DailyReportData
   );
 }
 
-export default function ReportsPage({ params }: { params: { cityName: string } }) {
-  const { cityName: encodedCityName } = params;
+export default function ReportsPage() {
+  const params = useParams();
+  const encodedCityName = params?.cityName as string;
   const cityName = decodeURIComponent(encodedCityName);
+
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -123,13 +125,13 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-        router.push('/login');
-        return;
+      router.push('/login');
+      return;
     }
-    
+
     getRainEvents(cityName)
-        .then(setRainEvents)
-        .finally(() => setEventsLoading(false));
+      .then(setRainEvents)
+      .finally(() => setEventsLoading(false));
   }, [authLoading, user, cityName, router]);
 
   const handleViewReport = async (reportDate: Date) => {
@@ -141,8 +143,8 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
       if (data) {
         setReportData(data);
         toast({
-            title: "Report Generated",
-            description: `Showing report for ${format(reportDate, 'PPP')}.`,
+          title: "Report Generated",
+          description: `Showing report for ${format(reportDate, 'PPP')}.`,
         });
       } else {
         toast({

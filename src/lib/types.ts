@@ -81,19 +81,22 @@ export interface Spell {
     spellData: SpellPointData[];
 }
 
-export interface RainEvent {
+
+export type RainEvent = {
     id: string;
     cityName: string;
-    status: 'active' | 'ended';
     startedAt: Date;
-    endedAt?: Date;
-}
+    endedAt: Date | null;
+    status: 'active' | 'ended';
+  }
+
 
 export interface DailyReportSpellInfo {
     startTime: Date;
     endTime: Date;
     status: 'active' | 'completed';
 }
+
 
 export interface DailyReportPointData {
     pointName: string;
