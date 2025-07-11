@@ -24,7 +24,7 @@ export async function getActiveOrLatestReportData(cityName: string): Promise<Spe
                 pointId: point.id,
                 pointName: point.name,
                 order: point.order,
-                totalRainfall: point.currentSpell ?? 0,
+                totalRainfall: point.maxRainfallForSpell ?? 0,
                 pondingLevel: point.ponding ?? 0,
                 maxPondingLevel: point.maxPondingLevelForSpell ?? 0,
                 clearedInTime: point.clearedInTime ?? '',
