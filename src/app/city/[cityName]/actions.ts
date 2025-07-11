@@ -455,7 +455,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const reportDateEnd = new Date(dateString);
         reportDateEnd.setHours(23, 59, 59, 999);
 
-        // Fetch all necessary data upfront
         const [allPondingPoints, completedSpellsSnapshot, activeSpell] = await Promise.all([
             getPondingPoints(cityName),
             db.collection('spells')
@@ -496,14 +495,14 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             
             allSpellsForDay.push({
                 ...activeSpell,
-                endTime: new Date(), // Use current time for "as of"
+                endTime: new Date(),
                 status: 'active',
                 spellData: liveSpellData,
             });
         }
         
         if (allSpellsForDay.length === 0) {
-            return null; // No spells on this day
+            return null;
         }
 
         const sortedSpells = allSpellsForDay.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
@@ -514,31 +513,17 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             status: spell.status as 'active' | 'completed',
         }));
 
-        // Use a map to aggregate data for each point ID
         const pointDataMap = new Map<string, DailyReportPointData>();
 
-        // Initialize map with all known points to include them even if they had no rain
-        allPondingPointsMap.forEach((point, pointId) => {
-            pointDataMap.set(pointId, {
-                pointName: point.name,
-                order: point.order ?? 9999,
-                spellRainfall: Array(sortedSpells.length).fill(0),
-                totalRainfall: 0,
-                finalStatus: 'Clear', // Default status
-                lastSpellData: null,
-            });
-        });
-
-        // Populate map with data from all spells on the selected day
         sortedSpells.forEach((spell, spellIndex) => {
             (spell.spellData || []).forEach(pointSpellData => {
                 const pointId = pointSpellData.pointId;
 
-                // Ensure point exists in the map (handles points from old spells that might be deleted now)
                 if (!pointDataMap.has(pointId)) {
+                    const currentPointDetails = allPondingPointsMap.get(pointId);
                      pointDataMap.set(pointId, {
-                        pointName: pointSpellData.pointName, // Use name from spell data as fallback
-                        order: pointSpellData.order ?? 9999,
+                        pointName: pointSpellData.pointName,
+                        order: currentPointDetails?.order ?? pointSpellData.order ?? 9999,
                         spellRainfall: Array(sortedSpells.length).fill(0),
                         totalRainfall: 0,
                         finalStatus: 'Clear',
@@ -554,8 +539,20 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 currentPoint.lastSpellData = pointSpellData;
             });
         });
+        
+        allPondingPointsMap.forEach((point, pointId) => {
+            if (!pointDataMap.has(pointId)) {
+                 pointDataMap.set(pointId, {
+                    pointName: point.name,
+                    order: point.order ?? 9999,
+                    spellRainfall: Array(sortedSpells.length).fill(0),
+                    totalRainfall: 0,
+                    finalStatus: 'Clear',
+                    lastSpellData: null,
+                });
+            }
+        });
 
-        // Determine final status after processing all spells
         pointDataMap.forEach(point => {
             const lastData = point.lastSpellData;
             if (lastData) {
@@ -566,6 +563,8 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 } else if (point.totalRainfall > 0) {
                     point.finalStatus = 'Stopped';
                 }
+            } else if (point.totalRainfall > 0) {
+                 point.finalStatus = 'Stopped';
             }
         });
         
