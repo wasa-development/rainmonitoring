@@ -332,7 +332,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 name="name"
                                 defaultValue={editingPoint?.name || ''}
                                 className="col-span-3"
-                                readOnly={!!editingPoint && claims?.role === 'city-user'}
                                 required
                             />
                         </div>
@@ -509,5 +508,3 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     </div>
   );
 }
-
-    
