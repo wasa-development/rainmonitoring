@@ -56,8 +56,8 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
         const events = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
-                ...data,
                 id: doc.id,
+                ...data,
                 startedAt: data.startedAt?.toDate?.() ?? null,
                 endedAt: data.endedAt?.toDate?.() ?? undefined,
             } as RainEvent;
@@ -547,10 +547,12 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 
 export async function getDailyReportData(cityName: string, dateString: string): Promise<DailyReportData | null> {
     try {
-        const reportDate = new Date(dateString);
-        reportDate.setUTCHours(0, 0, 0, 0); // Start of day in UTC
-        const reportDateEnd = new Date(dateString);
-        reportDateEnd.setUTCHours(23, 59, 59, 999); // End of day in UTC
+        // Fix: Use UTC to avoid timezone issues. The dateString is "yyyy-MM-dd".
+        // new Date('2024-07-11T00:00:00.000Z') ensures it's interpreted as midnight UTC.
+        const reportDate = new Date(`${dateString}T00:00:00.000Z`);
+        const reportDateEnd = new Date(reportDate);
+        reportDateEnd.setUTCDate(reportDate.getUTCDate() + 1);
+        reportDateEnd.setUTCMilliseconds(reportDateEnd.getUTCMilliseconds() - 1);
 
         const today = new Date();
         const isToday = today.getUTCFullYear() === reportDate.getUTCFullYear() &&
@@ -707,3 +709,4 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error(`Firestore error (${error.code}): ${error.message}`);
     }
 }
+
