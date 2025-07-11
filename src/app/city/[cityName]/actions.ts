@@ -257,14 +257,29 @@ export async function stopSpell(cityName: string) {
 
         for (const point of pondingPoints) {
             const pointRef = db.collection('ponding_points').doc(point.id);
+            
+            // Correctly calculate the new totals.
             const spellRainfall = point.maxRainfallForSpell ?? 0;
             const existingTotalRainfall = point.totalRainfall ?? 0;
             const newTotalRainfall = existingTotalRainfall + spellRainfall;
 
+            const spellMaxPonding = point.maxPondingLevelForSpell ?? 0;
+            const existingMaxPonding = point.maxPonding ?? 0;
+            const newMaxPonding = Math.max(existingMaxPonding, spellMaxPonding);
+            
+            const existingMaxRainfall = point.maxRainfall ?? 0;
+            const newMaxRainfall = Math.max(existingMaxRainfall, spellRainfall);
+
+
             batch.update(pointRef, { 
+                // Add this spell's rain to the persistent total.
                 totalRainfall: newTotalRainfall,
-                maxRainfall: Math.max(point.maxRainfall ?? 0, spellRainfall),
-                maxPonding: Math.max(point.maxPonding ?? 0, (point.maxPondingLevelForSpell ?? 0)),
+
+                // Update seasonal max values.
+                maxRainfall: newMaxRainfall,
+                maxPonding: newMaxPonding,
+
+                // Reset spell-specific fields.
                 currentSpell: 0,
                 isRaining: false,
                 maxRainfallForSpell: 0,
@@ -585,3 +600,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
 
     
 
+
+
+    

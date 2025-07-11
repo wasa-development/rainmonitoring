@@ -55,8 +55,9 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
     const displayedMaxSpell = isSpellActive ? (point.maxRainfallForSpell ?? 0) : (point.maxRainfall ?? 0);
     const currentRain = isSpellActive ? (point.currentSpell ?? 0) : 0;
-    const historicalTotalRainfall = point.totalRainfall ?? 0;
-    const displayedTotalRainfall = historicalTotalRainfall + currentRain;
+    
+    // Total Rainfall is the sum of all completed spells (totalRainfall) plus the current active spell's rain.
+    const displayedTotalRainfall = (point.totalRainfall ?? 0) + currentRain;
 
 
     return (
@@ -176,3 +177,5 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
         </Card>
     );
 }
+
+    
