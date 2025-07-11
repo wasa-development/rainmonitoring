@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import PondingPointCard from '@/components/ponding-point-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { format } from 'date-fns';
 
 export default function CityDashboardPage({ params }: { params: { cityName: string } }) {
   const { cityName: encodedCityName } = use(params);
@@ -63,8 +64,15 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
   
   const [isPending, startTransition] = useTransition();
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   const formRef = useRef<HTMLFormElement>(null);
   const clearanceFormRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchData = async () => {
     const [points, activeSpell] = await Promise.all([
@@ -276,11 +284,15 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-        <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-            <h1 className="text-3xl sm:text-4xl font-bold text-primary">
+        <header className="grid grid-cols-1 md:grid-cols-3 items-center mb-8 gap-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-primary md:col-span-1">
                 Ponding Points Dashboard
             </h1>
-            <div className="flex items-center gap-2">
+            <div className="text-center text-lg font-semibold text-muted-foreground md:col-span-1">
+                <p>{format(currentTime, 'eeee, MMMM do, yyyy')}</p>
+                <p>{format(currentTime, 'h:mm:ss a')}</p>
+            </div>
+            <div className="flex items-center gap-2 justify-self-end md:col-span-1">
                 {claims?.role !== 'viewer' && (
                     <>
                         <Button onClick={handleToggleSpell} disabled={isPending}>
@@ -544,5 +556,3 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
     </div>
   );
 }
-
-    
