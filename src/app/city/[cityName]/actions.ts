@@ -459,7 +459,8 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 export async function getDailyReportData(cityName: string, dateString: string): Promise<DailyReportData | null> {
     try {
         const reportDate = new Date(dateString);
-        reportDate.setUTCHours(0,0,0,0);
+        // Set to the beginning of the day in the local timezone of the server.
+        reportDate.setHours(0,0,0,0);
         
         const allCompletedSpellsQuery = await db.collection('spells')
             .where('cityName', '==', cityName)
@@ -479,7 +480,8 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             })
             .filter(spell => {
                 if (!spell.startTime) return false;
-                const spellDate = new Date(spell.startTime);
+                const spellDate = spell.startTime;
+                // Compare year, month, and day. This is more robust than toDateString() which can have timezone issues.
                 return spellDate.getFullYear() === reportDate.getFullYear() &&
                        spellDate.getMonth() === reportDate.getMonth() &&
                        spellDate.getDate() === reportDate.getDate();
@@ -535,6 +537,9 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const allPondingPoints = await getPondingPoints(cityName);
         const pointDataMap = new Map<string, DailyReportPointData>();
         
+        // Use a map for ponding points for efficient lookup by ID
+        const allPondingPointsMap = new Map(allPondingPoints.map(p => [p.id, p]));
+
         allPondingPoints.forEach(point => {
             pointDataMap.set(point.id, {
                 pointName: point.name,
@@ -561,15 +566,18 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         
         // Calculate finalStatus after all spells are processed
         pointsArray.forEach(point => {
-            // Check the last spell that affected this point
+            const pointDoc = allPondingPoints.find(p => p.name === point.pointName);
+            if (!pointDoc) return;
+
             let lastRainfall = 0;
             let lastPonding = 0;
             let lastClearedTime = '';
 
-            sortedSpells.forEach((spell, spellIndex) => {
-                const spellPointData = spell.spellData.find(p => p.pointId === allPondingPoints.find(ap => ap.name === point.pointName)?.id);
+            sortedSpells.forEach((spell) => {
+                const spellPointData = spell.spellData.find(p => p.pointId === pointDoc.id);
                 if (spellPointData) {
-                    lastRainfall = point.spellRainfall[spellIndex];
+                    // Update with the latest data found for this point
+                    lastRainfall = spellPointData.totalRainfall;
                     lastPonding = spellPointData.pondingLevel;
                     lastClearedTime = spellPointData.clearedInTime;
                 }
