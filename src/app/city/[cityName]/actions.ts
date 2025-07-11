@@ -266,6 +266,7 @@ export async function stopSpell(cityName: string) {
                 currentSpell: 0,
                 isRaining: false,
                 totalRainfall: newTotalRainfall,
+                maxRainfall: admin.firestore.FieldValue.increment(spellRainfall),
             });
         });
 
