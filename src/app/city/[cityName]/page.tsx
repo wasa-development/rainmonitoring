@@ -336,6 +336,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 defaultValue={editingPoint?.name || ''}
                                 className="col-span-3"
                                 required
+                                readOnly={claims?.role === 'city-user' && !!editingPoint}
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -381,7 +382,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                             </div>
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="ponding" className="text-right">Ponding (in)</Label>
+                            <Label htmlFor="ponding" className="text-right">Current Ponding (in)</Label>
                             <Input
                                 id="ponding"
                                 name="ponding"

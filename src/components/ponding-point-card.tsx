@@ -131,7 +131,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                         <div className="flex items-center gap-1.5">
                             <AlertTriangle className="h-3.5 w-3.5 text-white/90" />
                             <div>
-                                <p className="text-xs text-white/80">Ponding</p>
+                                <p className="text-xs text-white/80">Current Ponding</p>
                                 <p className="font-semibold text-xs">{(point.ponding ?? 0).toFixed(1)} in</p>
                             </div>
                         </div>
