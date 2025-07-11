@@ -60,9 +60,31 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
         });
 
         return events;
-    } catch (error) {
+    } catch (error: any) {
+        if (error.code === 'failed-precondition' && error.message.includes('index')) {
+            const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID;
+            const databaseId = '(default)';
+            const collectionId = 'rain_events';
+
+            // This query URL is specific to the query in this function.
+            // If the query changes, this URL must be updated.
+            const queryParams = new URLSearchParams({
+                "collectionId": collectionId,
+                "databaseId": databaseId,
+                "queryScope": "COLLECTION",
+                "fields": JSON.stringify([
+                    {"fieldPath": "cityName", "mode": "EQUAL"},
+                    {"fieldPath": "startedAt", "mode": "DESCENDING"}
+                ])
+            });
+            const indexCreationUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes/composite?${queryParams.toString()}`;
+            const userFriendlyError = `The database query for rain events failed because a required index is missing. Please create the index in your Firestore database by visiting this URL, then try again: ${indexCreationUrl}`;
+            
+            console.error("Missing Firestore index for getRainEvents query.");
+            throw new Error(userFriendlyError);
+        }
         console.error("Error fetching rain events:", error);
-        return [];
+        throw new Error("A database error occurred while fetching rain events. Please check server logs.");
     }
 }
 
