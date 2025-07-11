@@ -368,7 +368,6 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                 defaultValue={editingPoint?.name || ''}
                                 className="col-span-3"
                                 required
-                                readOnly={claims?.role === 'city-user' && !!editingPoint}
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
