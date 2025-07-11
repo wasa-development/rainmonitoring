@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, use } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -111,7 +111,7 @@ function GeneratedReport({ reportData, cityName }: { reportData: DailyReportData
 }
 
 export default function ReportsPage({ params }: { params: { cityName: string } }) {
-  const { cityName: encodedCityName } = use(params);
+  const { cityName: encodedCityName } = params;
   const cityName = decodeURIComponent(encodedCityName);
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
