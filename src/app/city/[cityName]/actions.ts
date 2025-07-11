@@ -44,18 +44,29 @@ export async function getActiveRainEvent(cityName: string): Promise<RainEvent | 
 
 export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
     try {
+        console.log(`Fetching rain events for city: ${cityName}`);
+
         const snapshot = await db.collection('rain_events')
             .where('cityName', '==', cityName)
             .orderBy('startedAt', 'desc')
             .get();
 
+        console.log(`Total rain events fetched: ${snapshot.size}`);
+
+        if (snapshot.empty) {
+            console.warn("No rain events found for the given city.");
+            return [];
+        }
+
         const events = snapshot.docs.map(doc => {
             const data = doc.data();
+            console.log(`RainEvent ID: ${doc.id}, Status: ${data.status}, StartedAt: ${data.startedAt}, EndedAt: ${data.endedAt}`);
+
             return {
                 id: doc.id,
                 ...data,
-                startedAt: data.startedAt.toDate(),
-                endedAt: data.endedAt ? data.endedAt.toDate() : undefined,
+                startedAt: data.startedAt?.toDate?.() ?? null,
+                endedAt: data.endedAt?.toDate?.() ?? undefined,
             } as RainEvent;
         });
 
@@ -66,27 +77,27 @@ export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
             const databaseId = '(default)';
             const collectionId = 'rain_events';
 
-            // This query URL is specific to the query in this function.
-            // If the query changes, this URL must be updated.
             const queryParams = new URLSearchParams({
                 "collectionId": collectionId,
                 "databaseId": databaseId,
                 "queryScope": "COLLECTION",
                 "fields": JSON.stringify([
-                    {"fieldPath": "cityName", "mode": "EQUAL"},
-                    {"fieldPath": "startedAt", "mode": "DESCENDING"}
+                    { "fieldPath": "cityName", "mode": "EQUAL" },
+                    { "fieldPath": "startedAt", "mode": "DESCENDING" }
                 ])
             });
             const indexCreationUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes/composite?${queryParams.toString()}`;
-            const userFriendlyError = `The database query for rain events failed because a required index is missing. Please create the index in your Firestore database by visiting this URL, then try again: ${indexCreationUrl}`;
-            
+            const userFriendlyError = `The database query for rain events failed because a required index is missing. Please create the index by visiting: ${indexCreationUrl}`;
+
             console.error("Missing Firestore index for getRainEvents query.");
             throw new Error(userFriendlyError);
         }
+
         console.error("Error fetching rain events:", error);
         throw new Error("A database error occurred while fetching rain events. Please check server logs.");
     }
 }
+
 
 
 export async function getPondingPoints(cityName: string, activeRainEventId?: string): Promise<PondingPoint[]> {
