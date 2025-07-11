@@ -258,14 +258,11 @@ export async function stopSpell(cityName: string) {
         for (const point of pondingPoints) {
             const pointRef = db.collection('ponding_points').doc(point.id);
             
-            // Correctly calculate the new totals.
             const spellRainfall = point.maxRainfallForSpell ?? 0;
-            const existingData = await pointRef.get().then(doc => doc.data() as PondingPoint);
-
-            const newTotalRainfall = (existingData.totalRainfall ?? 0) + spellRainfall;
-            const newMaxRainfall = Math.max(existingData.maxRainfall ?? 0, spellRainfall);
-            const newMaxPonding = Math.max(existingData.maxPonding ?? 0, point.maxPondingLevelForSpell ?? 0);
-
+            const newTotalRainfall = (point.totalRainfall ?? 0) + spellRainfall;
+            const newMaxRainfall = Math.max(point.maxRainfall ?? 0, spellRainfall);
+            const newMaxPonding = Math.max(point.maxPonding ?? 0, point.maxPondingLevelForSpell ?? 0);
+            
             batch.update(pointRef, { 
                 totalRainfall: newTotalRainfall,
                 maxRainfall: newMaxRainfall,
@@ -455,6 +452,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const reportDateEnd = new Date(dateString);
         reportDateEnd.setHours(23, 59, 59, 999);
 
+        // Fetch all data in parallel
         const [allCurrentPondingPoints, completedSpellsSnapshot, activeSpell] = await Promise.all([
             getPondingPoints(cityName),
             db.collection('spells')
@@ -476,11 +474,11 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 endTime: data.endTime?.toDate(),
             } as Spell;
         });
-        
+
         const allSpellsForDay: Spell[] = [...completedSpells];
         
+        // If the report is for today and there's an active spell, add it to the list
         const isToday = reportDate.toDateString() === new Date().toDateString();
-
         if (isToday && activeSpell) {
             const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
                 pointId: point.id,
@@ -489,7 +487,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 totalRainfall: point.maxRainfallForSpell ?? 0,
                 maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
                 pondingLevel: point.ponding ?? 0,
-                clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? '') : 'N/A',
+                clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
             }));
             
             allSpellsForDay.push({
@@ -500,11 +498,15 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             });
         }
         
+        // If no spells at all for the day, return null
         if (allSpellsForDay.length === 0) {
-            return null; // No data for this day.
+            return null;
         }
 
+        // --- Start of robust data aggregation ---
         const sortedSpells = allSpellsForDay.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+        // 1. Get a master list of all points involved today from all sources
         const allPointsMap = new Map<string, {name: string, order: number}>();
         allCurrentPondingPoints.forEach(p => allPointsMap.set(p.id, { name: p.name, order: p.order ?? 9999 }));
         sortedSpells.forEach(spell => {
@@ -515,18 +517,20 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             });
         });
 
+        // 2. Initialize a data grid for every point for every spell
         const pointDataMap = new Map<string, DailyReportPointData>();
         allPointsMap.forEach((pointDetails, pointId) => {
             pointDataMap.set(pointId, {
                 pointName: pointDetails.name,
                 order: pointDetails.order,
-                spellRainfall: Array(sortedSpells.length).fill(0),
+                spellRainfall: Array(sortedSpells.length).fill(0), // Initialize all spells with 0 rain
                 totalRainfall: 0,
                 finalStatus: 'Clear',
                 lastSpellData: null,
             });
         });
 
+        // 3. Populate the grid with actual data
         sortedSpells.forEach((spell, spellIndex) => {
             spell.spellData?.forEach(pointSpellData => {
                 const pointId = pointSpellData.pointId;
@@ -541,12 +545,13 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             });
         });
         
+        // 4. Determine final status based on the last known state of each point
         pointDataMap.forEach(point => {
             const lastData = point.lastSpellData;
             if (lastData) {
                 if (lastData.pondingLevel > 0) {
                     point.finalStatus = `${lastData.pondingLevel.toFixed(1)} in`;
-                } else if (lastData.clearedInTime) {
+                } else if (lastData.clearedInTime && lastData.clearedInTime !== 'N/A') {
                     point.finalStatus = lastData.clearedInTime;
                 } else if (point.totalRainfall > 0) {
                     point.finalStatus = 'Stopped';
@@ -555,6 +560,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                  point.finalStatus = 'Stopped';
             }
         });
+        // --- End of robust data aggregation ---
 
         const reportSpells: DailyReportSpellInfo[] = sortedSpells.map(spell => ({
             startTime: spell.startTime,
