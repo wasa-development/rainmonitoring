@@ -455,7 +455,8 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const reportDateEnd = new Date(dateString);
         reportDateEnd.setHours(23, 59, 59, 999);
 
-        const [allPondingPoints, completedSpellsSnapshot, activeSpell] = await Promise.all([
+        // Fetch all data in parallel
+        const [allCurrentPondingPoints, completedSpellsSnapshot, activeSpell] = await Promise.all([
             getPondingPoints(cityName),
             db.collection('spells')
               .where('cityName', '==', cityName)
@@ -466,10 +467,8 @@ export async function getDailyReportData(cityName: string, dateString: string): 
               .get(),
             getActiveSpell(cityName),
         ]);
-        
-        const allPondingPointsMap = new Map(allPondingPoints.map(p => [p.id, p]));
 
-        const completedSpellsOnDate: Spell[] = completedSpellsSnapshot.docs.map(doc => {
+        const completedSpells: Spell[] = completedSpellsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -478,12 +477,13 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 endTime: data.endTime?.toDate(),
             } as Spell;
         });
-
-        const allSpellsForDay: Spell[] = [...completedSpellsOnDate];
+        
+        const allSpellsForDay: Spell[] = [...completedSpells];
         
         const isToday = reportDate.toDateString() === new Date().toDateString();
+
         if (isToday && activeSpell) {
-            const liveSpellData: SpellPointData[] = allPondingPoints.map(point => ({
+            const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
                 pointId: point.id,
                 pointName: point.name,
                 order: point.order ?? 9999,
@@ -502,57 +502,54 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         }
         
         if (allSpellsForDay.length === 0) {
-            return null;
+            return null; // No data for this day.
         }
 
         const sortedSpells = allSpellsForDay.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-        const reportSpells: DailyReportSpellInfo[] = sortedSpells.map(spell => ({
-            startTime: spell.startTime,
-            endTime: spell.endTime!,
-            status: spell.status as 'active' | 'completed',
-        }));
+        // --- Start of rewritten logic ---
 
-        const pointDataMap = new Map<string, DailyReportPointData>();
-
-        sortedSpells.forEach((spell, spellIndex) => {
-            (spell.spellData || []).forEach(pointSpellData => {
-                const pointId = pointSpellData.pointId;
-
-                if (!pointDataMap.has(pointId)) {
-                    const currentPointDetails = allPondingPointsMap.get(pointId);
-                     pointDataMap.set(pointId, {
-                        pointName: pointSpellData.pointName,
-                        order: currentPointDetails?.order ?? pointSpellData.order ?? 9999,
-                        spellRainfall: Array(sortedSpells.length).fill(0),
-                        totalRainfall: 0,
-                        finalStatus: 'Clear',
-                        lastSpellData: null,
-                    });
+        // 1. Get a master list of all points involved today and their latest details.
+        const allPointsMap = new Map<string, {name: string, order: number}>();
+        allCurrentPondingPoints.forEach(p => allPointsMap.set(p.id, { name: p.name, order: p.order ?? 9999 }));
+        sortedSpells.forEach(spell => {
+            spell.spellData?.forEach(p => {
+                if (!allPointsMap.has(p.pointId)) {
+                    allPointsMap.set(p.pointId, { name: p.pointName, order: p.order ?? 9999 });
                 }
+            });
+        });
+
+        // 2. Initialize the report data structure for every point for every spell.
+        const pointDataMap = new Map<string, DailyReportPointData>();
+        allPointsMap.forEach((pointDetails, pointId) => {
+            pointDataMap.set(pointId, {
+                pointName: pointDetails.name,
+                order: pointDetails.order,
+                spellRainfall: Array(sortedSpells.length).fill(0),
+                totalRainfall: 0,
+                finalStatus: 'Clear',
+                lastSpellData: null,
+            });
+        });
+
+        // 3. Populate the structure with actual data from each spell.
+        sortedSpells.forEach((spell, spellIndex) => {
+            spell.spellData?.forEach(pointSpellData => {
+                const pointId = pointSpellData.pointId;
+                const currentPoint = pointDataMap.get(pointId);
                 
-                const currentPoint = pointDataMap.get(pointId)!;
-                const rainfall = pointSpellData.totalRainfall ?? 0;
-                
-                currentPoint.spellRainfall[spellIndex] = rainfall;
-                currentPoint.totalRainfall += rainfall;
-                currentPoint.lastSpellData = pointSpellData;
+                // This check handles points that might have been deleted but exist in old spell data.
+                if (currentPoint) {
+                    const rainfall = pointSpellData.totalRainfall ?? 0;
+                    currentPoint.spellRainfall[spellIndex] = rainfall;
+                    currentPoint.totalRainfall += rainfall;
+                    currentPoint.lastSpellData = pointSpellData;
+                }
             });
         });
         
-        allPondingPointsMap.forEach((point, pointId) => {
-            if (!pointDataMap.has(pointId)) {
-                 pointDataMap.set(pointId, {
-                    pointName: point.name,
-                    order: point.order ?? 9999,
-                    spellRainfall: Array(sortedSpells.length).fill(0),
-                    totalRainfall: 0,
-                    finalStatus: 'Clear',
-                    lastSpellData: null,
-                });
-            }
-        });
-
+        // 4. Determine final status for each point.
         pointDataMap.forEach(point => {
             const lastData = point.lastSpellData;
             if (lastData) {
@@ -567,7 +564,15 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                  point.finalStatus = 'Stopped';
             }
         });
+
+        // --- End of rewritten logic ---
         
+        const reportSpells: DailyReportSpellInfo[] = sortedSpells.map(spell => ({
+            startTime: spell.startTime,
+            endTime: spell.endTime!, // End time is guaranteed for completed, and set to new Date() for active
+            status: spell.status as 'active' | 'completed',
+        }));
+
         const pointsArray = Array.from(pointDataMap.values());
         const totalRainfallSum = pointsArray.reduce((sum, point) => sum + point.totalRainfall, 0);
         const averageRainfall = pointsArray.length > 0 ? totalRainfallSum / pointsArray.length : 0;
