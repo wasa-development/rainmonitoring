@@ -493,13 +493,13 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             const activeSpell = await getActiveSpell(cityName);
             if (activeSpell) { 
                 const pondingPoints = await getPondingPoints(cityName);
-                const spellData = pondingPoints.map(point => {
+                const liveSpellData = pondingPoints.map(point => {
                     const latestPonding = point.ponding ?? 0;
                     return {
                         pointId: point.id,
                         pointName: point.name,
                         order: point.order ?? 9999,
-                        totalRainfall: point.maxRainfallForSpell ?? 0, // Use maxRainfallForSpell for active spells
+                        totalRainfall: point.maxRainfallForSpell ?? 0, // Use max for active spells
                         maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, latestPonding),
                         pondingLevel: latestPonding,
                         clearedInTime: latestPonding === 0 ? point.clearedInTime ?? '' : 'N/A',
@@ -510,7 +510,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                     ...activeSpell,
                     endTime: new Date(), // Use current time for "as of"
                     status: 'active',
-                    spellData,
+                    spellData: liveSpellData, // Use the live data we just constructed
                 };
             }
         }
@@ -563,17 +563,26 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         pointsArray.forEach(point => {
             // Check the last spell that affected this point
             let lastRainfall = 0;
-            for(let i = point.spellRainfall.length - 1; i >= 0; i--) {
-                if(point.spellRainfall[i] > 0) {
-                    lastRainfall = point.spellRainfall[i];
-                    break;
-                }
-            }
+            let lastPonding = 0;
+            let lastClearedTime = '';
 
-            if (lastRainfall > 0) {
-                point.finalStatus = lastRainfall === 0.1 ? 'Trace' : `${lastRainfall.toFixed(1)} mm`;
-            } else {
+            sortedSpells.forEach((spell, spellIndex) => {
+                const spellPointData = spell.spellData.find(p => p.pointId === allPondingPoints.find(ap => ap.name === point.pointName)?.id);
+                if (spellPointData) {
+                    lastRainfall = point.spellRainfall[spellIndex];
+                    lastPonding = spellPointData.pondingLevel;
+                    lastClearedTime = spellPointData.clearedInTime;
+                }
+            });
+            
+            if (lastPonding > 0) {
+                point.finalStatus = `${lastPonding.toFixed(1)} in`;
+            } else if (lastClearedTime) {
+                point.finalStatus = lastClearedTime;
+            } else if (lastRainfall > 0) {
                 point.finalStatus = 'Stopped';
+            } else {
+                point.finalStatus = 'Clear';
             }
         });
 
