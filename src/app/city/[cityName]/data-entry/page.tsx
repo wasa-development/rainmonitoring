@@ -39,7 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
-import { Home, PlayCircle, PauseCircle, RefreshCw, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { Home, PlayCircle, PauseCircle, RefreshCw, PlusCircle, Trash2, ArrowLeft, CloudOff } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 export default function DataEntryPage({ params }: { params: { cityName: string } }) {
@@ -419,7 +419,7 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                 {point.name}
             </TableCell>
             <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <Input
                         name={`points[${index}].currentSpell`}
                         type="number"
@@ -439,6 +439,16 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                         />
                         <Label htmlFor={`trace-${point.id}`} className="text-sm font-normal">Trace</Label>
                     </div>
+                    <Button 
+                        type="button" 
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => setRainValue('0')}
+                        disabled={!isSpellActive || isPending}>
+                        <CloudOff className="mr-1 h-3 w-3"/>
+                        Stop Rain
+                    </Button>
                 </div>
             </TableCell>
             <TableCell>
@@ -486,7 +496,3 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
         </TableRow>
     );
 }
-
-    
-
-    
