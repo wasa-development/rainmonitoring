@@ -53,9 +53,8 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
     }
     
     const waveHeightPercentage = Math.min(40, 5 + (point.ponding || 0) * 4);
-    const displayedMaxSpell = Math.max(point.maxRainfall ?? 0, point.maxRainfallForSpell ?? 0);
-    const totalRainForSeason = (point.totalRainfall ?? 0) + (isSpellActive ? 0 : (point.maxRainfallForSpell ?? 0));
-    const currentRain = point.currentSpell ?? 0;
+    const displayedMaxSpell = isSpellActive ? (point.maxRainfallForSpell ?? 0) : (point.maxRainfall ?? 0);
+    const currentRain = isSpellActive ? (point.currentSpell ?? 0) : 0;
     const displayedTotalRainfall = (point.totalRainfall ?? 0) + currentRain;
 
 

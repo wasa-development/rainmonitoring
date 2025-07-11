@@ -262,11 +262,18 @@ export async function stopSpell(cityName: string) {
             const existingTotalRainfall = point.totalRainfall ?? 0;
             const newTotalRainfall = existingTotalRainfall + spellRainfall;
 
+            const existingMaxRainfall = point.maxRainfall ?? 0;
+            const newMaxRainfall = Math.max(existingMaxRainfall, spellRainfall);
+            
+            const existingMaxPonding = point.maxPonding ?? 0;
+            const newMaxPonding = Math.max(existingMaxPonding, (point.maxPondingLevelForSpell ?? 0));
+
             batch.update(pointRef, { 
                 currentSpell: 0,
                 isRaining: false,
                 totalRainfall: newTotalRainfall,
-                maxRainfall: admin.firestore.FieldValue.increment(spellRainfall),
+                maxRainfall: newMaxRainfall,
+                maxPonding: newMaxPonding,
             });
         });
 
