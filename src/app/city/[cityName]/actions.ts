@@ -552,7 +552,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const reportDate = new Date(`${dateString}T00:00:00.000Z`);
         const reportDateEnd = new Date(reportDate);
         reportDateEnd.setUTCDate(reportDate.getUTCDate() + 1);
-        reportDateEnd.setUTCMilliseconds(reportDateEnd.getUTCMilliseconds() - 1);
 
         const today = new Date();
         const isToday = today.getUTCFullYear() === reportDate.getUTCFullYear() &&
@@ -562,13 +561,19 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         // Find rain events that were active during the selected day
         const rainEventsSnapshot = await db.collection('rain_events')
             .where('cityName', '==', cityName)
-            .where('startedAt', '<=', reportDateEnd)
+            .where('startedAt', '<', reportDateEnd)
+            .where('status', '==', 'ended')
             .get();
         
         const relevantRainEvents = rainEventsSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data(), startedAt: (doc.data().startedAt as admin.firestore.Timestamp).toDate() } as RainEvent))
-            .filter(event => !event.endedAt || new Date(event.endedAt) >= reportDate);
+            .map(doc => ({ id: doc.id, ...doc.data(), startedAt: (doc.data().startedAt as admin.firestore.Timestamp).toDate(), endedAt: (doc.data().endedAt as admin.firestore.Timestamp).toDate() } as RainEvent))
+            .filter(event => event.endedAt >= reportDate);
             
+        const activeEvent = await getActiveRainEvent(cityName);
+        if (activeEvent) {
+            relevantRainEvents.push(activeEvent);
+        }
+
         if (relevantRainEvents.length === 0) return null;
         
         const allCurrentPondingPoints = await getPondingPoints(cityName);
@@ -581,7 +586,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 .where('rainEventId', '==', event.id)
                 .where('status', '==', 'completed')
                 .where('startTime', '>=', reportDate)
-                .where('startTime', '<=', reportDateEnd)
+                .where('startTime', '<', reportDateEnd)
                 .orderBy('startTime')
                 .get();
 
@@ -598,28 +603,25 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const allSpellsForDay: Spell[] = [...completedSpells];
 
         // Only look for an active spell if the report date is today
-        if (isToday) {
-            const activeRainEvent = await getActiveRainEvent(cityName);
-            if (activeRainEvent) {
-                const activeSpell = await getActiveSpell(activeRainEvent.id);
-                if (activeSpell) {
-                    const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
-                        pointId: point.id,
-                        pointName: point.name,
-                        order: point.order ?? 9999,
-                        totalRainfall: point.maxRainfallForSpell ?? 0,
-                        maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
-                        pondingLevel: point.ponding ?? 0,
-                        clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
-                    }));
-                    
-                    allSpellsForDay.push({
-                        ...activeSpell,
-                        endTime: new Date(), 
-                        status: 'active',
-                        spellData: liveSpellData,
-                    });
-                }
+        if (isToday && activeEvent) {
+            const activeSpell = await getActiveSpell(activeEvent.id);
+            if (activeSpell) {
+                const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
+                    pointId: point.id,
+                    pointName: point.name,
+                    order: point.order ?? 9999,
+                    totalRainfall: point.maxRainfallForSpell ?? 0,
+                    maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
+                    pondingLevel: point.ponding ?? 0,
+                    clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
+                }));
+                
+                allSpellsForDay.push({
+                    ...activeSpell,
+                    endTime: new Date(), 
+                    status: 'active',
+                    spellData: liveSpellData,
+                });
             }
         }
         
@@ -709,4 +711,3 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         throw new Error(`Firestore error (${error.code}): ${error.message}`);
     }
 }
-
