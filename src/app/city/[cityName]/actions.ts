@@ -579,7 +579,7 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                 .where('rainEventId', '==', event.id)
                 .where('status', '==', 'completed')
                 .where('startTime', '>=', reportDate)
-                .where('startTime', '<', reportDateEnd)
+                .where('startTime', '<=', reportDateEnd)
                 .orderBy('startTime')
                 .get();
 
@@ -699,35 +699,11 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         };
 
     } catch (error: any) {
-        if (error.code === 'failed-precondition' && error.message.includes('index')) {
-            const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID;
-            const databaseId = '(default)';
-            const collectionId = 'spells';
-
-            // This query URL is specific to the query in this function.
-            // If the query changes, this URL must be updated.
-            const queryParams = new URLSearchParams({
-                "collectionId": collectionId,
-                "databaseId": databaseId,
-                "queryScope": "COLLECTION",
-                "fields": JSON.stringify([
-                    {"fieldPath": "rainEventId", "mode": "EQUAL"},
-                    {"fieldPath": "status", "mode": "EQUAL"},
-                    {"fieldPath": "startTime", "mode": "ASCENDING"},
-                ])
-            });
-
-            const indexCreationUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes/composite?${queryParams.toString()}`;
-
-            const userFriendlyError = `The database query for the report failed because a required index is missing. Please create the index in your Firestore database by visiting this URL, then try again: ${indexCreationUrl}`;
-            
-            console.error("Missing Firestore index for getDailyReportData query.");
-            throw new Error(userFriendlyError);
-        }
-
-        console.error("CRITICAL ERROR in getDailyReportData for city", cityName, "on date", dateString);
-        console.error("Error Message:", error.message);
-        console.error("Error Stack:", error.stack);
-        throw new Error("A database error occurred while fetching the daily report data. Please check server logs for details.");
+        console.error("🔥 FIRESTORE QUERY FAILED", {
+            code: error.code,
+            message: error.message,
+            stack: error.stack,
+        });
+        throw new Error(`Firestore error (${error.code}): ${error.message}`);
     }
 }
