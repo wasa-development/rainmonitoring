@@ -56,8 +56,8 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
     const displayedMaxSpell = isSpellActive ? (point.maxRainfallForSpell ?? 0) : (point.maxRainfall ?? 0);
     const currentRain = isSpellActive ? (point.currentSpell ?? 0) : 0;
     
-    // Total Rainfall is the sum of all completed spells (totalRainfall) plus the current active spell's rain.
-    const displayedTotalRainfall = (point.totalRainfall ?? 0) + currentRain;
+    // Total Rainfall is the sum of all completed spells (totalRainfall) plus the current active spell's rain (maxRainfallForSpell).
+    const displayedTotalRainfall = (point.totalRainfall ?? 0) + (isSpellActive ? (point.maxRainfallForSpell ?? 0) : 0);
 
 
     return (
@@ -116,7 +116,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                             <Droplets className="h-3.5 w-3.5 text-white/90" />
                             <div>
                                 <p className="text-xs text-white/80">Current Rain</p>
-                                <p className="font-semibold text-xs">{point.currentSpell === 0.1 ? 'Trace' : `${(point.currentSpell ?? 0).toFixed(1)} mm`}</p>
+                                <p className="font-semibold text-xs">{currentRain === 0.1 ? 'Trace' : `${currentRain.toFixed(1)} mm`}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -177,5 +177,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
         </Card>
     );
 }
+
+    
 
     
