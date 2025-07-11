@@ -150,12 +150,14 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
         // Use a short timeout to allow state to update before re-submitting
         setTimeout(() => {
             if (formRef.current) {
-                const mainFormData = new FormData(formRef.current);
-                handleBatchUpdateSubmit({
-                    ...new Event('submit'),
-                    currentTarget: formRef.current,
+                // We create a new "submit" event to pass to the handler.
+                // This feels a bit like a hack, but it's a clean way to re-trigger our validation logic.
+                const fakeEvent = {
                     preventDefault: () => {},
-                } as unknown as React.FormEvent<HTMLFormElement>);
+                    currentTarget: formRef.current,
+                } as unknown as React.FormEvent<HTMLFormElement>;
+                
+                handleBatchUpdateSubmit(fakeEvent);
             }
         }, 50);
     };
@@ -164,7 +166,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
     const handleToggleSpell = () => {
         startTransition(async () => {
           if (isSpellActive) {
-            const hasActiveRain = points.some(p => p.currentSpell > 0);
+            const hasActiveRain = points.some(p => (p.currentSpell ?? 0) > 0);
             if (hasActiveRain) {
                 setStopSpellBlocked(true);
                 return;
@@ -496,3 +498,5 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
         </TableRow>
     );
 }
+
+    
