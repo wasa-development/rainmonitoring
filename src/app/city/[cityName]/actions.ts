@@ -44,24 +44,17 @@ export async function getActiveRainEvent(cityName: string): Promise<RainEvent | 
 
 export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
     try {
-        console.log(`Fetching rain events for city: ${cityName}`);
-
         const snapshot = await db.collection('rain_events')
             .where('cityName', '==', cityName)
             .orderBy('startedAt', 'desc')
             .get();
 
-        console.log(`Total rain events fetched: ${snapshot.size}`);
-
         if (snapshot.empty) {
-            console.warn("No rain events found for the given city.");
             return [];
         }
 
         const events = snapshot.docs.map(doc => {
             const data = doc.data();
-            console.log(`RainEvent ID: ${doc.id}, Status: ${data.status}, StartedAt: ${data.startedAt}, EndedAt: ${data.endedAt}`);
-
             return {
                 id: doc.id,
                 ...data,
