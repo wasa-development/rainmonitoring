@@ -350,7 +350,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         {isSpellActive && (
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
-                                <div className="col-span-3 flex items-center gap-2">
+                                <div className="col-span-3 flex items-center flex-wrap gap-2">
                                     <Input
                                         id="currentSpell"
                                         name="currentSpell"
@@ -365,6 +365,15 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                                         <Checkbox id="trace-checkbox" checked={isTrace} onCheckedChange={handleTraceChange} />
                                         <Label htmlFor="trace-checkbox" className="font-normal">Trace</Label>
                                     </div>
+                                     <Button 
+                                        type="button" 
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-xs h-8"
+                                        onClick={() => setCurrentRainValue('0')}>
+                                        <CloudOff className="mr-1 h-3 w-3"/>
+                                        Stop Rain
+                                    </Button>
                                 </div>
                             </div>
                         )}
