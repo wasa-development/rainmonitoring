@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useMemo } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -29,7 +29,7 @@ export default function CityLayout({
   children: React.ReactNode;
   params: { cityName: string };
 }) {
-  const { cityName: encodedCityName } = use(params);
+  const { cityName: encodedCityName } = params;
   const cityName = decodeURIComponent(encodedCityName);
   const pathname = usePathname();
   const { user, claims, loading: authLoading, signOut } = useAuth();

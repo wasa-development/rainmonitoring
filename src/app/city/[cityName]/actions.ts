@@ -42,6 +42,31 @@ export async function getActiveRainEvent(cityName: string): Promise<RainEvent | 
     }
 }
 
+export async function getRainEvents(cityName: string): Promise<RainEvent[]> {
+    try {
+        const eventsSnapshot = await db.collection('rain_events')
+            .where('cityName', '==', cityName)
+            .orderBy('startedAt', 'desc')
+            .get();
+
+        if (eventsSnapshot.empty) {
+            return [];
+        }
+        return eventsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                startedAt: data.startedAt.toDate(),
+                endedAt: data.endedAt ? data.endedAt.toDate() : undefined,
+            } as RainEvent;
+        });
+    } catch (error) {
+        console.error("Error fetching rain events:", error);
+        return [];
+    }
+}
+
 export async function getPondingPoints(cityName: string, activeRainEventId?: string): Promise<PondingPoint[]> {
     try {
         const pointsSnapshot = await db.collection('ponding_points').where('cityName', '==', cityName).get();
@@ -506,8 +531,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
                         today.getUTCMonth() === reportDate.getUTCMonth() &&
                         today.getUTCDate() === reportDate.getUTCDate();
 
-        const allSpellsForDay: Spell[] = [];
-        
         // Find rain events that were active during the selected day
         const rainEventsSnapshot = await db.collection('rain_events')
             .where('cityName', '==', cityName)
@@ -515,58 +538,61 @@ export async function getDailyReportData(cityName: string, dateString: string): 
             .get();
         
         const relevantRainEvents = rainEventsSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as RainEvent))
+            .map(doc => ({ id: doc.id, ...doc.data(), startedAt: (doc.data().startedAt as admin.firestore.Timestamp).toDate() } as RainEvent))
             .filter(event => !event.endedAt || new Date(event.endedAt) >= reportDate);
             
         if (relevantRainEvents.length === 0) return null;
         
         const relevantRainEventIds = relevantRainEvents.map(e => e.id);
 
-        const [allCurrentPondingPoints, completedSpellsSnapshot, activeRainEvent] = await Promise.all([
-            getPondingPoints(cityName),
-            db.collection('spells')
-              .where('rainEventId', 'in', relevantRainEventIds)
-              .where('status', '==', 'completed')
-              .where('startTime', '>=', reportDate)
-              .where('startTime', '<=', reportDateEnd)
-              .orderBy('startTime', 'asc')
-              .get(),
-            isToday ? getActiveRainEvent(cityName) : Promise.resolve(null),
-        ]);
+        const allCurrentPondingPoints = await getPondingPoints(cityName);
+
+        const completedSpellsSnapshot = await db.collection('spells')
+            .where('rainEventId', 'in', relevantRainEventIds)
+            .where('status', '==', 'completed')
+            .where('startTime', '>=', reportDate)
+            .where('startTime', '<=', reportDateEnd)
+            .orderBy('startTime', 'asc')
+            .get();
         
         const completedSpells: Spell[] = completedSpellsSnapshot.docs.map(doc => {
             const data = doc.data();
             return { id: doc.id, ...data, startTime: data.startTime.toDate(), endTime: data.endTime?.toDate() } as Spell;
         });
-        allSpellsForDay.push(...completedSpells);
 
-        let activeSpell: Spell | null = null;
-        if (activeRainEvent) {
-            activeSpell = await getActiveSpell(activeRainEvent.id);
-        }
+        const allSpellsForDay: Spell[] = [...completedSpells];
 
-        if (activeSpell) {
-            const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
-                pointId: point.id,
-                pointName: point.name,
-                order: point.order ?? 9999,
-                totalRainfall: point.maxRainfallForSpell ?? 0,
-                maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
-                pondingLevel: point.ponding ?? 0,
-                clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
-            }));
-            
-            allSpellsForDay.push({
-                ...activeSpell,
-                endTime: new Date(), 
-                status: 'active',
-                spellData: liveSpellData,
-            });
+        // Only look for an active spell if the report date is today
+        if (isToday) {
+            const activeRainEvent = await getActiveRainEvent(cityName);
+            if (activeRainEvent) {
+                const activeSpell = await getActiveSpell(activeRainEvent.id);
+                if (activeSpell) {
+                    const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
+                        pointId: point.id,
+                        pointName: point.name,
+                        order: point.order ?? 9999,
+                        totalRainfall: point.maxRainfallForSpell ?? 0,
+                        maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
+                        pondingLevel: point.ponding ?? 0,
+                        clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
+                    }));
+                    
+                    allSpellsForDay.push({
+                        ...activeSpell,
+                        endTime: new Date(), 
+                        status: 'active',
+                        spellData: liveSpellData,
+                    });
+                }
+            }
         }
         
         if (allSpellsForDay.length === 0) {
             return null;
         }
+
+        const earliestStartTime = allSpellsForDay[0].startTime;
 
         const allPointsMap = new Map<string, {name: string, order: number}>();
         allCurrentPondingPoints.forEach(p => allPointsMap.set(p.id, { name: p.name, order: p.order ?? 9999 }));
@@ -629,9 +655,6 @@ export async function getDailyReportData(cityName: string, dateString: string): 
         const totalRainfallSum = pointsArray.reduce((sum, point) => sum + point.totalRainfall, 0);
         const averageRainfall = pointsArray.length > 0 ? totalRainfallSum / pointsArray.length : 0;
         const maxTotalRainfall = Math.max(0, ...pointsArray.map(p => p.totalRainfall));
-        
-        // This was the source of a major bug. It needs to access the first element of allSpellsForDay only if it's not empty.
-        const earliestStartTime = allSpellsForDay.length > 0 ? allSpellsForDay[0].startTime : new Date();
 
         return {
             spells: reportSpells,

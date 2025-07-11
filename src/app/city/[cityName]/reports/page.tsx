@@ -1,23 +1,24 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, use } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Download, RefreshCw, Search } from 'lucide-react';
-import { getDailyReportData } from '../actions';
+import { Download, RefreshCw, Eye } from 'lucide-react';
+import { getDailyReportData, getRainEvents } from '../actions';
 import { generateDailyReportPdf } from '@/lib/report-generator';
-import type { DailyReportData } from '@/lib/types';
+import type { DailyReportData, RainEvent } from '@/lib/types';
 import { Logo } from '@/components/logo';
 
 function getOrdinalSuffix(i: number) {
-  const j = i % 10,
-    k = i % 100;
+  const j = i % 10, k = i % 100;
   if (j === 1 && k !== 11) return "st";
   if (j === 2 && k !== 12) return "nd";
   if (j === 3 && k !== 13) return "rd";
@@ -112,21 +113,26 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
   const cityName = decodeURIComponent(encodedCityName);
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
-  const [reportDate, setReportDate] = useState<Date | undefined>(new Date());
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState<DailyReportData | null>(null);
+  const [rainEvents, setRainEvents] = useState<RainEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
-  const handleViewReport = async () => {
-    if (!reportDate) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please select a date for the report.",
-      });
-      return;
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+        router.push('/login');
+        return;
     }
+    
+    getRainEvents(cityName)
+        .then(setRainEvents)
+        .finally(() => setEventsLoading(false));
+  }, [authLoading, user, cityName, router]);
 
+  const handleViewReport = async (reportDate: Date) => {
     setIsLoading(true);
     setReportData(null);
     try {
@@ -134,6 +140,10 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
       const data = await getDailyReportData(cityName, dateString);
       if (data) {
         setReportData(data);
+        toast({
+            title: "Report Generated",
+            description: `Showing report for ${format(reportDate, 'PPP')}.`,
+        });
       } else {
         toast({
           variant: "destructive",
@@ -155,14 +165,10 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
   const handleDownloadPdf = () => {
     if (reportData) {
       generateDailyReportPdf(reportData, cityName);
-      toast({
-        title: "Report Generated",
-        description: "Your PDF report is downloading.",
-      });
     }
   };
-
-  if (authLoading || !user) {
+  
+  if (authLoading || eventsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
@@ -174,51 +180,48 @@ export default function ReportsPage({ params }: { params: { cityName: string } }
     <main className="p-4 sm:p-6 md:p-8">
       <header className="flex justify-between items-center mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary">
-          Rain Reports
+          Rain Event Reports
         </h1>
       </header>
-      <Card className="max-w-xl mx-auto overflow-hidden shadow-lg">
+      <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Generate Rain Report</CardTitle>
-          <CardDescription>Select a date to generate a PDF summary of all rain spells for that day.</CardDescription>
+          <CardTitle>Event History</CardTitle>
+          <CardDescription>Select a rain event to view its detailed report.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row items-center justify-center gap-4 p-6">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-full sm:w-[280px] justify-start text-left font-normal",
-                  !reportDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {reportDate ? format(reportDate, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={reportDate}
-                onSelect={setReportDate}
-                initialFocus
-                disabled={(date) => date > new Date() || date < new Date("2024-01-01")}
-              />
-            </PopoverContent>
-          </Popover>
-          <Button onClick={handleViewReport} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
+        <CardContent>
+            {rainEvents.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Start Time</TableHead>
+                            <TableHead>End Time</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rainEvents.map(event => (
+                            <TableRow key={event.id}>
+                                <TableCell>{format(event.startedAt, 'PPpp')}</TableCell>
+                                <TableCell>{event.endedAt ? format(event.endedAt, 'PPpp') : '—'}</TableCell>
+                                <TableCell>
+                                    <Badge variant={event.status === 'active' ? 'default' : 'secondary'} className={cn(event.status === 'active' && "bg-green-600")}>
+                                        {event.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Button onClick={() => handleViewReport(event.startedAt)} variant="outline" size="sm" disabled={isLoading}>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View Report
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                View Report
-              </>
+                <p className="text-muted-foreground text-center py-8">No rain events found for {cityName}.</p>
             )}
-          </Button>
         </CardContent>
       </Card>
 
