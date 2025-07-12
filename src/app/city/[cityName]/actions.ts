@@ -551,7 +551,7 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
         if (!rainEventDoc.exists) {
             return null;
         }
-        const rainEvent = rainEventDoc.data() as RainEvent;
+        const rainEvent = { id: rainEventDoc.id, ...rainEventDoc.data() } as RainEvent;
 
         // Fetch all completed spells for this specific rain event
         const completedSpellsSnapshot = await db.collection('spells')
@@ -566,33 +566,31 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
         });
 
         // Check for an active spell if the rain event is still active
-        let activeSpellForEvent: Spell | null = null;
         if (rainEvent.status === 'active') {
-            activeSpellForEvent = await getActiveSpell(rainEventId);
+            const activeSpellForEvent = await getActiveSpell(rainEventId);
+            if (activeSpellForEvent) {
+                const allCurrentPondingPoints = await getPondingPoints(cityName);
+                const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
+                    pointId: point.id,
+                    pointName: point.name,
+                    order: point.order ?? 9999,
+                    totalRainfall: point.maxRainfallForSpell ?? 0,
+                    maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
+                    pondingLevel: point.ponding ?? 0,
+                    clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
+                }));
+                
+                allSpellsForEvent.push({
+                    ...activeSpellForEvent,
+                    endTime: new Date(), 
+                    status: 'active',
+                    spellData: liveSpellData,
+                });
+            }
         }
         
-        if (allSpellsForEvent.length === 0 && !activeSpellForEvent) {
+        if (allSpellsForEvent.length === 0) {
             return null; // No spells found for this event
-        }
-
-        if (activeSpellForEvent) {
-            const allCurrentPondingPoints = await getPondingPoints(cityName);
-            const liveSpellData: SpellPointData[] = allCurrentPondingPoints.map(point => ({
-                pointId: point.id,
-                pointName: point.name,
-                order: point.order ?? 9999,
-                totalRainfall: point.maxRainfallForSpell ?? 0,
-                maxPondingLevel: Math.max(point.maxPondingLevelForSpell ?? 0, point.ponding ?? 0),
-                pondingLevel: point.ponding ?? 0,
-                clearedInTime: (point.ponding ?? 0) === 0 ? (point.clearedInTime ?? 'N/A') : 'N/A',
-            }));
-            
-            allSpellsForEvent.push({
-                ...activeSpellForEvent,
-                endTime: new Date(), 
-                status: 'active',
-                spellData: liveSpellData,
-            });
         }
         
         const earliestStartTime = allSpellsForEvent.length > 0 ? allSpellsForEvent[0].startTime : new Date();
@@ -640,9 +638,13 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
                 } else if (lastData.clearedInTime && lastData.clearedInTime !== 'N/A' && lastData.clearedInTime.trim() !== '') {
                     point.finalStatus = lastData.clearedInTime;
                 } else if (point.totalRainfall > 0) {
+                    point.finalStatus = 'Continued';
+                } else {
                     point.finalStatus = 'Stopped';
                 }
             } else if (point.totalRainfall > 0) {
+                 point.finalStatus = 'Continued';
+            } else {
                  point.finalStatus = 'Stopped';
             }
         });
@@ -661,7 +663,7 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
         return {
             spells: reportSpells,
             points: pointsArray,
-            reportDate: rainEvent.startedAt.toDate(),
+            reportDate: rainEvent.startedAt,
             earliestStartTime: earliestStartTime,
             averageRainfall,
             maxTotalRainfall,
