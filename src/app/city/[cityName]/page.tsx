@@ -314,25 +314,30 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
             <div className="flex items-center gap-2 justify-self-end md:col-span-1">
                 {claims?.role !== 'viewer' && (
                     <>
-                        {!activeRainEvent && (
-                            <Button onClick={handleStartRainEvent} disabled={isPending}>
-                                <CloudSun className="mr-2" />
-                                Start Rain
-                            </Button>
-                        )}
-                        {activeRainEvent && (
+                        {activeRainEvent ? (
                             <>
                                 <Button onClick={handleToggleSpell} disabled={isPending}>
                                     {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
                                     {isSpellActive ? 'Stop Spell' : 'Start Spell'}
                                 </Button>
-                                <Button onClick={handleAddNewClick} disabled={!isSpellActive}>
+                                <Button onClick={handleAddNewClick}>
                                     <PlusCircle className="mr-2" />
                                     Add Point
                                 </Button>
                                 <Button variant="destructive" onClick={() => setIsEndSeasonAlertOpen(true)} disabled={isPending || isSpellActive}>
                                     <CloudOff className="mr-2" />
                                     End Rain
+                                </Button>
+                            </>
+                        ) : (
+                             <>
+                                <Button onClick={handleStartRainEvent} disabled={isPending}>
+                                    <CloudSun className="mr-2" />
+                                    Start Rain
+                                </Button>
+                                 <Button onClick={handleAddNewClick}>
+                                    <PlusCircle className="mr-2" />
+                                    Add Point
                                 </Button>
                             </>
                         )}
@@ -382,7 +387,7 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                     <DialogTitle>{editingPoint ? 'Edit' : 'Add'} Ponding Point</DialogTitle>
                      <DialogDescription>
                         {editingPoint
-                        ? `Update the details for ${editingPoint.name}. Rain value will be updated, not added.`
+                        ? `Update the details for ${editingPoint.name}.`
                         : 'Add a new location to track for ponding.'}
                     </DialogDescription>
                 </DialogHeader>
@@ -412,73 +417,75 @@ export default function CityDashboardPage({ params }: { params: { cityName: stri
                         </div>
                        
                         {isSpellActive && (
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
-                                <div className="col-span-3 flex items-center flex-wrap gap-2">
+                            <>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="currentSpell" className="text-right">Rain (mm)</Label>
+                                    <div className="col-span-3 flex items-center flex-wrap gap-2">
+                                        <Input
+                                            id="currentSpell"
+                                            name="currentSpell"
+                                            type="number"
+                                            value={currentRainValue}
+                                            onChange={handleRainInputChange}
+                                            className="w-24"
+                                            step="0.1"
+                                            min="0"
+                                        />
+                                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                            <Checkbox id="trace-checkbox" checked={isTrace} onCheckedChange={handleTraceChange} />
+                                            <Label htmlFor="trace-checkbox" className="font-normal">Trace</Label>
+                                        </div>
+                                         <Button 
+                                            type="button" 
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-xs h-8"
+                                            onClick={() => setCurrentRainValue('0')}>
+                                            <CloudOff className="mr-1 h-3 w-3"/>
+                                            Stop Rain
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="ponding" className="text-right">Current Ponding (in)</Label>
                                     <Input
-                                        id="currentSpell"
-                                        name="currentSpell"
+                                        id="ponding"
+                                        name="ponding"
                                         type="number"
-                                        value={currentRainValue}
-                                        onChange={handleRainInputChange}
-                                        className="w-24"
+                                        value={currentPondingValue}
+                                        onChange={handlePondingChange}
+                                        className="col-span-3"
                                         step="0.1"
                                         min="0"
                                     />
-                                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                        <Checkbox id="trace-checkbox" checked={isTrace} onCheckedChange={handleTraceChange} />
-                                        <Label htmlFor="trace-checkbox" className="font-normal">Trace</Label>
-                                    </div>
-                                     <Button 
-                                        type="button" 
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-xs h-8"
-                                        onClick={() => setCurrentRainValue('0')}>
-                                        <CloudOff className="mr-1 h-3 w-3"/>
-                                        Stop Rain
-                                    </Button>
                                 </div>
-                            </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="clearedInTime" className="text-right">Cleared In</Label>
+                                    <div className="col-span-3 flex items-center gap-2">
+                                        <Input
+                                            id="clearedInTime"
+                                            name="clearedInTime"
+                                            type="text"
+                                            value={currentClearedInTime}
+                                            onChange={(e) => setCurrentClearedInTime(e.target.value)}
+                                            placeholder="e.g., 02:30"
+                                            className="flex-grow"
+                                            disabled={parseFloat(currentPondingValue) > 0}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            className="h-8 text-xs"
+                                            onClick={() => setCurrentClearedInTime('Cleared During Rain')}
+                                            disabled={parseFloat(currentPondingValue) > 0}
+                                        >
+                                            During Rain
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
                         )}
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="ponding" className="text-right">Current Ponding (in)</Label>
-                            <Input
-                                id="ponding"
-                                name="ponding"
-                                type="number"
-                                value={currentPondingValue}
-                                onChange={handlePondingChange}
-                                className="col-span-3"
-                                step="0.1"
-                                min="0"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="clearedInTime" className="text-right">Cleared In</Label>
-                            <div className="col-span-3 flex items-center gap-2">
-                                <Input
-                                    id="clearedInTime"
-                                    name="clearedInTime"
-                                    type="text"
-                                    value={currentClearedInTime}
-                                    onChange={(e) => setCurrentClearedInTime(e.target.value)}
-                                    placeholder="e.g., 02:30"
-                                    className="flex-grow"
-                                    disabled={parseFloat(currentPondingValue) > 0}
-                                />
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    className="h-8 text-xs"
-                                    onClick={() => setCurrentClearedInTime('Cleared During Rain')}
-                                    disabled={parseFloat(currentPondingValue) > 0}
-                                >
-                                    During Rain
-                                </Button>
-                            </div>
-                        </div>
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>Cancel</Button>

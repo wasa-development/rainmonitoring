@@ -246,11 +246,13 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                     Bulk Data Entry
                 </h1>
                 <div className="flex items-center gap-2">
-                    <Button onClick={handleToggleSpell} disabled={isPending || !activeRainEvent}>
-                        {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
-                        {isSpellActive ? 'Stop Spell' : 'Start Spell'}
-                    </Button>
-                    <Button onClick={() => setFormOpen(true)} disabled={!isSpellActive}>
+                    {activeRainEvent && (
+                        <Button onClick={handleToggleSpell} disabled={isPending}>
+                            {isPending ? <RefreshCw className="mr-2 animate-spin" /> : isSpellActive ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
+                            {isSpellActive ? 'Stop Spell' : 'Start Spell'}
+                        </Button>
+                    )}
+                    <Button onClick={() => setFormOpen(true)}>
                         <PlusCircle className="mr-2" />
                         Add Point
                     </Button>
@@ -307,7 +309,7 @@ export default function DataEntryPage({ params }: { params: { cityName: string }
                 <Card className="md:col-span-2 lg:col-span-3">
                     <CardContent className="flex flex-col items-center justify-center h-48">
                         <h3 className="text-lg font-semibold">No Ponding Points Found</h3>
-                        <p className="text-muted-foreground">Get started by adding a new ponding point during an active spell.</p>
+                        <p className="text-muted-foreground">Get started by adding a new ponding point.</p>
                     </CardContent>
                 </Card>
             )}
@@ -488,7 +490,7 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                     onChange={handlePondingChange}
                     step="0.1"
                     min="0"
-                    disabled={isPending}
+                    disabled={isPending || !isSpellActive}
                     className="max-w-xs"
                 />
             </TableCell>
@@ -500,7 +502,7 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                         value={clearedInTimeValue}
                         onChange={(e) => setClearedInTimeValue(e.target.value)}
                         placeholder="e.g., 02:30"
-                        disabled={isPending || parseFloat(pondingValue) > 0}
+                        disabled={isPending || parseFloat(pondingValue) > 0 || !isSpellActive}
                         className="w-28"
                     />
                     <Button 
@@ -515,7 +517,7 @@ function RainfallTableRow({ point, index, isSpellActive, isPending, userRole, on
                                 setClearedInTimeValue('Cleared During Rain');
                             }
                         }}
-                        disabled={isPending || parseFloat(pondingValue) > 0}>
+                        disabled={isPending || parseFloat(pondingValue) > 0 || !isSpellActive}>
                         During Rain
                     </Button>
                 </div>
