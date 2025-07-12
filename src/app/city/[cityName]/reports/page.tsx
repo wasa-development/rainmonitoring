@@ -134,23 +134,22 @@ export default function ReportsPage() {
       .finally(() => setEventsLoading(false));
   }, [authLoading, user, cityName, router]);
 
-  const handleViewReport = async (reportDate: Date) => {
+  const handleViewReport = async (rainEventId: string) => {
     setIsLoading(true);
     setReportData(null);
     try {
-      const dateString = format(reportDate, 'yyyy-MM-dd');
-      const data = await getDailyReportData(cityName, dateString);
+      const data = await getDailyReportData(cityName, rainEventId);
       if (data) {
         setReportData(data);
         toast({
           title: "Report Generated",
-          description: `Showing report for ${format(reportDate, 'PPP')}.`,
+          description: `Showing report for event started at ${format(data.reportDate, 'PPP')}.`,
         });
       } else {
         toast({
           variant: "destructive",
           title: "No Data",
-          description: `No completed or active rain spells found for ${format(reportDate, 'PPP')}.`,
+          description: `No spell data found for the selected rain event.`,
         });
       }
     } catch (e: any) {
@@ -212,7 +211,7 @@ export default function ReportsPage() {
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button onClick={() => handleViewReport(event.startedAt)} variant="outline" size="sm" disabled={isLoading}>
+                                    <Button onClick={() => handleViewReport(event.id)} variant="outline" size="sm" disabled={isLoading}>
                                         <Eye className="mr-2 h-4 w-4" />
                                         View Report
                                     </Button>

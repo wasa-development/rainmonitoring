@@ -138,5 +138,5 @@ export function generateDailyReportPdf(reportData: DailyReportData, cityName: st
     doc.text(`Monsoon Control Room, WASA Head Office ${cityName}`, pageW / 2, finalY + 8, { align: 'center' });
 
     // Save the PDF
-    doc.save(`Rain_Report_${cityName}_${format(reportData.reportDate, 'yyyy-MM-dd')}.pdf`);
+    doc.save(`Rain_Report_${cityName}_${format(new Date(reportData.reportDate), 'yyyy-MM-dd')}.pdf`);
 }
