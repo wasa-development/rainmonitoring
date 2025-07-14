@@ -58,6 +58,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
     
     // Total Rainfall is the sum of all completed spells (totalRainfall) plus the current active spell's rain (maxRainfallForSpell).
     const displayedTotalRainfall = (point.totalRainfall ?? 0) + (isSpellActive ? (point.maxRainfallForSpell ?? 0) : 0);
+    const displayedMaxPonding = isSpellActive ? (point.maxPondingLevelForSpell ?? 0) : (point.maxPonding ?? 0);
 
 
     return (
@@ -130,7 +131,7 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
                              <AlertTriangle className="h-3.5 w-3.5 text-white/90" />
                              <div>
                                 <p className="text-xs text-white/80">Max Ponding</p>
-                                <p className="font-semibold text-xs">{(point.maxPondingLevelForSpell ?? 0).toFixed(1)} in</p>
+                                <p className="font-semibold text-xs">{displayedMaxPonding.toFixed(1)} in</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -177,7 +178,3 @@ export default function PondingPointCard({ point, onEdit, onDelete, userRole, is
         </Card>
     );
 }
-
-    
-
-    
