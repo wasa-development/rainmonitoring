@@ -28,7 +28,7 @@ function getOrdinalSuffix(i: number) {
 function GeneratedReport({ reportData, cityName }: { reportData: DailyReportData, cityName: string }) {
   const { maxTotalRainfall } = reportData;
   const sortedPoints = [...reportData.points].sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.pointName.localeCompare(b.pointName));
-  const lastSpellEndTime = reportData.spells.length > 0 ? reportData.spells[reportData.spells.length - 1].endTime : new Date();
+  const lastSpellEndTime = reportData.spells.length > 0 ? new Date(reportData.spells[reportData.spells.length - 1].endTime) : new Date();
 
   return (
     <div className="max-w-5xl mx-auto bg-white dark:bg-card shadow-lg mt-4" id="report-content">
@@ -38,7 +38,7 @@ function GeneratedReport({ reportData, cityName }: { reportData: DailyReportData
         </div>
         <div className="text-center">
           <h2 className="text-2xl font-bold">{cityName} Region Local Rainfall</h2>
-          <p>Dated {format(reportData.reportDate, 'dd-MM-yyyy')}</p>
+          <p>Dated {format(new Date(reportData.reportDate), 'dd-MM-yyyy')}</p>
         </div>
         <div className="text-center col-start-2">
           <div className="mt-2">
@@ -47,7 +47,7 @@ function GeneratedReport({ reportData, cityName }: { reportData: DailyReportData
               const spellNumber = index + 1;
               return (
                 <p key={index}>
-                  {spellNumber}{getOrdinalSuffix(spellNumber)} Spell {format(spell.startTime, 'hh:mm a')} to {format(spell.endTime, 'hh:mm a')}
+                  {spellNumber}{getOrdinalSuffix(spellNumber)} Spell {format(new Date(spell.startTime), 'hh:mm a')} to {format(new Date(spell.endTime), 'hh:mm a')}
                 </p>
               );
             })}
@@ -143,7 +143,7 @@ export default function ReportsPage() {
         setReportData(data);
         toast({
           title: "Report Generated",
-          description: `Showing report for event started at ${format(data.reportDate, 'PPP')}.`,
+          description: `Showing report for event started at ${format(new Date(data.reportDate), 'PPP')}.`,
         });
       } else {
         toast({
@@ -203,8 +203,8 @@ export default function ReportsPage() {
                     <TableBody>
                         {rainEvents.map(event => (
                             <TableRow key={event.id}>
-                                <TableCell>{format(event.startedAt, 'PPpp')}</TableCell>
-                                <TableCell>{event.endedAt ? format(event.endedAt, 'PPpp') : '—'}</TableCell>
+                                <TableCell>{format(new Date(event.startedAt), 'PPpp')}</TableCell>
+                                <TableCell>{event.endedAt ? format(new Date(event.endedAt), 'PPpp') : '—'}</TableCell>
                                 <TableCell>
                                     <Badge variant={event.status === 'active' ? 'default' : 'secondary'} className={cn(event.status === 'active' && "bg-green-600")}>
                                         {event.status}

@@ -196,7 +196,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                 const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
                 
                 const eventMaxPonding = existingData.maxPonding ?? 0;
-                const newEventMaxPonding = Math.max(eventMaxPonding, newPonding);
+                const newEventMaxPonding = Math.max(eventMaxPonding, newPonding, maxPondingLevelForSpell);
 
                 const pointDataForUpdate = { 
                     name: data.name,
@@ -529,7 +529,7 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
             const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
             
             const eventMaxPonding = existingData.maxPonding ?? 0;
-            const newEventMaxPonding = Math.max(eventMaxPonding, newPonding);
+            const newEventMaxPonding = Math.max(eventMaxPonding, newPonding, maxPondingLevelForSpell);
 
             const pointDataForDb = { 
                 currentSpell: newRainfallInput,
@@ -562,7 +562,16 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
         if (!rainEventDoc.exists) {
             return null;
         }
-        const rainEvent = { id: rainEventDoc.id, ...rainEventDoc.data() } as RainEvent;
+        const rainEventData = rainEventDoc.data();
+        if (!rainEventData) return null;
+
+        const rainEvent: RainEvent = { 
+            id: rainEventDoc.id, 
+            cityName: rainEventData.cityName,
+            status: rainEventData.status,
+            startedAt: rainEventData.startedAt.toDate(),
+            endedAt: rainEventData.endedAt ? rainEventData.endedAt.toDate() : null
+        };
 
         // Fetch all completed spells for this specific rain event
         const completedSpellsSnapshot = await db.collection('spells')
@@ -661,8 +670,8 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
         });
 
         const reportSpells: DailyReportSpellInfo[] = allSpellsForEvent.map(spell => ({
-            startTime: spell.startTime,
-            endTime: spell.endTime!,
+            startTime: spell.startTime.toISOString(),
+            endTime: spell.endTime!.toISOString(),
             status: spell.status as 'active' | 'completed',
         }));
 
@@ -674,8 +683,8 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
         return {
             spells: reportSpells,
             points: pointsArray,
-            reportDate: rainEvent.startedAt,
-            earliestStartTime: earliestStartTime,
+            reportDate: rainEvent.startedAt.toISOString(),
+            earliestStartTime: earliestStartTime.toISOString(),
             averageRainfall,
             maxTotalRainfall,
         };

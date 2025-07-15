@@ -42,7 +42,7 @@ export function generateDailyReportPdf(reportData: DailyReportData, cityName: st
     doc.setFontSize(16);
     doc.text(`${cityName} Region Local Rainfall`, pageW / 2, 10, { align: 'center' });
     doc.setFontSize(12);
-    const reportDateStr = format(reportData.reportDate, 'dd-MM-yyyy');
+    const reportDateStr = format(new Date(reportData.reportDate), 'dd-MM-yyyy');
     doc.text(`Dated: ${reportDateStr}`, pageW / 2, 18, { align: 'center' });
 
     // Rain Duration
@@ -54,12 +54,12 @@ export function generateDailyReportPdf(reportData: DailyReportData, cityName: st
     let yPos = 30;
     reportData.spells.forEach((spell, index) => {
         const spellNumber = index + 1;
-        const spellText = `${spellNumber}${getOrdinalSuffix(spellNumber)} Spell ${format(spell.startTime, 'hh:mm a')} to ${format(spell.endTime, 'hh:mm a')}`;
+        const spellText = `${spellNumber}${getOrdinalSuffix(spellNumber)} Spell ${format(new Date(spell.startTime), 'hh:mm a')} to ${format(new Date(spell.endTime), 'hh:mm a')}`;
         doc.text(spellText, pageW / 2, yPos, { align: 'center' });
         yPos += 5;
     });
 
-    const lastSpellEndTime = reportData.spells.length > 0 ? reportData.spells[reportData.spells.length - 1].endTime : new Date();
+    const lastSpellEndTime = reportData.spells.length > 0 ? new Date(reportData.spells[reportData.spells.length - 1].endTime) : new Date();
     const reportingTimeText = `Reporting Time: ${format(lastSpellEndTime, 'hh:mm a')}`;
     doc.text(reportingTimeText, pageW / 2, yPos, { align: 'center' });
 

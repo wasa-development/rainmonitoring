@@ -92,8 +92,8 @@ export type RainEvent = {
 
 
 export interface DailyReportSpellInfo {
-    startTime: Date;
-    endTime: Date;
+    startTime: string; // Serialized Date
+    endTime: string;   // Serialized Date
     status: 'active' | 'completed';
 }
 
@@ -110,9 +110,8 @@ export interface DailyReportPointData {
 export interface DailyReportData {
     spells: DailyReportSpellInfo[];
     points: DailyReportPointData[];
-    reportDate: Date;
-    earliestStartTime: Date;
+    reportDate: string; // Serialized Date
+    earliestStartTime: string; // Serialized Date
     averageRainfall: number;
     maxTotalRainfall: number;
 }
-    
