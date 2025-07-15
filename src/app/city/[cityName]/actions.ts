@@ -146,12 +146,15 @@ export async function getPondingPoints(cityName: string, activeRainEventId?: str
                 }
             }
             
+            const timestamp = pointData.updatedAt as any;
+            const date = timestamp ? timestamp.toDate() : null;
+
             return {
                 id: pointId,
                 ...pointData,
                 maxRainfall,
                 maxPonding,
-                updatedAt: pointData.updatedAt ? (pointData.updatedAt as any).toDate() : undefined,
+                updatedAt: date ? date.toISOString() : undefined,
             } as PondingPoint;
         });
 
@@ -191,6 +194,9 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                 
                 const oldMaxPonding = existingData.maxPondingLevelForSpell ?? 0;
                 const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
+                
+                const eventMaxPonding = existingData.maxPonding ?? 0;
+                const newEventMaxPonding = Math.max(eventMaxPonding, newPonding);
 
                 const pointDataForUpdate = { 
                     name: data.name,
@@ -201,6 +207,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                     maxRainfallForSpell,
                     ponding: newPonding,
                     maxPondingLevelForSpell,
+                    maxPonding: newEventMaxPonding,
                     clearedInTime: data.clearedInTime ?? '',
                 };
 
@@ -224,7 +231,7 @@ export async function addOrUpdatePondingPoint(formData: FormData, cityName: stri
                 maxPondingLevelForSpell: data.ponding ?? 0,
                 totalRainfall: 0,
                 maxRainfall: 0,
-                maxPonding: 0,
+                maxPonding: data.ponding ?? 0,
             };
             await db.collection('ponding_points').add(pointDataForDb);
         }
@@ -520,6 +527,9 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
 
             const oldMaxPonding = existingData.maxPondingLevelForSpell ?? 0;
             const maxPondingLevelForSpell = Math.max(oldMaxPonding, newPonding);
+            
+            const eventMaxPonding = existingData.maxPonding ?? 0;
+            const newEventMaxPonding = Math.max(eventMaxPonding, newPonding);
 
             const pointDataForDb = { 
                 currentSpell: newRainfallInput,
@@ -528,6 +538,7 @@ export async function batchUpdatePondingPoints(formData: FormData, cityName: str
                 isRaining: newRainfallInput > 0,
                 maxRainfallForSpell,
                 maxPondingLevelForSpell,
+                maxPonding: newEventMaxPonding,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             };
 
@@ -637,7 +648,7 @@ export async function getDailyReportData(cityName: string, rainEventId: string):
                     point.finalStatus = `${lastData.pondingLevel.toFixed(1)} in`;
                 } else if (lastData.clearedInTime && lastData.clearedInTime !== 'N/A' && lastData.clearedInTime.trim() !== '') {
                     point.finalStatus = lastData.clearedInTime;
-                } else if (point.totalRainfall > 0) {
+                } else if (lastData.totalRainfall > 0) {
                     point.finalStatus = 'Continued';
                 } else {
                     point.finalStatus = 'Stopped';

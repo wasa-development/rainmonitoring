@@ -34,7 +34,7 @@ export interface PondingPoint {
     maxPondingLevelForSpell?: number;
     isRaining: boolean;
     order?: number;
-    updatedAt?: Date;
+    updatedAt?: string; // Changed from Date to string
     totalRainfall?: number;
 }
 
